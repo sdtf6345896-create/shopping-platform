@@ -1,5 +1,6 @@
 package com.example.shopping.member.dto.response;
 
+import com.example.shopping.common.enums.AccountStatus;
 import com.example.shopping.member.entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,6 +15,7 @@ public class MemberResponse {
     private String email;
     private String name;
     private String phone;
+    private AccountStatus status;
     private LocalDateTime createdAt;
 
     public static MemberResponse from(Member member) {
@@ -22,6 +24,7 @@ public class MemberResponse {
                 member.getEmail(),
                 member.getName(),
                 member.getPhone(),
+                member.getStatus(),
                 member.getCreatedAt());
     }
 }

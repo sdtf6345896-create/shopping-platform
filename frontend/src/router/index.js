@@ -52,6 +52,7 @@ const routes = [
         props: true,
       },
       { path: 'reports', name: 'AdminReport', component: () => import('../views/admin/Report.vue') },
+      { path: 'members', name: 'AdminMemberList', component: () => import('../views/admin/MemberList.vue') },
     ],
   },
 ]

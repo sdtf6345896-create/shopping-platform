@@ -11,6 +11,7 @@ const menu = [
   { name: 'AdminCategoryList', label: '分類管理' },
   { name: 'AdminOrderList', label: '訂單管理', matchNames: ['AdminOrderList', 'AdminOrderDetail'] },
   { name: 'AdminReport', label: '銷售報表' },
+  { name: 'AdminMemberList', label: '會員管理' },
 ]
 
 function isActive(item) {
