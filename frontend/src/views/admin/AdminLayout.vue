@@ -9,10 +9,12 @@ const adminAuthStore = useAdminAuthStore()
 const menu = [
   { name: 'AdminProductList', label: '商品管理' },
   { name: 'AdminCategoryList', label: '分類管理' },
+  { name: 'AdminOrderList', label: '訂單管理', matchNames: ['AdminOrderList', 'AdminOrderDetail'] },
 ]
 
 function isActive(item) {
-  return route.matched.some((r) => r.name === item.name)
+  const names = item.matchNames || [item.name]
+  return names.includes(route.name)
 }
 
 function handleLogout() {

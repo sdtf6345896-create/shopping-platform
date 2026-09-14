@@ -44,6 +44,13 @@ const routes = [
         props: true,
       },
       { path: 'categories', name: 'AdminCategoryList', component: () => import('../views/admin/CategoryList.vue') },
+      { path: 'orders', name: 'AdminOrderList', component: () => import('../views/admin/OrderList.vue') },
+      {
+        path: 'orders/:id',
+        name: 'AdminOrderDetail',
+        component: () => import('../views/admin/OrderDetail.vue'),
+        props: true,
+      },
     ],
   },
 ]
