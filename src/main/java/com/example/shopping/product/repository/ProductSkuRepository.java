@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface ProductSkuRepository extends JpaRepository<ProductSku, Long> {
 
     Optional<ProductSku> findByIdAndProductId(Long id, Long productId);
+
+    Optional<ProductSku> findBySkuCode(String skuCode);
 }
