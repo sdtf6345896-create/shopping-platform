@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getCategoryTree } from '../api/category'
 import { listProducts } from '../api/product'
 import ProductCard from '../components/ProductCard.vue'
+import { flattenCategories } from '../utils/categoryTree'
 
 const route = useRoute()
 const router = useRouter()
@@ -21,17 +22,7 @@ const filters = reactive({
   page: route.query.page ? Number(route.query.page) : 0,
 })
 
-const flatCategories = computed(() => {
-  const result = []
-  function walk(list, depth) {
-    for (const item of list) {
-      result.push({ id: item.id, name: item.name, depth })
-      if (item.children?.length) walk(item.children, depth + 1)
-    }
-  }
-  walk(categories.value, 0)
-  return result
-})
+const flatCategories = computed(() => flattenCategories(categories.value))
 
 async function loadCategories() {
   categories.value = await getCategoryTree()

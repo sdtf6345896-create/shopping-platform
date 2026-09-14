@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useAdminAuthStore } from '../stores/adminAuth'
 
 const routes = [
   { path: '/', name: 'Home', component: () => import('../views/Home.vue') },
@@ -27,6 +28,24 @@ const routes = [
       { path: 'orders', name: 'MemberOrders', component: () => import('../views/member/OrderList.vue') },
     ],
   },
+  { path: '/admin/login', name: 'AdminLogin', component: () => import('../views/admin/AdminLogin.vue') },
+  {
+    path: '/admin',
+    component: () => import('../views/admin/AdminLayout.vue'),
+    meta: { requiresAdminAuth: true },
+    children: [
+      { path: '', redirect: { name: 'AdminProductList' } },
+      { path: 'products', name: 'AdminProductList', component: () => import('../views/admin/ProductList.vue') },
+      { path: 'products/new', name: 'AdminProductCreate', component: () => import('../views/admin/ProductForm.vue') },
+      {
+        path: 'products/:id/edit',
+        name: 'AdminProductEdit',
+        component: () => import('../views/admin/ProductForm.vue'),
+        props: true,
+      },
+      { path: 'categories', name: 'AdminCategoryList', component: () => import('../views/admin/CategoryList.vue') },
+    ],
+  },
 ]
 
 const router = createRouter({
@@ -38,6 +57,14 @@ const router = createRouter({
 })
 
 router.beforeEach((to) => {
+  if (to.meta.requiresAdminAuth) {
+    const adminAuthStore = useAdminAuthStore()
+    if (!adminAuthStore.isLoggedIn) {
+      return { name: 'AdminLogin', query: { redirect: to.fullPath } }
+    }
+    return true
+  }
+
   const authStore = useAuthStore()
   if (to.meta.requiresAuth && !authStore.isLoggedIn) {
     return { name: 'Login', query: { redirect: to.fullPath } }
