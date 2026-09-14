@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: shopping-platform
+  profiles:
+    active: dev
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # schema 一律交給 Flyway 管理,JPA 只驗證不自動建表
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+  api-docs:
+    path: /v3/api-docs
+
+jwt:
+  secret: ${JWT_SECRET:this-is-a-dev-only-secret-key-please-change-in-prod-32bytes+}
+  expiration-ms: ${JWT_EXPIRATION_MS:86400000}   # 24 小時
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
