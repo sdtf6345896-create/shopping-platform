@@ -10,6 +10,7 @@ const menu = [
   { name: 'AdminProductList', label: '商品管理' },
   { name: 'AdminCategoryList', label: '分類管理' },
   { name: 'AdminOrderList', label: '訂單管理', matchNames: ['AdminOrderList', 'AdminOrderDetail'] },
+  { name: 'AdminReport', label: '銷售報表' },
 ]
 
 function isActive(item) {
