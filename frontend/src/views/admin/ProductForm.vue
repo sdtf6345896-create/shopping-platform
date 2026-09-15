@@ -2,9 +2,14 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import { Plus } from '@element-plus/icons-vue'
 import { getAdminProduct, createProduct, updateProduct } from '../../api/admin/product'
 import { listAdminCategories } from '../../api/admin/category'
+import { uploadImage } from '../../api/admin/upload'
 import { flattenCategories } from '../../utils/categoryTree'
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 
 const props = defineProps({
   id: { type: [String, Number], default: null },
@@ -18,6 +23,7 @@ const flatCategories = computed(() => flattenCategories(categories.value))
 
 const loading = ref(false)
 const saving = ref(false)
+const uploading = ref(false)
 const formRef = ref()
 
 const form = reactive({
@@ -33,6 +39,29 @@ const rules = {
   categoryId: [{ required: true, message: '請選擇分類', trigger: 'change' }],
   name: [{ required: true, message: '請輸入商品名稱', trigger: 'blur' }],
   price: [{ required: true, message: '請輸入價格', trigger: 'blur' }],
+}
+
+function beforeImageUpload(file) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    ElMessage.error('僅支援 JPG / PNG / WEBP 格式的圖片')
+    return false
+  }
+  if (file.size > MAX_IMAGE_SIZE) {
+    ElMessage.error('圖片大小請控制在 5MB 以內')
+    return false
+  }
+  return true
+}
+
+async function handleImageUpload({ file }) {
+  uploading.value = true
+  try {
+    const data = await uploadImage(file)
+    form.mainImage = data.url
+    ElMessage.success('圖片上傳成功')
+  } finally {
+    uploading.value = false
+  }
 }
 
 function addSku() {
@@ -117,8 +146,24 @@ onMounted(async () => {
       <el-form-item label="價格" prop="price">
         <el-input-number v-model="form.price" :min="0" :precision="2" />
       </el-form-item>
-      <el-form-item label="主圖網址">
-        <el-input v-model="form.mainImage" style="width: 400px" placeholder="https://..." />
+      <el-form-item label="商品主圖">
+        <div v-loading="uploading" class="image-upload">
+          <el-upload
+            class="uploader"
+            :show-file-list="false"
+            :before-upload="beforeImageUpload"
+            :http-request="handleImageUpload"
+            accept="image/jpeg,image/png,image/webp"
+          >
+            <img v-if="form.mainImage" :src="form.mainImage" class="preview" />
+            <div v-else class="upload-placeholder">
+              <el-icon :size="24"><Plus /></el-icon>
+              <span>上傳圖片</span>
+            </div>
+          </el-upload>
+          <el-input v-model="form.mainImage" size="small" class="url-input" placeholder="或直接貼上圖片網址" />
+          <p class="upload-hint">支援 JPG / PNG / WEBP,單檔 5MB 以內</p>
+        </div>
       </el-form-item>
 
       <el-form-item label="規格 (SKU)">
@@ -161,5 +206,54 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.image-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uploader :deep(.el-upload) {
+  border: 1px dashed var(--el-border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  overflow: hidden;
+  display: block;
+  width: 140px;
+  height: 140px;
+}
+
+.uploader :deep(.el-upload):hover {
+  border-color: var(--el-color-primary);
+}
+
+.preview {
+  width: 140px;
+  height: 140px;
+  object-fit: cover;
+  display: block;
+}
+
+.upload-placeholder {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #999;
+  font-size: 13px;
+}
+
+.url-input {
+  width: 300px;
+}
+
+.upload-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #999;
 }
 </style>
