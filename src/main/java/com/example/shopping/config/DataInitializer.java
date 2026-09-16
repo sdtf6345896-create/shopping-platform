@@ -13,6 +13,8 @@ import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.review.entity.ProductReview;
+import com.example.shopping.review.repository.ProductReviewRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -42,6 +44,7 @@ public class DataInitializer implements CommandLineRunner {
     private final AddressRepository addressRepository;
     private final ProductSkuRepository productSkuRepository;
     private final OrderRepository orderRepository;
+    private final ProductReviewRepository productReviewRepository;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -50,6 +53,7 @@ public class DataInitializer implements CommandLineRunner {
                             AddressRepository addressRepository,
                             ProductSkuRepository productSkuRepository,
                             OrderRepository orderRepository,
+                            ProductReviewRepository productReviewRepository,
                             PasswordEncoder passwordEncoder,
                             JdbcTemplate jdbcTemplate) {
         this.adminRepository = adminRepository;
@@ -57,6 +61,7 @@ public class DataInitializer implements CommandLineRunner {
         this.addressRepository = addressRepository;
         this.productSkuRepository = productSkuRepository;
         this.orderRepository = orderRepository;
+        this.productReviewRepository = productReviewRepository;
         this.passwordEncoder = passwordEncoder;
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -161,6 +166,32 @@ public class DataInitializer implements CommandLineRunner {
 
             LocalDateTime backdatedAt = LocalDateTime.now().minusDays(spec.daysAgo());
             jdbcTemplate.update("UPDATE orders SET created_at = ? WHERE id = ?", backdatedAt, saved.getId());
+        }
+
+        seedDemoReviews(member);
+    }
+
+    private void seedDemoReviews(Member member) {
+        record ReviewSeed(String skuCode, int rating, String content) {
+        }
+
+        List<ReviewSeed> reviewSeeds = List.of(
+                new ReviewSeed("TSHIRT-BLK-M", 5, "布料厚度剛好,洗過幾次也沒有變形,回購中。"),
+                new ReviewSeed("EARBUD-BLK", 4, "音質不錯,但是盒子有點大不好放口袋。"),
+                new ReviewSeed("DRESS-FLR-S", 3, "版型偏小,建議大半號購買。"),
+                new ReviewSeed("CARD-BEG-M", 5, "顏色跟照片一樣好看,質感很好。")
+        );
+
+        for (ReviewSeed seed : reviewSeeds) {
+            ProductSku sku = productSkuRepository.findBySkuCode(seed.skuCode())
+                    .orElseThrow(() -> new IllegalStateException("找不到示範用 SKU:" + seed.skuCode()));
+
+            ProductReview review = new ProductReview();
+            review.setProduct(sku.getProduct());
+            review.setMember(member);
+            review.setRating(seed.rating());
+            review.setContent(seed.content());
+            productReviewRepository.save(review);
         }
     }
 }
