@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { Search } from '@element-plus/icons-vue'
 import { getCategoryTree } from '../api/category'
 import { listProducts } from '../api/product'
 import ProductCard from '../components/ProductCard.vue'
@@ -18,9 +19,26 @@ const filters = reactive({
   categoryId: route.query.categoryId ? Number(route.query.categoryId) : null,
   minPrice: route.query.minPrice ? Number(route.query.minPrice) : null,
   maxPrice: route.query.maxPrice ? Number(route.query.maxPrice) : null,
+  keyword: typeof route.query.keyword === 'string' ? route.query.keyword : null,
   sort: route.query.sort || 'createdAt,desc',
   page: route.query.page ? Number(route.query.page) : 0,
 })
+
+const keywordInput = ref(filters.keyword || '')
+
+// 導覽列的搜尋框在同一頁面(仍是 ProductList 元件實例)送出新關鍵字時,
+// 元件不會重新掛載,靠這個 watcher 把 route 上的關鍵字同步進 filters。
+watch(
+  () => route.query.keyword,
+  (keyword) => {
+    const normalized = typeof keyword === 'string' ? keyword : null
+    if (normalized !== filters.keyword) {
+      filters.keyword = normalized
+      filters.page = 0
+    }
+    keywordInput.value = normalized || ''
+  },
+)
 
 const flatCategories = computed(() => flattenCategories(categories.value))
 
@@ -35,6 +53,7 @@ async function loadProducts() {
       categoryId: filters.categoryId || undefined,
       minPrice: filters.minPrice ?? undefined,
       maxPrice: filters.maxPrice ?? undefined,
+      keyword: filters.keyword || undefined,
       sort: filters.sort,
       page: filters.page,
       size: 12,
@@ -52,6 +71,7 @@ function syncQuery() {
       ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
       ...(filters.minPrice != null ? { minPrice: filters.minPrice } : {}),
       ...(filters.maxPrice != null ? { maxPrice: filters.maxPrice } : {}),
+      ...(filters.keyword ? { keyword: filters.keyword } : {}),
       sort: filters.sort,
       page: filters.page,
     },
@@ -64,6 +84,17 @@ function selectCategory(categoryId) {
 }
 
 function applyPriceRange() {
+  filters.page = 0
+}
+
+function applyKeyword() {
+  filters.keyword = keywordInput.value.trim() || null
+  filters.page = 0
+}
+
+function clearKeyword() {
+  keywordInput.value = ''
+  filters.keyword = null
   filters.page = 0
 }
 
@@ -110,19 +141,42 @@ onMounted(() => {
 
       <div class="main">
         <div class="toolbar">
-          <span class="total-text">共 {{ total }} 件商品</span>
-          <el-select v-model="filters.sort" size="small" style="width: 160px">
-            <el-option label="最新上架" value="createdAt,desc" />
-            <el-option label="價格由低到高" value="price,asc" />
-            <el-option label="價格由高到低" value="price,desc" />
-            <el-option label="熱銷優先" value="salesCount,desc" />
-          </el-select>
+          <div class="toolbar-left">
+            <span class="total-text">共 {{ total }} 件商品</span>
+            <el-tag v-if="filters.keyword" closable class="keyword-tag" @close="clearKeyword">
+              關鍵字:{{ filters.keyword }}
+            </el-tag>
+          </div>
+          <div class="toolbar-right">
+            <el-input
+              v-model="keywordInput"
+              placeholder="搜尋商品名稱"
+              size="small"
+              clearable
+              style="width: 200px"
+              @keyup.enter="applyKeyword"
+              @clear="clearKeyword"
+            >
+              <template #suffix>
+                <el-icon class="search-icon" @click="applyKeyword"><Search /></el-icon>
+              </template>
+            </el-input>
+            <el-select v-model="filters.sort" size="small" style="width: 160px">
+              <el-option label="最新上架" value="createdAt,desc" />
+              <el-option label="價格由低到高" value="price,asc" />
+              <el-option label="價格由高到低" value="price,desc" />
+              <el-option label="熱銷優先" value="salesCount,desc" />
+            </el-select>
+          </div>
         </div>
 
         <div v-loading="loading" class="product-grid">
           <ProductCard v-for="product in products" :key="product.id" :product="product" />
         </div>
-        <el-empty v-if="!loading && products.length === 0" description="找不到符合條件的商品" />
+        <el-empty
+          v-if="!loading && products.length === 0"
+          :description="filters.keyword ? `找不到符合「${filters.keyword}」的商品` : '找不到符合條件的商品'"
+        />
 
         <el-pagination
           v-if="total > 0"
@@ -207,12 +261,39 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .total-text {
   font-size: 13px;
   color: #666;
+}
+
+.keyword-tag {
+  font-size: 12px;
+}
+
+.search-icon {
+  cursor: pointer;
+  color: #999;
+}
+
+.search-icon:hover {
+  color: #e4393c;
 }
 
 .product-grid {

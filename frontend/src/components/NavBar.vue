@@ -1,13 +1,28 @@
 <script setup>
-import { onMounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
-import { ShoppingCart, User } from '@element-plus/icons-vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { Search, ShoppingCart, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
+const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const cartStore = useCartStore()
+
+const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
+
+watch(
+  () => route.query.keyword,
+  (keyword) => {
+    searchKeyword.value = typeof keyword === 'string' ? keyword : ''
+  },
+)
+
+function handleSearch() {
+  const keyword = searchKeyword.value.trim()
+  router.push({ path: '/products', query: keyword ? { keyword } : {} })
+}
 
 async function refreshCart() {
   if (authStore.isLoggedIn) {
@@ -40,6 +55,18 @@ function handleLogout() {
         <router-link to="/">首頁</router-link>
         <router-link to="/products">全部商品</router-link>
       </nav>
+
+      <el-input
+        v-model="searchKeyword"
+        placeholder="搜尋商品"
+        class="search-input"
+        clearable
+        @keyup.enter="handleSearch"
+      >
+        <template #suffix>
+          <el-icon class="search-icon" @click="handleSearch"><Search /></el-icon>
+        </template>
+      </el-input>
 
       <div class="nav-actions">
         <router-link to="/cart" class="cart-link">
@@ -98,17 +125,31 @@ function handleLogout() {
 .nav-links {
   display: flex;
   gap: 20px;
-  flex: 1;
 }
 
 .nav-links a {
   color: #333;
   font-size: 15px;
+  white-space: nowrap;
 }
 
 .nav-links a.router-link-active {
   color: #e4393c;
   font-weight: 600;
+}
+
+.search-input {
+  flex: 1;
+  max-width: 360px;
+}
+
+.search-icon {
+  cursor: pointer;
+  color: #999;
+}
+
+.search-icon:hover {
+  color: #e4393c;
 }
 
 .nav-actions {
