@@ -254,6 +254,24 @@ CANCELLED       → (終態)
 
 ---
 
+## 圖片上傳(Admin）— 需管理員登入
+
+### `POST /api/admin/uploads/image`
+`multipart/form-data`,欄位名 `file`。僅接受 `image/jpeg`、`image/png`、`image/webp`,大小上限 5MB(超過由 `MaxUploadSizeExceeded` handler 攔截,回 400 而非 500)。
+
+檔案以 UUID 重新命名後存放於 `app.upload.dir`(預設 `./uploads`),不採用使用者原始檔名,避免路徑穿越風險。
+
+回應 `data`:`UploadResponse`
+```json
+{ "url": "/uploads/3f2504e0-4f89-11d3-9a0c-0305e82c3301.jpg" }
+```
+
+上傳後的圖片透過 `/uploads/**` 靜態資源公開存取(無需認證),`url` 可直接填入商品的 `mainImage` 欄位。
+
+> 本機磁碟儲存僅適合本專案規模的展示用途,多數雲端平台的檔案系統是暫時性的(重新部署會遺失),正式環境需改用 S3 相容的物件儲存。
+
+---
+
 ## 購物車(Cart）— 需會員登入
 
 ### `GET /api/cart`
@@ -383,6 +401,7 @@ CANCELLED       → (終態)
 | GET / PUT / DELETE | `/api/admin/products/{id}` | 管理員 |
 | PATCH | `/api/admin/products/{id}/status` | 管理員 |
 | PATCH | `/api/admin/products/{productId}/skus/{skuId}/stock` | 管理員 |
+| POST | `/api/admin/uploads/image` | 管理員 |
 | GET / DELETE | `/api/cart` | 會員 |
 | POST | `/api/cart/items` | 會員 |
 | PUT / DELETE | `/api/cart/items/{itemId}` | 會員 |
