@@ -6,6 +6,9 @@ import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
+import com.example.shopping.coupon.dto.response.CouponApplyResponse;
+import com.example.shopping.coupon.repository.CouponRepository;
+import com.example.shopping.coupon.service.CouponService;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.repository.AddressRepository;
 import com.example.shopping.member.repository.MemberRepository;
@@ -53,15 +56,21 @@ public class OrderServiceImpl implements OrderService {
     private final CartItemRepository cartItemRepository;
     private final AddressRepository addressRepository;
     private final MemberRepository memberRepository;
+    private final CouponService couponService;
+    private final CouponRepository couponRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
                              AddressRepository addressRepository,
-                             MemberRepository memberRepository) {
+                             MemberRepository memberRepository,
+                             CouponService couponService,
+                             CouponRepository couponRepository) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
         this.memberRepository = memberRepository;
+        this.couponService = couponService;
+        this.couponRepository = couponRepository;
     }
 
     @Override
@@ -123,7 +132,18 @@ public class OrderServiceImpl implements OrderService {
 
             sku.setStock(sku.getStock() - cartItem.getQuantity());
         }
-        order.setTotalAmount(totalAmount);
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        String couponCode = request.getCouponCode();
+        if (couponCode != null && !couponCode.isBlank()) {
+            CouponApplyResponse applied = couponService.reserve(couponCode.trim(), totalAmount);
+            discountAmount = applied.getDiscountAmount();
+            order.setCoupon(couponRepository.getReferenceById(applied.getCouponId()));
+            order.setCouponCode(applied.getCode());
+        }
+        order.setSubtotalAmount(totalAmount);
+        order.setDiscountAmount(discountAmount);
+        order.setTotalAmount(totalAmount.subtract(discountAmount));
 
         Orders saved = orderRepository.save(order);
         cartItemRepository.deleteAll(cartItems);
@@ -197,6 +217,9 @@ public class OrderServiceImpl implements OrderService {
         for (OrderItem item : order.getItems()) {
             ProductSku sku = item.getProductSku();
             sku.setStock(sku.getStock() + item.getQuantity());
+        }
+        if (order.getCoupon() != null) {
+            couponService.release(order.getCoupon().getId());
         }
         order.setStatus(OrderStatus.CANCELLED);
     }

@@ -5,7 +5,12 @@ import com.example.shopping.cart.repository.CartItemRepository;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.common.enums.ProductStatus;
+import com.example.shopping.common.enums.DiscountType;
 import com.example.shopping.common.exception.BusinessException;
+import com.example.shopping.coupon.dto.response.CouponApplyResponse;
+import com.example.shopping.coupon.entity.Coupon;
+import com.example.shopping.coupon.repository.CouponRepository;
+import com.example.shopping.coupon.service.CouponService;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.repository.AddressRepository;
@@ -46,6 +51,10 @@ class OrderServiceImplTest {
     private AddressRepository addressRepository;
     @Mock
     private MemberRepository memberRepository;
+    @Mock
+    private CouponService couponService;
+    @Mock
+    private CouponRepository couponRepository;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -123,6 +132,35 @@ class OrderServiceImplTest {
     }
 
     @Test
+    void checkout_appliesCouponDiscount_whenCouponCodeProvided() {
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Coupon coupon = new Coupon();
+        coupon.setId(5L);
+        coupon.setCode("SAVE100");
+        coupon.setDiscountType(DiscountType.FIXED_AMOUNT);
+        coupon.setDiscountValue(new BigDecimal("100"));
+
+        when(couponService.reserve("SAVE100", new BigDecimal("1180.00"))).thenReturn(
+                new CouponApplyResponse(5L, "SAVE100", "折抵 100 元", DiscountType.FIXED_AMOUNT,
+                        new BigDecimal("100"), new BigDecimal("100"), new BigDecimal("1080.00")));
+        when(couponRepository.getReferenceById(5L)).thenReturn(coupon);
+
+        CheckoutRequest request = checkoutRequest();
+        request.setCouponCode("SAVE100");
+
+        OrderResponse response = orderService.checkout(1L, request);
+
+        assertThat(response.getSubtotalAmount()).isEqualByComparingTo("1180.00");
+        assertThat(response.getDiscountAmount()).isEqualByComparingTo("100");
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("1080.00");
+        assertThat(response.getCouponCode()).isEqualTo("SAVE100");
+    }
+
+    @Test
     void checkout_throws_whenCartIsEmpty() {
         when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
         when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of());
@@ -195,6 +233,20 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(sku.getStock()).isEqualTo(5);
+    }
+
+    @Test
+    void cancelByMember_releasesCouponQuota_whenOrderHadCoupon() {
+        sku.setStock(3);
+        Orders order = pendingOrderWithItem(2);
+        Coupon coupon = new Coupon();
+        coupon.setId(5L);
+        order.setCoupon(coupon);
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        orderService.cancelByMember(1L, 1L);
+
+        verify(couponService).release(5L);
     }
 
     @Test

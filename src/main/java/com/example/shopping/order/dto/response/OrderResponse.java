@@ -18,7 +18,10 @@ public class OrderResponse {
     private String orderNo;
     private OrderStatus status;
     private PaymentMethod paymentMethod;
+    private BigDecimal subtotalAmount;
+    private BigDecimal discountAmount;
     private BigDecimal totalAmount;
+    private String couponCode;
     private String receiverName;
     private String receiverPhone;
     private String receiverAddress;
@@ -31,7 +34,10 @@ public class OrderResponse {
                 order.getOrderNo(),
                 order.getStatus(),
                 order.getPaymentMethod(),
+                order.getSubtotalAmount(),
+                order.getDiscountAmount(),
                 order.getTotalAmount(),
+                order.getCouponCode(),
                 order.getReceiverName(),
                 order.getReceiverPhone(),
                 order.getReceiverAddress(),

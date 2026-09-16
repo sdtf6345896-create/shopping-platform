@@ -154,6 +154,7 @@ public class DataInitializer implements CommandLineRunner {
                 orderItem.setSubtotal(subtotal);
                 order.addItem(orderItem);
             }
+            order.setSubtotalAmount(total);
             order.setTotalAmount(total);
 
             Orders saved = orderRepository.save(order);

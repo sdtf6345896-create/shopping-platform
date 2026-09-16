@@ -2,6 +2,7 @@ package com.example.shopping.order.entity;
 
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.coupon.entity.Coupon;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
 import jakarta.persistence.*;
@@ -38,8 +39,24 @@ public class Orders {
     @JoinColumn(name = "address_id")
     private Address address;
 
+    /** 商品原價小計(套用優惠券前) */
+    @Column(name = "subtotal_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal subtotalAmount;
+
+    /** 優惠券折抵金額 */
+    @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    /** 實付金額(= subtotalAmount - discountAmount) */
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
+    @Column(name = "coupon_code", length = 30)
+    private String couponCode;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 20)

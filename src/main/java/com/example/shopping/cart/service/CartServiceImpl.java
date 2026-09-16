@@ -15,6 +15,9 @@ import com.example.shopping.product.repository.ProductSkuRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.List;
+
 @Service
 @Transactional
 public class CartServiceImpl implements CartService {
@@ -82,6 +85,28 @@ public class CartServiceImpl implements CartService {
     @Override
     public void clearCart(Long memberId) {
         cartItemRepository.deleteByMemberId(memberId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal calculateSubtotal(Long memberId, List<Long> cartItemIds) {
+        List<CartItem> items = resolveItems(memberId, cartItemIds);
+        if (items.isEmpty()) {
+            throw new BusinessException("購物車是空的");
+        }
+        return items.stream()
+                .map(item -> item.getProductSku().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private List<CartItem> resolveItems(Long memberId, List<Long> cartItemIds) {
+        if (cartItemIds == null || cartItemIds.isEmpty()) {
+            return cartItemRepository.findAllByMemberIdWithDetails(memberId);
+        }
+        return cartItemIds.stream()
+                .map(id -> cartItemRepository.findByIdAndMemberId(id, memberId)
+                        .orElseThrow(() -> new ResourceNotFoundException("購物車項目不存在:" + id)))
+                .toList();
     }
 
     private void ensureStockAvailable(ProductSku sku, int requestedQuantity) {

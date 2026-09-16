@@ -71,6 +71,14 @@ onMounted(load)
           <span>{{ item.productName }} - {{ item.specName }} x {{ item.quantity }}</span>
           <span>NT$ {{ item.subtotal }}</span>
         </div>
+        <div class="item-row">
+          <span>小計</span>
+          <span>NT$ {{ order.subtotalAmount }}</span>
+        </div>
+        <div v-if="order.discountAmount > 0" class="item-row discount-row">
+          <span>優惠折抵{{ order.couponCode ? `(${order.couponCode})` : '' }}</span>
+          <span>- NT$ {{ order.discountAmount }}</span>
+        </div>
         <div class="total-row">
           <span>總金額</span>
           <span class="total-amount">NT$ {{ order.totalAmount }}</span>
@@ -144,6 +152,10 @@ onMounted(load)
 .total-amount {
   color: #e4393c;
   font-size: 18px;
+}
+
+.discount-row {
+  color: #e4393c;
 }
 
 .actions {

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { listAddresses, createAddress } from '../api/address'
 import { checkout } from '../api/order'
+import { applyCoupon } from '../api/coupon'
 import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
@@ -38,7 +39,37 @@ const checkoutItems = computed(() => {
   const ids = cartStore.checkoutSelection || []
   return cartStore.items.filter((item) => ids.includes(item.id))
 })
-const totalAmount = computed(() => checkoutItems.value.reduce((sum, item) => sum + item.subtotal, 0))
+const subtotalAmount = computed(() => checkoutItems.value.reduce((sum, item) => sum + item.subtotal, 0))
+
+const couponCode = ref('')
+const appliedCoupon = ref(null)
+const applyingCoupon = ref(false)
+const discountAmount = computed(() => appliedCoupon.value?.discountAmount || 0)
+const totalAmount = computed(() => subtotalAmount.value - discountAmount.value)
+
+async function handleApplyCoupon() {
+  if (!couponCode.value.trim()) {
+    ElMessage.warning('請輸入優惠券代碼')
+    return
+  }
+  applyingCoupon.value = true
+  try {
+    appliedCoupon.value = await applyCoupon({
+      code: couponCode.value.trim(),
+      cartItemIds: cartStore.checkoutSelection,
+    })
+    ElMessage.success('優惠券套用成功')
+  } catch {
+    appliedCoupon.value = null
+  } finally {
+    applyingCoupon.value = false
+  }
+}
+
+function handleRemoveCoupon() {
+  appliedCoupon.value = null
+  couponCode.value = ''
+}
 
 async function loadAddresses() {
   addresses.value = await listAddresses()
@@ -81,6 +112,7 @@ async function handleSubmit() {
       addressId: selectedAddressId.value,
       paymentMethod: paymentMethod.value,
       cartItemIds: cartStore.checkoutSelection,
+      couponCode: appliedCoupon.value?.code || null,
     })
     cartStore.setCheckoutSelection(null)
     await cartStore.fetchCart()
@@ -132,10 +164,33 @@ onMounted(async () => {
     </section>
 
     <section class="block">
+      <div class="block-title">優惠券</div>
+      <div v-if="!appliedCoupon" class="coupon-input">
+        <el-input v-model="couponCode" placeholder="輸入優惠券代碼" @keyup.enter="handleApplyCoupon" />
+        <el-button type="primary" :loading="applyingCoupon" @click="handleApplyCoupon">套用</el-button>
+      </div>
+      <div v-else class="coupon-applied">
+        <div>
+          <el-tag type="success">{{ appliedCoupon.code }}</el-tag>
+          <span class="coupon-name">{{ appliedCoupon.name }}</span>
+        </div>
+        <el-button link type="danger" @click="handleRemoveCoupon">移除</el-button>
+      </div>
+    </section>
+
+    <section class="block">
       <div class="block-title">訂單確認</div>
       <div v-for="item in checkoutItems" :key="item.id" class="confirm-row">
         <span>{{ item.productName }} - {{ item.specName }} x {{ item.quantity }}</span>
         <span>NT$ {{ item.subtotal }}</span>
+      </div>
+      <div class="confirm-row">
+        <span>小計</span>
+        <span>NT$ {{ subtotalAmount }}</span>
+      </div>
+      <div v-if="appliedCoupon" class="confirm-row discount-row">
+        <span>優惠折抵</span>
+        <span>- NT$ {{ discountAmount }}</span>
       </div>
       <div class="confirm-total">
         <span>總金額</span>
@@ -237,6 +292,27 @@ onMounted(async () => {
   justify-content: space-between;
   padding-top: 12px;
   font-weight: 600;
+}
+
+.discount-row {
+  color: #e4393c;
+}
+
+.coupon-input {
+  display: flex;
+  gap: 12px;
+}
+
+.coupon-applied {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.coupon-name {
+  margin-left: 8px;
+  font-size: 13px;
+  color: #666;
 }
 
 .total-amount {

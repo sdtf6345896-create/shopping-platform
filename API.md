@@ -62,6 +62,8 @@
 | `ProductStatus` | `ON_SALE`, `OFF_SHELF` |
 | `OrderStatus` | `PENDING_PAYMENT`, `PAID`, `SHIPPING`, `COMPLETED`, `CANCELLED` |
 | `PaymentMethod` | `CREDIT_CARD`, `ATM`, `COD` |
+| `CouponStatus` | `ACTIVE`, `DISABLED` |
+| `DiscountType` | `FIXED_AMOUNT`(固定金額折抵), `PERCENTAGE`(百分比折扣) |
 
 訂單狀態合法轉換(後台變更狀態、會員取消訂單都受此限制):
 
@@ -311,13 +313,15 @@ CANCELLED       → (終態)
 ```json
 {
   "id": 1, "orderNo": "ORD202609142029305718", "status": "PAID", "paymentMethod": "CREDIT_CARD",
-  "totalAmount": 1770.00, "receiverName": "王小明", "receiverPhone": "0912345678",
+  "subtotalAmount": 1870.00, "discountAmount": 100.00, "totalAmount": 1770.00, "couponCode": "SAVE100",
+  "receiverName": "王小明", "receiverPhone": "0912345678",
   "receiverAddress": "台北市大安區復興南路一段1號", "createdAt": "2026-09-14T20:29:30",
   "items": [ { "id": 1, "skuId": 2, "productName": "經典圓領T恤", "specName": "黑色/L",
                 "unitPrice": 590.00, "quantity": 1, "subtotal": 590.00 } ]
 }
 ```
 > `receiverName`/`receiverPhone`/`receiverAddress` 與商品名稱/規格/單價皆為**下單當下的快照**,之後會員改地址或商家改商品都不影響歷史訂單。
+> `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
 
 ### `GET /api/orders/{id}`
 自己的訂單詳情,非本人訂單回 404。
@@ -325,15 +329,71 @@ CANCELLED       → (終態)
 ### `POST /api/orders`
 結帳。請求:
 ```json
-{ "addressId": 2, "paymentMethod": "CREDIT_CARD", "cartItemIds": [1, 2] }
+{ "addressId": 2, "paymentMethod": "CREDIT_CARD", "cartItemIds": [1, 2], "couponCode": "SAVE100" }
 ```
-`cartItemIds` 選填,不帶則結帳購物車全部項目。下單當下就會扣庫存(非等付款);若購物車內有商品已下架或庫存不足,整筆交易失敗回 400,購物車項目不受影響。
+`cartItemIds` 選填,不帶則結帳購物車全部項目。`couponCode` 選填,不帶則不使用優惠券;若代碼無效、已停用/過期/兌換完畢,或未達最低消費門檻,回 400 且不會建立訂單。下單當下就會扣庫存與優惠券使用名額(非等付款);若購物車內有商品已下架或庫存不足,整筆交易失敗回 400,購物車項目不受影響。
 
 ### `POST /api/orders/{id}/pay`
 模擬付款。只能對 `PENDING_PAYMENT` 的訂單執行,成功後狀態變 `PAID`,並累加商品 `salesCount`。
 
 ### `POST /api/orders/{id}/cancel`
-取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存。
+取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存;若該訂單有使用優惠券,也會歸還一次使用名額。
+
+---
+
+## 優惠券(Coupon）
+
+### `POST /api/coupons/apply` — 需會員登入
+依購物車目前選取的項目試算優惠券折扣,**不會**消耗使用名額(僅供結帳頁預覽,實際扣抵在 `POST /api/orders` 結帳時才會發生)。請求:
+```json
+{ "code": "SAVE100", "cartItemIds": [1, 2] }
+```
+`cartItemIds` 選填,不帶則以購物車全部項目計算小計。回應 `CouponApplyResponse`:
+```json
+{
+  "couponId": 1, "code": "SAVE100", "name": "新會員折抵 100 元",
+  "discountType": "FIXED_AMOUNT", "discountValue": 100.00,
+  "discountAmount": 100.00, "payableAmount": 1080.00
+}
+```
+代碼不存在、已停用、未到/已過有效期間、兌換名額已滿,或購物車小計未達 `minSpendAmount` 門檻,皆回 400 並附原因訊息。
+
+### `GET /api/admin/coupons` — 需管理員登入
+Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageResponse<CouponResponse>`
+
+`CouponResponse`:
+```json
+{
+  "id": 1, "code": "SAVE100", "name": "新會員折抵 100 元",
+  "discountType": "FIXED_AMOUNT", "discountValue": 100.00, "maxDiscountAmount": null,
+  "minSpendAmount": 500.00, "totalQuantity": null, "usedQuantity": 3,
+  "startAt": null, "endAt": null, "status": "ACTIVE", "createdAt": "2026-09-01T00:00:00"
+}
+```
+> `maxDiscountAmount` 只在 `discountType` 為 `PERCENTAGE` 時有意義,作為折扣金額上限;`totalQuantity` 為 `null` 代表發放數量不限。
+
+### `GET /api/admin/coupons/{id}` — 需管理員登入
+單張優惠券詳情。
+
+### `POST /api/admin/coupons` — 需管理員登入
+新增優惠券。請求:
+```json
+{
+  "code": "SAVE10PCT", "name": "全館 9 折", "discountType": "PERCENTAGE", "discountValue": 10,
+  "maxDiscountAmount": 300, "minSpendAmount": 1000, "totalQuantity": 200,
+  "startAt": "2026-09-01T00:00:00", "endAt": "2026-09-30T23:59:59"
+}
+```
+代碼重複回 400;`startAt`/`endAt`/`totalQuantity` 皆選填,不帶代表不限。代碼會統一轉大寫儲存。
+
+### `PUT /api/admin/coupons/{id}` — 需管理員登入
+更新優惠券,body 同上(代碼仍可修改,但不可與其他優惠券重複)。
+
+### `PATCH /api/admin/coupons/{id}/status` — 需管理員登入
+請求:`{ "status": "DISABLED" }`
+
+### `DELETE /api/admin/coupons/{id}` — 需管理員登入
+刪除優惠券。已被使用過(`usedQuantity > 0`)的優惠券無法刪除,回 400,請改用停用。
 
 ---
 
@@ -346,13 +406,13 @@ CANCELLED       → (終態)
 任意訂單詳情。
 
 ### `PATCH /api/admin/orders/{id}/status`
-變更訂單狀態(出貨、標記完成、取消等)。請求:`{ "status": "SHIPPING" }`。不合法的狀態轉換回 400。取消訂單會歸還庫存。
+變更訂單狀態(出貨、標記完成、取消等)。請求:`{ "status": "SHIPPING" }`。不合法的狀態轉換回 400。取消訂單會歸還庫存與優惠券使用名額。
 
 ---
 
 ## 銷售報表(Admin）— 需管理員登入
 
-三支皆接受 Query:`startDate`、`endDate`(格式 `yyyy-MM-dd`,不帶則預設近 30 天,含今天)。統計只計入 `PAID`/`SHIPPING`/`COMPLETED` 三種狀態的訂單(排除待付款與已取消)。
+三支皆接受 Query:`startDate`、`endDate`(格式 `yyyy-MM-dd`,不帶則預設近 30 天,含今天)。統計只計入 `PAID`/`SHIPPING`/`COMPLETED` 三種狀態的訂單(排除待付款與已取消),金額皆以套用優惠券後的實付金額(`total_amount`)計算。
 
 ### `GET /api/admin/reports/summary`
 ```json

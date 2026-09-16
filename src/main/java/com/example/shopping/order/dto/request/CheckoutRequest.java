@@ -21,4 +21,9 @@ public class CheckoutRequest {
      * 要結帳的購物車項目 id;不填則結帳購物車內所有項目。
      */
     private List<Long> cartItemIds;
+
+    /**
+     * 欲套用的優惠券代碼;不填則不使用優惠券。
+     */
+    private String couponCode;
 }
