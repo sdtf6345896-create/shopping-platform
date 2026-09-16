@@ -26,6 +26,7 @@ const routes = [
       { path: 'profile', name: 'MemberProfile', component: () => import('../views/member/Profile.vue') },
       { path: 'addresses', name: 'MemberAddresses', component: () => import('../views/member/Addresses.vue') },
       { path: 'orders', name: 'MemberOrders', component: () => import('../views/member/OrderList.vue') },
+      { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue') },
     ],
   },
   { path: '/admin/login', name: 'AdminLogin', component: () => import('../views/admin/AdminLogin.vue') },

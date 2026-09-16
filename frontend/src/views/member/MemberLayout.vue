@@ -8,6 +8,7 @@ const menu = [
   { name: 'MemberProfile', label: '個人資料' },
   { name: 'MemberAddresses', label: '收件地址' },
   { name: 'MemberOrders', label: '我的訂單' },
+  { name: 'MemberWishlist', label: '我的收藏' },
 ]
 </script>
 

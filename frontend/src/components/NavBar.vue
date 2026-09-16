@@ -85,6 +85,7 @@ function handleLogout() {
               <el-dropdown-item @click="router.push('/member/profile')">個人資料</el-dropdown-item>
               <el-dropdown-item @click="router.push('/member/addresses')">收件地址</el-dropdown-item>
               <el-dropdown-item @click="router.push('/member/orders')">我的訂單</el-dropdown-item>
+              <el-dropdown-item @click="router.push('/member/wishlist')">我的收藏</el-dropdown-item>
               <el-dropdown-item divided @click="handleLogout">登出</el-dropdown-item>
             </el-dropdown-menu>
           </template>

@@ -2,8 +2,10 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductDetail } from '../api/product'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
+import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
@@ -56,6 +58,39 @@ async function handleAddToCart() {
     ElMessage.success('已加入購物車')
   } finally {
     submitting.value = false
+  }
+}
+
+const favorited = ref(false)
+const togglingFavorite = ref(false)
+
+async function loadFavoriteState() {
+  if (!authStore.isLoggedIn) {
+    favorited.value = false
+    return
+  }
+  favorited.value = await fetchIsFavorited(props.id)
+}
+
+async function handleToggleFavorite() {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('請先登入')
+    router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  togglingFavorite.value = true
+  try {
+    if (favorited.value) {
+      await removeFromWishlist(props.id)
+      favorited.value = false
+      ElMessage.success('已移除收藏')
+    } else {
+      await addToWishlist(props.id)
+      favorited.value = true
+      ElMessage.success('已加入收藏')
+    }
+  } finally {
+    togglingFavorite.value = false
   }
 }
 
@@ -129,7 +164,7 @@ async function handleDeleteReview() {
 
 onMounted(async () => {
   await load()
-  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview()])
+  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState()])
 })
 </script>
 
@@ -177,16 +212,28 @@ onMounted(async () => {
             <span v-if="selectedSku" class="stock-hint">庫存:{{ selectedSku.stock }}</span>
           </div>
 
-          <el-button
-            type="primary"
-            size="large"
-            class="add-cart-btn"
-            :loading="submitting"
-            :disabled="isSoldOut"
-            @click="handleAddToCart"
-          >
-            {{ isSoldOut ? '已售完' : '加入購物車' }}
-          </el-button>
+          <div class="action-row">
+            <el-button
+              type="primary"
+              size="large"
+              class="add-cart-btn"
+              :loading="submitting"
+              :disabled="isSoldOut"
+              @click="handleAddToCart"
+            >
+              {{ isSoldOut ? '已售完' : '加入購物車' }}
+            </el-button>
+            <el-button
+              size="large"
+              class="favorite-btn"
+              :class="{ favorited }"
+              :loading="togglingFavorite"
+              @click="handleToggleFavorite"
+            >
+              <el-icon><component :is="favorited ? StarFilled : Star" /></el-icon>
+              {{ favorited ? '已收藏' : '收藏' }}
+            </el-button>
+          </div>
 
           <div class="description">
             <p class="label">商品描述</p>
@@ -361,9 +408,19 @@ onMounted(async () => {
   color: #999;
 }
 
-.add-cart-btn {
+.action-row {
+  display: flex;
+  gap: 12px;
   margin-top: 24px;
+}
+
+.add-cart-btn {
   width: 220px;
+}
+
+.favorite-btn.favorited {
+  color: #e6a23c;
+  border-color: #e6a23c;
 }
 
 .description p {
