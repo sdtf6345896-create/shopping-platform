@@ -4,6 +4,7 @@ import com.example.shopping.admin.dto.request.AdminLoginRequest;
 import com.example.shopping.admin.dto.response.AdminLoginResponse;
 import com.example.shopping.admin.entity.Admin;
 import com.example.shopping.admin.repository.AdminRepository;
+import com.example.shopping.common.enums.AccountStatus;
 import com.example.shopping.common.enums.Role;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.security.JwtTokenProvider;
@@ -34,6 +35,9 @@ public class AdminAuthServiceImpl implements AdminAuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
             throw new BusinessException("帳號或密碼錯誤");
+        }
+        if (admin.getStatus() != AccountStatus.ACTIVE) {
+            throw new BusinessException("帳號已被停用,請聯繫系統管理員");
         }
 
         String token = jwtTokenProvider.generateToken(admin.getId(), admin.getUsername(), Role.ADMIN);
