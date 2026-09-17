@@ -1,8 +1,10 @@
 # 購物平台 Shopping Platform
 
-仿 momo 風格的購物網站,包含會員前台 + 管理後台,作為求職作品集專案。
+[![GitHub repo](https://img.shields.io/badge/GitHub-shopping--platform-181717?logo=github)](https://github.com/sdtf6345896-create/shopping-platform)
+[![Last commit](https://img.shields.io/github/last-commit/sdtf6345896-create/shopping-platform)](https://github.com/sdtf6345896-create/shopping-platform/commits/master)
+[![Stars](https://img.shields.io/github/stars/sdtf6345896-create/shopping-platform?style=flat)](https://github.com/sdtf6345896-create/shopping-platform/stargazers)
 
-**Repo:** https://github.com/sdtf6345896-create/shopping-platform
+仿 momo 風格的購物網站,包含會員前台 + 管理後台,作為求職作品集專案。
 
 ## 技術棧
 
