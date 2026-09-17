@@ -44,6 +44,7 @@ const routes = [
         component: () => import('../views/admin/ProductForm.vue'),
         props: true,
       },
+      { path: 'banners', name: 'AdminBannerList', component: () => import('../views/admin/BannerList.vue') },
       { path: 'categories', name: 'AdminCategoryList', component: () => import('../views/admin/CategoryList.vue') },
       { path: 'orders', name: 'AdminOrderList', component: () => import('../views/admin/OrderList.vue') },
       {

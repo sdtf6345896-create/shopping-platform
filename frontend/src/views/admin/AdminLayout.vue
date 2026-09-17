@@ -8,6 +8,7 @@ const adminAuthStore = useAdminAuthStore()
 
 const menu = [
   { name: 'AdminProductList', label: '商品管理' },
+  { name: 'AdminBannerList', label: 'Banner 管理' },
   { name: 'AdminCategoryList', label: '分類管理' },
   { name: 'AdminOrderList', label: '訂單管理', matchNames: ['AdminOrderList', 'AdminOrderDetail'] },
   { name: 'AdminCouponList', label: '優惠券管理' },

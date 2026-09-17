@@ -3,27 +3,25 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCategoryTree } from '../api/category'
 import { listProducts } from '../api/product'
+import { getBanners } from '../api/banner'
 import ProductCard from '../components/ProductCard.vue'
 
 const router = useRouter()
 const categories = ref([])
 const hotProducts = ref([])
+const banners = ref([])
 const loading = ref(true)
-
-const banners = [
-  { title: '新品上市', subtitle: '本季新款搶先看', gradient: 'linear-gradient(135deg,#ff6b6b,#e4393c)' },
-  { title: '限時優惠', subtitle: '精選商品折扣中', gradient: 'linear-gradient(135deg,#4facfe,#00f2fe)' },
-  { title: '會員專屬', subtitle: '註冊即享購物優惠', gradient: 'linear-gradient(135deg,#43e97b,#38f9d7)' },
-]
 
 onMounted(async () => {
   try {
-    const [categoryData, productData] = await Promise.all([
+    const [categoryData, productData, bannerData] = await Promise.all([
       getCategoryTree(),
       listProducts({ sort: 'salesCount,desc', size: 8 }),
+      getBanners(),
     ])
     categories.value = categoryData
     hotProducts.value = productData.content
+    banners.value = bannerData
   } finally {
     loading.value = false
   }
@@ -32,15 +30,31 @@ onMounted(async () => {
 function goToCategory(categoryId) {
   router.push({ path: '/products', query: { categoryId } })
 }
+
+function goToBanner(banner) {
+  if (!banner.linkUrl) return
+  if (/^https?:\/\//.test(banner.linkUrl)) {
+    window.open(banner.linkUrl, '_blank')
+  } else {
+    router.push(banner.linkUrl)
+  }
+}
 </script>
 
 <template>
   <div class="page-container">
-    <el-carousel height="260px" class="banner">
-      <el-carousel-item v-for="banner in banners" :key="banner.title">
-        <div class="banner-slide" :style="{ background: banner.gradient }">
-          <h2>{{ banner.title }}</h2>
-          <p>{{ banner.subtitle }}</p>
+    <el-carousel v-if="banners.length" height="260px" class="banner">
+      <el-carousel-item v-for="banner in banners" :key="banner.id">
+        <div
+          class="banner-slide"
+          :class="{ clickable: !!banner.linkUrl }"
+          :style="{ backgroundImage: `url(${banner.imageUrl})` }"
+          @click="goToBanner(banner)"
+        >
+          <div class="banner-overlay">
+            <h2>{{ banner.title }}</h2>
+            <p v-if="banner.subtitle">{{ banner.subtitle }}</p>
+          </div>
         </div>
       </el-carousel-item>
     </el-carousel>
@@ -74,18 +88,28 @@ function goToCategory(categoryId) {
 .banner-slide {
   height: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-end;
+  background-size: cover;
+  background-position: center;
   color: #fff;
 }
 
-.banner-slide h2 {
-  font-size: 28px;
-  margin: 0 0 8px;
+.banner-slide.clickable {
+  cursor: pointer;
 }
 
-.banner-slide p {
+.banner-overlay {
+  width: 100%;
+  padding: 20px 28px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0));
+}
+
+.banner-overlay h2 {
+  font-size: 26px;
+  margin: 0 0 6px;
+}
+
+.banner-overlay p {
   margin: 0;
   opacity: 0.9;
 }

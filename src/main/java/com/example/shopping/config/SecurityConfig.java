@@ -47,7 +47,7 @@ public class SecurityConfig {
                         // 公開:登入/註冊、商品與分類瀏覽、API 文件
                         .requestMatchers("/api/auth/**", "/api/admin/auth/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .requestMatchers("GET", "/api/products/**", "/api/categories/**").permitAll()
+                        .requestMatchers("GET", "/api/products/**", "/api/categories/**", "/api/banners/**").permitAll()
                         .requestMatchers("GET", "/uploads/**").permitAll()
                         // 後台管理需要 ADMIN 角色
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
