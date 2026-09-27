@@ -682,6 +682,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ```
 代碼重複回 400;`startAt`/`endAt`/`totalQuantity` 皆選填,不帶代表不限。代碼會統一轉大寫儲存。
 
+`perMemberLimit` 選填:每位會員最多可使用幾次(不含已取消的訂單),不填為不限;超過時試算與結帳都會回 400「此優惠券每人限用 N 次」。
 ### `PUT /api/admin/coupons/{id}` — 需管理員登入
 更新優惠券,body 同上(代碼仍可修改,但不可與其他優惠券重複)。
 

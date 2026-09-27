@@ -47,6 +47,10 @@ public class Coupon {
     @Column(name = "total_quantity")
     private Integer totalQuantity;
 
+    /** 每位會員最多可使用幾次,null 表示不限 */
+    @Column(name = "per_member_limit")
+    private Integer perMemberLimit;
+
     /**
      * 已使用數量。不隨 entity 存檔更新(updatable = false),一律透過 CouponRepository 的條件式 UPDATE 增減,
      * 避免同時結帳超發,或後台編輯優惠券時用舊值蓋掉。

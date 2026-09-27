@@ -26,9 +26,11 @@ import static com.example.shopping.coupon.repository.CouponSpecifications.keywor
 public class CouponServiceImpl implements CouponService {
 
     private final CouponRepository couponRepository;
+    private final CouponUsageLookup couponUsageLookup;
 
-    public CouponServiceImpl(CouponRepository couponRepository) {
+    public CouponServiceImpl(CouponRepository couponRepository, CouponUsageLookup couponUsageLookup) {
         this.couponRepository = couponRepository;
+        this.couponUsageLookup = couponUsageLookup;
     }
 
     @Override
@@ -84,14 +86,14 @@ public class CouponServiceImpl implements CouponService {
 
     @Override
     @Transactional(readOnly = true)
-    public CouponApplyResponse preview(String code, BigDecimal subtotal) {
-        Coupon coupon = validateCoupon(code, subtotal);
+    public CouponApplyResponse preview(String code, BigDecimal subtotal, Long memberId) {
+        Coupon coupon = validateCoupon(code, subtotal, memberId);
         return toApplyResponse(coupon, subtotal);
     }
 
     @Override
-    public CouponApplyResponse reserve(String code, BigDecimal subtotal) {
-        Coupon coupon = validateCoupon(code, subtotal);
+    public CouponApplyResponse reserve(String code, BigDecimal subtotal, Long memberId) {
+        Coupon coupon = validateCoupon(code, subtotal, memberId);
         // validateCoupon 讀到的數量可能已過時;真正佔名額用條件式 UPDATE,同時結帳也不會超發
         if (couponRepository.claimOne(coupon.getId()) == 0) {
             throw new BusinessException("此優惠券已被兌換完畢");
@@ -104,7 +106,7 @@ public class CouponServiceImpl implements CouponService {
         couponRepository.releaseOne(couponId);
     }
 
-    private Coupon validateCoupon(String code, BigDecimal subtotal) {
+    private Coupon validateCoupon(String code, BigDecimal subtotal, Long memberId) {
         if (code == null || code.isBlank()) {
             throw new BusinessException("請輸入優惠券代碼");
         }
@@ -123,6 +125,10 @@ public class CouponServiceImpl implements CouponService {
         }
         if (coupon.getTotalQuantity() != null && coupon.getUsedQuantity() >= coupon.getTotalQuantity()) {
             throw new BusinessException("此優惠券已被兌換完畢");
+        }
+        if (coupon.getPerMemberLimit() != null && memberId != null
+                && couponUsageLookup.countUsedBy(memberId, coupon.getId()) >= coupon.getPerMemberLimit()) {
+            throw new BusinessException("此優惠券每人限用 " + coupon.getPerMemberLimit() + " 次,您已使用過");
         }
         if (subtotal.compareTo(coupon.getMinSpendAmount()) < 0) {
             throw new BusinessException("訂單金額未達 NT$ " + coupon.getMinSpendAmount() + " 門檻,無法使用此優惠券");
@@ -154,6 +160,7 @@ public class CouponServiceImpl implements CouponService {
         coupon.setMaxDiscountAmount(request.getMaxDiscountAmount());
         coupon.setMinSpendAmount(request.getMinSpendAmount());
         coupon.setTotalQuantity(request.getTotalQuantity());
+        coupon.setPerMemberLimit(request.getPerMemberLimit());
         coupon.setStartAt(request.getStartAt());
         coupon.setEndAt(request.getEndAt());
     }

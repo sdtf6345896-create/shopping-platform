@@ -27,12 +27,12 @@ public interface CouponService {
     /**
      * 試算優惠券折抵金額,不會消耗使用張數;供購物車/結帳頁預覽用。
      */
-    CouponApplyResponse preview(String code, BigDecimal subtotal);
+    CouponApplyResponse preview(String code, BigDecimal subtotal, Long memberId);
 
     /**
      * 結帳時實際套用優惠券,驗證通過後會佔用一張使用名額。
      */
-    CouponApplyResponse reserve(String code, BigDecimal subtotal);
+    CouponApplyResponse reserve(String code, BigDecimal subtotal, Long memberId);
 
     /**
      * 訂單取消時歸還優惠券使用名額。

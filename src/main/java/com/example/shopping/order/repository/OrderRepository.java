@@ -18,6 +18,8 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
 
     long countByStatus(OrderStatus status);
 
+    long countByMemberIdAndCouponIdAndStatusNot(Long memberId, Long couponId, OrderStatus status);
+
     /** 會員在某時間之後、指定狀態訂單的商品金額合計(實付扣掉運費) */
     @Query("select sum(o.totalAmount - o.shippingFee) from Orders o "
             + "where o.member.id = :memberId and o.status = :status and o.createdAt >= :since")

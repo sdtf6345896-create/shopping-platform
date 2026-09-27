@@ -33,6 +33,6 @@ public class CouponController {
     public ApiResponse<CouponApplyResponse> apply(@Valid @RequestBody CouponApplyRequest request) {
         Long memberId = SecurityUtils.getCurrentUserId();
         BigDecimal subtotal = cartService.calculateSubtotal(memberId, request.getCartItemIds());
-        return ApiResponse.success(couponService.preview(request.getCode(), subtotal));
+        return ApiResponse.success(couponService.preview(request.getCode(), subtotal, memberId));
     }
 }

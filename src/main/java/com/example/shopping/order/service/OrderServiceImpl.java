@@ -189,7 +189,7 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal discountAmount = BigDecimal.ZERO;
         String couponCode = request.getCouponCode();
         if (couponCode != null && !couponCode.isBlank()) {
-            CouponApplyResponse applied = couponService.reserve(couponCode.trim(), totalAmount);
+            CouponApplyResponse applied = couponService.reserve(couponCode.trim(), totalAmount, memberId);
             discountAmount = applied.getDiscountAmount();
             order.setCoupon(couponRepository.getReferenceById(applied.getCouponId()));
             order.setCouponCode(applied.getCode());

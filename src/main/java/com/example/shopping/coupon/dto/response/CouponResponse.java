@@ -21,6 +21,7 @@ public class CouponResponse {
     private BigDecimal maxDiscountAmount;
     private BigDecimal minSpendAmount;
     private Integer totalQuantity;
+    private Integer perMemberLimit;
     private int usedQuantity;
     private LocalDateTime startAt;
     private LocalDateTime endAt;
@@ -37,6 +38,7 @@ public class CouponResponse {
                 coupon.getMaxDiscountAmount(),
                 coupon.getMinSpendAmount(),
                 coupon.getTotalQuantity(),
+                coupon.getPerMemberLimit(),
                 coupon.getUsedQuantity(),
                 coupon.getStartAt(),
                 coupon.getEndAt(),

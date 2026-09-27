@@ -19,6 +19,8 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -27,6 +29,8 @@ class CouponServiceImplTest {
 
     @Mock
     private CouponRepository couponRepository;
+    @Mock
+    private CouponUsageLookup couponUsageLookup;
 
     @InjectMocks
     private CouponServiceImpl couponService;
@@ -60,7 +64,7 @@ class CouponServiceImplTest {
     void preview_calculatesFixedDiscount_andDoesNotConsumeQuota() {
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
 
-        CouponApplyResponse response = couponService.preview("SAVE100", new BigDecimal("1000"));
+        CouponApplyResponse response = couponService.preview("SAVE100", new BigDecimal("1000"), 1L);
 
         assertThat(response.getDiscountAmount()).isEqualByComparingTo("100");
         assertThat(response.getPayableAmount()).isEqualByComparingTo("900");
@@ -71,7 +75,7 @@ class CouponServiceImplTest {
     void preview_capsPercentageDiscount_atMaxDiscountAmount() {
         when(couponRepository.findByCodeIgnoreCase("SAVE10PCT")).thenReturn(Optional.of(percentageCoupon));
 
-        CouponApplyResponse response = couponService.preview("SAVE10PCT", new BigDecimal("5000"));
+        CouponApplyResponse response = couponService.preview("SAVE10PCT", new BigDecimal("5000"), 1L);
 
         // 10% of 5000 = 500, capped at 300
         assertThat(response.getDiscountAmount()).isEqualByComparingTo("300");
@@ -82,7 +86,7 @@ class CouponServiceImplTest {
     void preview_throws_whenBelowMinSpend() {
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
 
-        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("100")))
+        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("100"), 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("門檻");
     }
@@ -91,7 +95,7 @@ class CouponServiceImplTest {
     void preview_throws_whenCouponNotFound() {
         when(couponRepository.findByCodeIgnoreCase("NOPE")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> couponService.preview("NOPE", BigDecimal.TEN))
+        assertThatThrownBy(() -> couponService.preview("NOPE", BigDecimal.TEN, 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不存在");
     }
@@ -101,7 +105,7 @@ class CouponServiceImplTest {
         fixedCoupon.setStatus(CouponStatus.DISABLED);
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
 
-        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000")))
+        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000"), 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("停用");
     }
@@ -111,7 +115,7 @@ class CouponServiceImplTest {
         fixedCoupon.setEndAt(LocalDateTime.now().minusDays(1));
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
 
-        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000")))
+        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000"), 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("過期");
     }
@@ -122,7 +126,7 @@ class CouponServiceImplTest {
         fixedCoupon.setUsedQuantity(1);
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
 
-        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000")))
+        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000"), 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("兌換完畢");
     }
@@ -133,7 +137,7 @@ class CouponServiceImplTest {
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
         when(couponRepository.claimOne(1L)).thenReturn(1);
 
-        couponService.reserve("SAVE100", new BigDecimal("1000"));
+        couponService.reserve("SAVE100", new BigDecimal("1000"), 1L);
 
         verify(couponRepository).claimOne(1L);
     }
@@ -146,7 +150,7 @@ class CouponServiceImplTest {
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
         when(couponRepository.claimOne(1L)).thenReturn(0);
 
-        assertThatThrownBy(() -> couponService.reserve("SAVE100", new BigDecimal("1000")))
+        assertThatThrownBy(() -> couponService.reserve("SAVE100", new BigDecimal("1000"), 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("兌換完畢");
     }
@@ -166,5 +170,37 @@ class CouponServiceImplTest {
         assertThatThrownBy(() -> couponService.delete(1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("無法刪除");
+    }
+
+    @Test
+    void preview_rejects_whenMemberAlreadyUsedUpPersonalLimit() {
+        fixedCoupon.setPerMemberLimit(1);
+        when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
+        when(couponUsageLookup.countUsedBy(1L, 1L)).thenReturn(1L);
+
+        assertThatThrownBy(() -> couponService.preview("SAVE100", new BigDecimal("1000"), 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("每人限用 1 次");
+    }
+
+    @Test
+    void reserve_allowsUse_whileUnderPersonalLimit() {
+        fixedCoupon.setPerMemberLimit(2);
+        when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
+        when(couponUsageLookup.countUsedBy(1L, 1L)).thenReturn(1L);
+        when(couponRepository.claimOne(1L)).thenReturn(1);
+
+        couponService.reserve("SAVE100", new BigDecimal("1000"), 1L);
+
+        verify(couponRepository).claimOne(1L);
+    }
+
+    @Test
+    void preview_skipsUsageLookup_whenNoPersonalLimit() {
+        when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
+
+        couponService.preview("SAVE100", new BigDecimal("1000"), 1L);
+
+        verify(couponUsageLookup, never()).countUsedBy(any(), any());
     }
 }

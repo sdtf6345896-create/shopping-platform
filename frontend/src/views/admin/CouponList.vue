@@ -32,6 +32,7 @@ const emptyForm = () => ({
   maxDiscountAmount: null,
   minSpendAmount: 0,
   totalQuantity: null,
+  perMemberLimit: null,
   startAt: null,
   endAt: null,
 })
@@ -89,6 +90,7 @@ function openEdit(coupon) {
     maxDiscountAmount: coupon.maxDiscountAmount,
     minSpendAmount: coupon.minSpendAmount,
     totalQuantity: coupon.totalQuantity,
+    perMemberLimit: coupon.perMemberLimit,
     startAt: coupon.startAt,
     endAt: coupon.endAt,
   })
@@ -170,7 +172,10 @@ onMounted(loadCoupons)
         <template #default="{ row }">NT$ {{ row.minSpendAmount }}</template>
       </el-table-column>
       <el-table-column label="使用狀況" width="120">
-        <template #default="{ row }">{{ row.usedQuantity }} / {{ row.totalQuantity ?? '無限制' }}</template>
+        <template #default="{ row }">
+          {{ row.usedQuantity }} / {{ row.totalQuantity ?? '無限制' }}
+          <div v-if="row.perMemberLimit" class="per-member">每人限 {{ row.perMemberLimit }} 次</div>
+        </template>
       </el-table-column>
       <el-table-column label="有效期間" min-width="200">
         <template #default="{ row }">
@@ -243,6 +248,10 @@ onMounted(loadCoupons)
         <el-form-item label="發放張數上限">
           <el-input-number v-model="form.totalQuantity" :min="1" placeholder="不限制" />
         </el-form-item>
+        <el-form-item label="每人限用">
+          <el-input-number v-model="form.perMemberLimit" :min="1" placeholder="不限制" />
+          <span class="form-hint">次(留空表示不限,已取消的訂單不計)</span>
+        </el-form-item>
         <el-form-item label="開始時間">
           <el-date-picker v-model="form.startAt" type="datetime" placeholder="不限制" value-format="YYYY-MM-DDTHH:mm:ss" />
         </el-form-item>
@@ -259,6 +268,17 @@ onMounted(loadCoupons)
 </template>
 
 <style scoped>
+.per-member {
+  color: #999;
+  font-size: 12px;
+}
+
+.form-hint {
+  margin-left: 8px;
+  color: #999;
+  font-size: 12px;
+}
+
 .header-row {
   display: flex;
   justify-content: space-between;

@@ -2,6 +2,7 @@ package com.example.shopping.coupon.dto.request;
 
 import com.example.shopping.common.enums.DiscountType;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -37,6 +38,10 @@ public class CouponRequest {
 
     /** 總發放張數上限,留空代表不限制 */
     private Integer totalQuantity;
+
+    /** 每人限用次數,不填表示不限 */
+    @Min(value = 1, message = "每人限用次數至少為 1")
+    private Integer perMemberLimit;
 
     private LocalDateTime startAt;
 

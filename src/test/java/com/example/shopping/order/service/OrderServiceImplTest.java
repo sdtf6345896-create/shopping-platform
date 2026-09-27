@@ -186,7 +186,7 @@ class OrderServiceImplTest {
         coupon.setDiscountType(DiscountType.FIXED_AMOUNT);
         coupon.setDiscountValue(new BigDecimal("100"));
 
-        when(couponService.reserve("SAVE100", new BigDecimal("1180.00"))).thenReturn(
+        when(couponService.reserve("SAVE100", new BigDecimal("1180.00"), 1L)).thenReturn(
                 new CouponApplyResponse(5L, "SAVE100", "折抵 100 元", DiscountType.FIXED_AMOUNT,
                         new BigDecimal("100"), new BigDecimal("100"), new BigDecimal("1080.00")));
         when(couponRepository.getReferenceById(5L)).thenReturn(coupon);

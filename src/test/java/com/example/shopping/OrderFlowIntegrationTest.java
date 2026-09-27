@@ -315,6 +315,19 @@ class OrderFlowIntegrationTest {
         JsonNode categorySales = call(get("/api/admin/reports/categories"), adminToken, null, 200).at("/data");
         assertThat(categorySales.isArray()).isTrue();
 
+        // ---- 優惠券每人限用一次:用過後再套用被拒 ----
+        String onceCode = ("ONCE" + suffix).toUpperCase();
+        call(post("/api/admin/coupons"), adminToken, Map.of(
+                "code", onceCode, "name", "新客限用一次", "discountType", "FIXED_AMOUNT",
+                "discountValue", 50, "minSpendAmount", 0, "perMemberLimit", 1), 200);
+        call(post("/api/coupons/apply"), memberToken, Map.of("code", onceCode), 200);
+        JsonNode couponOrder = call(post("/api/orders"), memberToken,
+                Map.of("addressId", addressId, "paymentMethod", "COD", "couponCode", onceCode), 200).at("/data");
+        assertThat(couponOrder.at("/discountAmount").decimalValue()).isEqualByComparingTo("50");
+        call(post("/api/cart/items"), memberToken, Map.of("skuId", newSkuId, "quantity", 1), 200);
+        JsonNode reused = call(post("/api/coupons/apply"), memberToken, Map.of("code", onceCode), 400);
+        assertThat(reused.at("/message").asText()).contains("每人限用 1 次");
+
         // ---- 修改密碼:目前密碼錯誤被拒;成功後舊的 refresh token 失效、新密碼可登入 ----
         call(put("/api/members/me/password"), memberToken,
                 Map.of("currentPassword", "wrong-password", "newPassword", "newPassword456"), 400);
