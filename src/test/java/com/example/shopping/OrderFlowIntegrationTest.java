@@ -1,0 +1,162 @@
+package com.example.shopping;
+
+import com.example.shopping.admin.entity.Admin;
+import com.example.shopping.admin.repository.AdminRepository;
+import com.example.shopping.member.entity.EmailVerificationToken;
+import com.example.shopping.member.entity.Member;
+import com.example.shopping.member.repository.EmailVerificationTokenRepository;
+import com.example.shopping.member.repository.MemberRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+
+/**
+ * 端到端走一次購物主流程(真的 HTTP → Security → Service → JPA,資料庫用 H2):
+ * 後台建分類與商品 → 會員註冊、驗證 Email、登入 → 加入購物車 → 結帳 → 付款 → 後台出貨 → 會員查看訂單歷程。
+ */
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+class OrderFlowIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
+    private AdminRepository adminRepository;
+    @Autowired
+    private MemberRepository memberRepository;
+    @Autowired
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @Test
+    void fullPurchaseFlow() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+
+        // ---- 後台:建立管理員、分類、商品並上架 ----
+        Admin admin = new Admin();
+        admin.setUsername("it-admin-" + suffix);
+        admin.setPassword(passwordEncoder.encode("admin123"));
+        admin.setName("整合測試管理員");
+        adminRepository.save(admin);
+
+        String adminToken = call(post("/api/admin/auth/login"), null,
+                Map.of("username", admin.getUsername(), "password", "admin123"), 200)
+                .at("/data/token").asText();
+
+        long categoryId = call(post("/api/admin/categories"), adminToken,
+                Map.of("name", "整合測試分類-" + suffix, "sortOrder", 1), 200)
+                .at("/data/id").asLong();
+
+        JsonNode product = call(post("/api/admin/products"), adminToken, Map.of(
+                "categoryId", categoryId,
+                "name", "整合測試商品",
+                "price", 500,
+                "skus", List.of(Map.of("skuCode", "IT-" + suffix, "specName", "標準", "price", 500, "stock", 3))),
+                200).at("/data");
+        long productId = product.at("/id").asLong();
+        long skuId = product.at("/skus/0/id").asLong();
+
+        call(patch("/api/admin/products/" + productId + "/status"), adminToken, Map.of("status", "ON_SALE"), 200);
+
+        // ---- 會員:註冊 → 未驗證不能登入 → 驗證 → 登入 ----
+        String email = "it-" + suffix + "@example.com";
+        Map<String, String> credentials = Map.of("email", email, "password", "password123");
+        call(post("/api/auth/register"), null,
+                Map.of("email", email, "password", "password123", "name", "整合測試會員"), 200);
+
+        JsonNode unverified = call(post("/api/auth/login"), null, credentials, 400);
+        assertThat(unverified.at("/message").asText()).contains("Email 驗證");
+
+        Member member = memberRepository.findByEmail(email).orElseThrow();
+        String verifyToken = emailVerificationTokenRepository.findAll().stream()
+                .filter(t -> t.getMemberId().equals(member.getId()))
+                .map(EmailVerificationToken::getToken)
+                .findFirst().orElseThrow();
+        call(post("/api/auth/verify-email"), null, Map.of("token", verifyToken), 200);
+
+        String memberToken = call(post("/api/auth/login"), null, credentials, 200).at("/data/token").asText();
+
+        // 會員 token 不能打後台 API
+        call(get("/api/admin/orders"), memberToken, null, 403);
+
+        // ---- 購物:地址 → 購物車 → 結帳 ----
+        long addressId = call(post("/api/members/addresses"), memberToken, Map.of(
+                "recipientName", "王小明", "phone", "0912345678",
+                "city", "台北市", "district", "大安區", "detailAddress", "復興南路一段1號"), 200)
+                .at("/data/id").asLong();
+
+        call(post("/api/cart/items"), memberToken, Map.of("skuId", skuId, "quantity", 2), 200);
+
+        JsonNode order = call(post("/api/orders"), memberToken,
+                Map.of("addressId", addressId, "paymentMethod", "CREDIT_CARD"), 200).at("/data");
+        long orderId = order.at("/id").asLong();
+        assertThat(order.at("/status").asText()).isEqualTo("PENDING_PAYMENT");
+        assertThat(order.at("/totalAmount").decimalValue()).isEqualByComparingTo("1000");
+        assertThat(order.at("/paymentDeadline").isNull()).isFalse();
+        assertThat(order.at("/statusLogs")).hasSize(1);
+
+        // 下單扣庫存後剩 1 件,應出現在庫存警示中
+        JsonNode lowStock = call(get("/api/admin/products/low-stock?threshold=1"), adminToken, null, 200).at("/data");
+        assertThat(lowStock.findValuesAsText("skuCode")).contains("IT-" + suffix);
+
+        // ---- 付款 → 出貨 ----
+        call(post("/api/orders/" + orderId + "/pay"), memberToken, null, 200);
+
+        JsonNode missingTracking = call(patch("/api/admin/orders/" + orderId + "/status"), adminToken,
+                Map.of("status", "SHIPPING"), 400);
+        assertThat(missingTracking.at("/message").asText()).contains("物流單號");
+
+        call(patch("/api/admin/orders/" + orderId + "/status"), adminToken,
+                Map.of("status", "SHIPPING", "shippingCarrier", "黑貓宅急便", "trackingNumber", "TRK-" + suffix), 200);
+
+        // ---- 會員查看訂單:物流資訊與完整歷程 ----
+        JsonNode shipped = call(get("/api/orders/" + orderId), memberToken, null, 200).at("/data");
+        assertThat(shipped.at("/status").asText()).isEqualTo("SHIPPING");
+        assertThat(shipped.at("/trackingNumber").asText()).isEqualTo("TRK-" + suffix);
+        assertThat(shipped.at("/statusLogs").findValuesAsText("toStatus"))
+                .containsExactly("PENDING_PAYMENT", "PAID", "SHIPPING");
+        assertThat(shipped.at("/statusLogs").findValuesAsText("actor"))
+                .containsExactly("MEMBER", "MEMBER", "ADMIN");
+
+        // 未登入不能查看訂單
+        call(get("/api/orders/" + orderId), null, null, 401);
+    }
+
+    private JsonNode call(MockHttpServletRequestBuilder request, String token, Object body, int expectedStatus)
+            throws Exception {
+        if (token != null) {
+            request.header("Authorization", "Bearer " + token);
+        }
+        if (body != null) {
+            request.contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(body));
+        }
+        var result = mockMvc.perform(request).andReturn();
+        String content = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        assertThat(result.getResponse().getStatus())
+                .as("%s %s → %s", result.getRequest().getMethod(), result.getRequest().getRequestURI(), content)
+                .isEqualTo(expectedStatus);
+        return content.isEmpty() ? objectMapper.createObjectNode() : objectMapper.readTree(content);
+    }
+}
