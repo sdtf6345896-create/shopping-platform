@@ -65,3 +65,41 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  docker:
+    name: Docker Compose smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start the stack
+        run: docker compose up -d --build
+
+      - name: Wait for backend (migrations + demo data)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fs http://localhost:8080/api/products > /dev/null; then
+              echo "backend is up"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "backend did not become ready"
+          exit 1
+
+      - name: Frontend is served and proxies the API
+        run: |
+          curl -fs http://localhost:8081/ | grep -q 'id="app"'
+          curl -fs http://localhost:8081/member/orders | grep -q 'id="app"'
+          curl -fs http://localhost:8081/api/products | grep -q '"success":true'
+          curl -fs -X POST http://localhost:8081/api/admin/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"admin","password":"admin123"}' | grep -q '"token"'
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v

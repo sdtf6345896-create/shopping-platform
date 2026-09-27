@@ -37,6 +37,20 @@
 - 操作紀錄:以 AOP 自動記錄管理員的每一筆寫入操作與資料匯出(含失敗原因),可依管理員 / 對象查詢
 - 銷售報表
 
+## 快速體驗(Docker)
+
+只要有 Docker,一行指令就能啟動 MySQL + 後端 + 前端,並自動建立示範資料:
+
+```bash
+docker compose up --build
+```
+
+- 前台:`http://localhost:8081`(示範會員 `demo@momoshop.test` / `demo1234`)
+- 後台:`http://localhost:8081/admin`(`admin` / `admin123`)
+- Swagger UI:`http://localhost:8080/swagger-ui.html`
+
+CI 每次 push 都會實際 `docker compose up` 並打 API 做 smoke test。
+
 ## 本機啟動
 
 ### 後端
