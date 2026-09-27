@@ -315,6 +315,11 @@ class OrderFlowIntegrationTest {
         JsonNode categorySales = call(get("/api/admin/reports/categories"), adminToken, null, 200).at("/data");
         assertThat(categorySales.isArray()).isTrue();
 
+        // ---- 搜尋建議:公開、不分大小寫、% 不會被當萬用字元 ----
+        JsonNode suggestions = call(get("/api/products/suggestions?keyword=整合測試"), null, null, 200).at("/data");
+        assertThat(suggestions.findValuesAsText("name")).contains("整合測試商品");
+        assertThat(call(get("/api/products/suggestions?keyword=%25"), null, null, 200).at("/data").size()).isZero();
+
         // ---- 優惠券每人限用一次:用過後再套用被拒 ----
         String onceCode = ("ONCE" + suffix).toUpperCase();
         call(post("/api/admin/coupons"), adminToken, Map.of(

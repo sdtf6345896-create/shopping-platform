@@ -38,6 +38,12 @@ public class ProductController {
                 productService.listPublic(categoryId, minPrice, maxPrice, keyword, pageable)));
     }
 
+    @GetMapping("/suggestions")
+    public ApiResponse<List<ProductListResponse>> suggestions(@RequestParam(required = false) String keyword,
+                                                              @RequestParam(defaultValue = "8") int limit) {
+        return ApiResponse.success(productService.suggest(keyword, limit));
+    }
+
     @GetMapping("/flash-sale")
     public ApiResponse<List<ProductListResponse>> flashSale(@RequestParam(defaultValue = "8") int limit) {
         return ApiResponse.success(productService.listFlashSale(limit));

@@ -198,6 +198,24 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<ProductListResponse> suggest(String keyword, int limit) {
+        if (keyword == null || keyword.isBlank()) {
+            return List.of();
+        }
+        String trimmed = keyword.trim();
+        if (trimmed.length() > 50) {
+            trimmed = trimmed.substring(0, 50);
+        }
+        int size = Math.min(Math.max(limit, 1), 10);
+        return productRepository.findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
+                        ProductStatus.ON_SALE, trimmed, PageRequest.of(0, size))
+                .stream()
+                .map(ProductListResponse::from)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<ProductListResponse> listFlashSale(int limit) {
         int size = Math.min(Math.max(limit, 1), 20);
         return productRepository.findOnSale(ProductStatus.ON_SALE, LocalDateTime.now(), PageRequest.of(0, size))

@@ -450,4 +450,24 @@ class ProductServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("SKU 編號重複");
     }
+
+    @Test
+    void suggest_trimsKeyword_andCapsLimit() {
+        Product shirt = new Product();
+        shirt.setId(3L);
+        shirt.setName("經典圓領T恤");
+        when(productRepository.findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
+                ProductStatus.ON_SALE, "T恤", PageRequest.of(0, 10))).thenReturn(List.of(shirt));
+
+        List<ProductListResponse> result = productService.suggest("  T恤 ", 99);
+
+        assertThat(result).extracting(ProductListResponse::getName).containsExactly("經典圓領T恤");
+    }
+
+    @Test
+    void suggest_returnsNothing_forBlankKeyword() {
+        assertThat(productService.suggest("   ", 8)).isEmpty();
+        verify(productRepository, never()).findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
+                any(), any(), any());
+    }
 }

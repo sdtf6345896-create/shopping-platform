@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bell, Search, ShoppingCart, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
+import { suggestProducts } from '../api/product'
 import { useNotificationStore } from '../stores/notification'
 
 const route = useRoute()
@@ -20,6 +21,23 @@ watch(
     searchKeyword.value = typeof keyword === 'string' ? keyword : ''
   },
 )
+
+// 搜尋建議:輸入時列出相符的熱銷商品,點選直接進商品頁;按 Enter 仍是一般搜尋
+async function fetchSuggestions(query, callback) {
+  if (!query?.trim()) {
+    callback([])
+    return
+  }
+  try {
+    callback(await suggestProducts(query.trim()))
+  } catch {
+    callback([])
+  }
+}
+
+function handleSelectSuggestion(product) {
+  router.push(`/products/${product.id}`)
+}
 
 function handleSearch() {
   const keyword = searchKeyword.value.trim()
@@ -78,17 +96,28 @@ function handleLogout() {
         <router-link to="/products">全部商品</router-link>
       </nav>
 
-      <el-input
+      <el-autocomplete
         v-model="searchKeyword"
         placeholder="搜尋商品"
         class="search-input"
         clearable
+        value-key="name"
+        :fetch-suggestions="fetchSuggestions"
+        :trigger-on-focus="false"
+        :debounce="250"
+        @select="handleSelectSuggestion"
         @keyup.enter="handleSearch"
       >
+        <template #default="{ item }">
+          <div class="suggestion">
+            <span class="suggestion-name">{{ item.name }}</span>
+            <span class="suggestion-price">NT$ {{ item.salePrice ?? item.price }}</span>
+          </div>
+        </template>
         <template #suffix>
           <el-icon class="search-icon" @click="handleSearch"><Search /></el-icon>
         </template>
-      </el-input>
+      </el-autocomplete>
 
       <div class="nav-actions">
         <router-link v-if="authStore.isLoggedIn" to="/member/notifications" class="cart-link" title="通知中心">
@@ -128,6 +157,22 @@ function handleLogout() {
 </template>
 
 <style scoped>
+.suggestion {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.suggestion-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-price {
+  color: #e4393c;
+  white-space: nowrap;
+}
+
 .navbar {
   background: #fff;
   border-bottom: 1px solid #eee;

@@ -15,3 +15,7 @@ export function listFlashSaleProducts(params) {
 export function listRelatedProducts(id, params) {
   return request.get(`/products/${id}/related`, { params })
 }
+
+export function suggestProducts(keyword, limit = 8) {
+  return request.get('/products/suggestions', { params: { keyword, limit } })
+}

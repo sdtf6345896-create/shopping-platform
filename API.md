@@ -319,6 +319,9 @@ REFUNDED        → (終態)
 }
 ```
 
+### `GET /api/products/suggestions`
+公開。搜尋框即時建議:名稱包含 `keyword`(不分大小寫)的上架商品,熱銷優先。Query:`keyword`、`limit`(預設 8,最多 10)。`keyword` 空白時回傳空陣列;`%`、`_` 視為一般字元。回傳 `ProductListResponse` 陣列。
+
 ### `GET /api/products/flash-sale`
 公開。目前限時特價中的上架商品,最快結束的排前面。Query:`limit`(預設 8,最多 20)。回傳 `ProductListResponse` 陣列。
 
@@ -780,6 +783,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/categories/{id}/status` | 管理員 |
 | GET | `/api/products` | 公開 |
 | GET | `/api/products/{id}` | 公開 |
+| GET | `/api/products/suggestions` | 公開 |
 | GET | `/api/products/flash-sale` | 公開 |
 | GET | `/api/shipping/policy` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |

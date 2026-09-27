@@ -17,6 +17,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByCategoryId(Long categoryId);
 
+    /** 搜尋建議:名稱包含關鍵字的商品,熱銷優先(Containing 會跳脫 % 與 _,不會被當成萬用字元) */
+    List<Product> findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
+            ProductStatus status, String keyword, Pageable pageable);
+
     @Query("select p from Product p where p.status = :status and p.saleDiscountPercent is not null "
             + "and p.saleStartAt <= :now and p.saleEndAt > :now order by p.saleEndAt asc, p.id asc")
     List<Product> findOnSale(@Param("status") ProductStatus status, @Param("now") LocalDateTime now,
