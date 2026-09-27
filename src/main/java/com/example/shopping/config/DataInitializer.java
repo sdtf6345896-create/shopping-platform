@@ -14,6 +14,7 @@ import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.service.PointService;
+import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.review.entity.ProductReview;
@@ -189,6 +190,7 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         seedDemoReviews(member);
+        seedDemoFlashSale();
     }
 
     private void seedDemoReviews(Member member) {
@@ -214,5 +216,15 @@ public class DataInitializer implements CommandLineRunner {
             productReviewRepository.save(review);
             reviewService.refreshProductRating(sku.getProduct().getId());
         }
+    }
+
+    /** 讓一個示範商品正在限時特價(從啟動時起 7 天),首頁的特價區塊一開始就有東西可看 */
+    private void seedDemoFlashSale() {
+        productSkuRepository.findBySkuCode("EARBUD-BLK").ifPresent(sku -> {
+            Product product = sku.getProduct();
+            product.setSaleDiscountPercent(15);
+            product.setSaleStartAt(LocalDateTime.now().minusHours(1));
+            product.setSaleEndAt(LocalDateTime.now().plusDays(7));
+        });
     }
 }
