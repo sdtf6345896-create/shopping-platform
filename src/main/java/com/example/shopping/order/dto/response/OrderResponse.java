@@ -28,6 +28,7 @@ public class OrderResponse {
     private String shippingCarrier;
     private String trackingNumber;
     private LocalDateTime shippedAt;
+    private LocalDateTime paymentDeadline;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
     private List<OrderStatusLogResponse> statusLogs;
@@ -48,6 +49,7 @@ public class OrderResponse {
                 order.getShippingCarrier(),
                 order.getTrackingNumber(),
                 order.getShippedAt(),
+                order.getPaymentDeadline(),
                 order.getCreatedAt(),
                 order.getItems().stream().map(OrderItemResponse::from).toList(),
                 order.getStatusLogs().stream().map(OrderStatusLogResponse::from).toList());

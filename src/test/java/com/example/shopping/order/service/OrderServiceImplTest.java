@@ -33,12 +33,14 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -60,6 +62,8 @@ class OrderServiceImplTest {
     private CouponRepository couponRepository;
     @Mock
     private OrderMailSender orderMailSender;
+    @Mock
+    private OrderPaymentPolicy paymentPolicy;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -217,6 +221,54 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(product.getSalesCount()).isEqualTo(2);
+        verify(orderMailSender).notifyStatusChanged(order);
+    }
+
+    @Test
+    void checkout_setsPaymentDeadlineFromPolicy() {
+        LocalDateTime deadline = LocalDateTime.of(2026, 9, 27, 16, 0);
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(paymentPolicy.deadlineFor(eq(PaymentMethod.CREDIT_CARD), any(LocalDateTime.class))).thenReturn(deadline);
+
+        OrderResponse response = orderService.checkout(1L, checkoutRequest());
+
+        assertThat(response.getPaymentDeadline()).isEqualTo(deadline);
+    }
+
+    @Test
+    void pay_throws_whenPaymentDeadlinePassed() {
+        Orders order = pendingOrderWithItem(2);
+        order.setPaymentDeadline(LocalDateTime.now().minusMinutes(1));
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.pay(1L, 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("付款期限");
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+    }
+
+    @Test
+    void cancelExpiredOrders_cancelsAndRestoresStockAsSystem() {
+        sku.setStock(3);
+        Orders order = pendingOrderWithItem(2);
+        Coupon coupon = new Coupon();
+        coupon.setId(5L);
+        order.setCoupon(coupon);
+        LocalDateTime now = LocalDateTime.now();
+        when(orderRepository.findByStatusAndPaymentDeadlineBefore(OrderStatus.PENDING_PAYMENT, now))
+                .thenReturn(List.of(order));
+
+        int cancelled = orderService.cancelExpiredOrders(now);
+
+        assertThat(cancelled).isEqualTo(1);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
+        assertThat(sku.getStock()).isEqualTo(5);
+        assertThat(order.getStatusLogs()).last()
+                .satisfies(log -> assertThat(log.getActor()).isEqualTo(OrderActor.SYSTEM));
+        verify(couponService).release(5L);
         verify(orderMailSender).notifyStatusChanged(order);
     }
 

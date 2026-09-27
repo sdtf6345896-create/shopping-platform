@@ -62,6 +62,7 @@ public class OrderServiceImpl implements OrderService {
     private final CouponService couponService;
     private final CouponRepository couponRepository;
     private final OrderMailSender orderMailSender;
+    private final OrderPaymentPolicy paymentPolicy;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -69,7 +70,8 @@ public class OrderServiceImpl implements OrderService {
                              MemberRepository memberRepository,
                              CouponService couponService,
                              CouponRepository couponRepository,
-                             OrderMailSender orderMailSender) {
+                             OrderMailSender orderMailSender,
+                             OrderPaymentPolicy paymentPolicy) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -77,6 +79,7 @@ public class OrderServiceImpl implements OrderService {
         this.couponService = couponService;
         this.couponRepository = couponRepository;
         this.orderMailSender = orderMailSender;
+        this.paymentPolicy = paymentPolicy;
     }
 
     @Override
@@ -107,6 +110,7 @@ public class OrderServiceImpl implements OrderService {
         order.setMember(memberRepository.getReferenceById(memberId));
         order.setAddress(address);
         order.setPaymentMethod(request.getPaymentMethod());
+        order.setPaymentDeadline(paymentPolicy.deadlineFor(request.getPaymentMethod(), LocalDateTime.now()));
         order.markCreated(OrderActor.MEMBER);
         order.setReceiverName(address.getRecipientName());
         order.setReceiverPhone(address.getPhone());
@@ -164,6 +168,10 @@ public class OrderServiceImpl implements OrderService {
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new BusinessException("訂單狀態不正確,無法付款");
         }
+        // 排程還沒掃到的逾期訂單也不能再付款
+        if (order.getPaymentDeadline() != null && order.getPaymentDeadline().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("已超過付款期限,訂單將自動取消");
+        }
         markPaid(order, OrderActor.MEMBER, "會員完成付款");
         orderMailSender.notifyStatusChanged(order);
         return OrderResponse.from(order);
@@ -212,6 +220,16 @@ public class OrderServiceImpl implements OrderService {
         orderMailSender.notifyStatusChanged(order);
 
         return OrderResponse.from(order);
+    }
+
+    @Override
+    public int cancelExpiredOrders(LocalDateTime now) {
+        List<Orders> expired = orderRepository.findByStatusAndPaymentDeadlineBefore(OrderStatus.PENDING_PAYMENT, now);
+        for (Orders order : expired) {
+            cancelOrder(order, OrderActor.SYSTEM, "逾時未付款,系統自動取消");
+            orderMailSender.notifyStatusChanged(order);
+        }
+        return expired.size();
     }
 
     private void markPaid(Orders order, OrderActor actor, String note) {

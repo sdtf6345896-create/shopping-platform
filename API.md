@@ -379,6 +379,7 @@ CANCELLED       → (終態)
   "receiverName": "王小明", "receiverPhone": "0912345678",
   "receiverAddress": "台北市大安區復興南路一段1號",
   "shippingCarrier": null, "trackingNumber": null, "shippedAt": null,
+  "paymentDeadline": "2026-09-14T20:59:30",
   "createdAt": "2026-09-14T20:29:30",
   "items": [ { "id": 1, "skuId": 2, "productName": "經典圓領T恤", "specName": "黑色/L",
                 "unitPrice": 590.00, "quantity": 1, "subtotal": 590.00 } ],
@@ -390,6 +391,7 @@ CANCELLED       → (終態)
 ```
 > `statusLogs` 為訂單狀態歷程,依時間由舊到新排列,每一次狀態變更(會員付款/取消、管理員出貨/取消、系統自動處理)都會新增一筆。
 > `shippingCarrier`/`trackingNumber`/`shippedAt` 在管理員出貨後才有值。
+> `paymentDeadline` 為付款期限:線上付款(`CREDIT_CARD`/`ATM`)為下單後 30 分鐘(`app.order.payment-timeout-minutes` 可調),貨到付款(`COD`)為 `null`。逾期仍未付款的訂單會被背景排程(每分鐘掃描一次)自動取消,歸還庫存與優惠券名額,訂單歷程記為 `SYSTEM`。
 > `receiverName`/`receiverPhone`/`receiverAddress` 與商品名稱/規格/單價皆為**下單當下的快照**,之後會員改地址或商家改商品都不影響歷史訂單。
 > `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
 
@@ -404,7 +406,7 @@ CANCELLED       → (終態)
 `cartItemIds` 選填,不帶則結帳購物車全部項目。`couponCode` 選填,不帶則不使用優惠券;若代碼無效、已停用/過期/兌換完畢,或未達最低消費門檻,回 400 且不會建立訂單。下單當下就會扣庫存與優惠券使用名額(非等付款);若購物車內有商品已下架或庫存不足,整筆交易失敗回 400,購物車項目不受影響。
 
 ### `POST /api/orders/{id}/pay`
-模擬付款。只能對 `PENDING_PAYMENT` 的訂單執行,成功後狀態變 `PAID`,並累加商品 `salesCount`。
+模擬付款。只能對 `PENDING_PAYMENT` 且尚未超過 `paymentDeadline` 的訂單執行(逾期回 400),成功後狀態變 `PAID`,並累加商品 `salesCount`。
 
 ### `POST /api/orders/{id}/cancel`
 取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存;若該訂單有使用優惠券,也會歸還一次使用名額。

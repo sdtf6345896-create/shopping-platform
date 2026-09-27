@@ -87,6 +87,10 @@ public class Orders {
     @Column(name = "shipped_at")
     private LocalDateTime shippedAt;
 
+    /** 付款期限,逾期未付款會被排程自動取消;貨到付款為 null */
+    @Column(name = "payment_deadline")
+    private LocalDateTime paymentDeadline;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 

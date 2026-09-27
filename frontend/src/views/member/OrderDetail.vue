@@ -1,9 +1,10 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getOrderDetail, payOrder, cancelOrder } from '../../api/order'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TAG_TYPES, PAYMENT_METHOD_LABELS } from '../../utils/orderEnums'
+import { formatCountdown, remainingMs } from '../../utils/countdown'
 import OrderTimeline from '../../components/OrderTimeline.vue'
 
 const props = defineProps({
@@ -46,6 +47,18 @@ async function handleCancel() {
     acting.value = false
   }
 }
+
+// 付款期限倒數(貨到付款沒有期限)
+const now = ref(Date.now())
+const timer = setInterval(() => {
+  now.value = Date.now()
+}, 1000)
+onUnmounted(() => clearInterval(timer))
+
+const awaitingPayment = computed(() => order.value?.status === 'PENDING_PAYMENT')
+const hasDeadline = computed(() => awaitingPayment.value && !!order.value?.paymentDeadline)
+const timeLeft = computed(() => (hasDeadline.value ? remainingMs(order.value.paymentDeadline, now.value) : 0))
+const paymentExpired = computed(() => hasDeadline.value && timeLeft.value === 0)
 
 onMounted(load)
 </script>
@@ -98,8 +111,27 @@ onMounted(load)
         <OrderTimeline :logs="order.statusLogs" />
       </div>
 
+      <el-alert
+        v-if="hasDeadline"
+        class="deadline-alert"
+        :type="paymentExpired ? 'error' : 'warning'"
+        :closable="false"
+        show-icon
+      >
+        <template v-if="paymentExpired">已超過付款期限,訂單將由系統自動取消</template>
+        <template v-else>
+          請在 <strong class="countdown">{{ formatCountdown(timeLeft) }}</strong> 內完成付款,逾期訂單將自動取消
+        </template>
+      </el-alert>
+
       <div class="actions">
-        <el-button v-if="order.status === 'PENDING_PAYMENT'" type="primary" :loading="acting" @click="handlePay">
+        <el-button
+          v-if="awaitingPayment"
+          type="primary"
+          :loading="acting"
+          :disabled="paymentExpired"
+          @click="handlePay"
+        >
           模擬付款
         </el-button>
         <el-button
@@ -175,6 +207,14 @@ onMounted(load)
 .tracking-no {
   font-family: monospace;
   color: #333;
+}
+
+.deadline-alert {
+  margin-bottom: 16px;
+}
+
+.countdown {
+  font-variant-numeric: tabular-nums;
 }
 
 .actions {
