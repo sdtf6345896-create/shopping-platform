@@ -17,12 +17,12 @@ import java.util.EnumSet;
  * 已經被下單過的商品 / 規格不能刪除(訂單明細需要保留);還有處理中訂單的會員不能刪除帳號。
  */
 @Component
-public class OrderProductGuard {
+public class OrderDeletionGuard {
 
     private final OrderItemRepository orderItemRepository;
     private final OrderRepository orderRepository;
 
-    public OrderProductGuard(OrderItemRepository orderItemRepository, OrderRepository orderRepository) {
+    public OrderDeletionGuard(OrderItemRepository orderItemRepository, OrderRepository orderRepository) {
         this.orderItemRepository = orderItemRepository;
         this.orderRepository = orderRepository;
     }
