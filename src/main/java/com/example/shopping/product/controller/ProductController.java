@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
@@ -40,5 +41,11 @@ public class ProductController {
     @GetMapping("/{id}")
     public ApiResponse<ProductDetailResponse> detail(@PathVariable Long id) {
         return ApiResponse.success(productService.getPublicDetail(id));
+    }
+
+    @GetMapping("/{id}/related")
+    public ApiResponse<List<ProductListResponse>> related(@PathVariable Long id,
+                                                           @RequestParam(defaultValue = "6") int limit) {
+        return ApiResponse.success(productService.listRelated(id, limit));
     }
 }

@@ -7,3 +7,7 @@ export function listProducts(params) {
 export function getProductDetail(id) {
   return request.get(`/products/${id}`)
 }
+
+export function listRelatedProducts(id, params) {
+  return request.get(`/products/${id}/related`, { params })
+}

@@ -287,6 +287,9 @@ CANCELLED       → (終態)
 }
 ```
 
+### `GET /api/products/{id}/related`
+公開。相關商品推薦:同分類的其他上架商品依銷量排序,不足 `limit` 筆時以全站熱銷商品補齊(不含本商品)。Query:`limit`(預設 6,最多 20)。回傳格式同商品列表項目(`ProductListResponse` 陣列)。
+
 ### `GET /api/admin/products`
 需管理員登入。所有狀態商品皆可查。Query:`categoryId`、`status`、`keyword`、`page`、`size`、`sort`。回傳格式同 `GET /api/products`(輕量版,不含分類名稱與 SKU)。
 
@@ -546,6 +549,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/categories/{id}/status` | 管理員 |
 | GET | `/api/products` | 公開 |
 | GET | `/api/products/{id}` | 公開 |
+| GET | `/api/products/{id}/related` | 公開 |
 | GET / POST | `/api/admin/products` | 管理員 |
 | GET / PUT / DELETE | `/api/admin/products/{id}` | 管理員 |
 | PATCH | `/api/admin/products/{id}/status` | 管理員 |

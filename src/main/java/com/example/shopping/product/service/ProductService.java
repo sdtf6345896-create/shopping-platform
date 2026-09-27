@@ -25,6 +25,9 @@ public interface ProductService {
 
     ProductDetailResponse getAdminDetail(Long id);
 
+    /** 相關商品:同分類熱銷優先,不足時以全站熱銷補齊 */
+    List<ProductListResponse> listRelated(Long productId, int limit);
+
     ProductDetailResponse create(ProductRequest request);
 
     ProductDetailResponse update(Long id, ProductRequest request);

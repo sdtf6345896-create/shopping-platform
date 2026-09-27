@@ -25,7 +25,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import static com.example.shopping.product.repository.ProductSpecifications.*;
 
@@ -79,6 +82,26 @@ public class ProductServiceImpl implements ProductService {
             throw new ResourceNotFoundException("商品不存在");
         }
         return ProductDetailResponse.from(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProductListResponse> listRelated(Long productId, int limit) {
+        Product product = findOrThrow(productId);
+        int size = Math.min(Math.max(limit, 1), 20);
+
+        List<Product> related = new ArrayList<>(productRepository
+                .findByCategoryIdAndStatusAndIdNotOrderBySalesCountDescIdDesc(
+                        product.getCategory().getId(), ProductStatus.ON_SALE, productId, PageRequest.of(0, size)));
+
+        if (related.size() < size) {
+            Set<Long> exclude = new HashSet<>();
+            exclude.add(productId);
+            related.forEach(p -> exclude.add(p.getId()));
+            related.addAll(productRepository.findByStatusAndIdNotInOrderBySalesCountDescIdDesc(
+                    ProductStatus.ON_SALE, exclude, PageRequest.of(0, size - related.size())));
+        }
+        return related.stream().map(ProductListResponse::from).toList();
     }
 
     @Override

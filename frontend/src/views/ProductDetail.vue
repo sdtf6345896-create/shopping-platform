@@ -1,9 +1,10 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, StarFilled } from '@element-plus/icons-vue'
-import { getProductDetail } from '../api/product'
+import { getProductDetail, listRelatedProducts } from '../api/product'
+import ProductCard from '../components/ProductCard.vue'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
 import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
 import { recordView } from '../api/browsingHistory'
@@ -163,16 +164,39 @@ async function handleDeleteReview() {
   await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview()])
 }
 
-onMounted(async () => {
+const relatedProducts = ref([])
+
+async function loadRelated() {
+  try {
+    relatedProducts.value = await listRelatedProducts(props.id, { limit: 6 })
+  } catch {
+    relatedProducts.value = []
+  }
+}
+
+async function loadPage() {
+  reviewsPage.value = 0
+  quantity.value = 1
   await load()
-  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState()])
+  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState(), loadRelated()])
 
   if (authStore.isLoggedIn) {
     recordView(props.id).catch(() => {
       // 記錄瀏覽紀錄失敗不影響商品頁瀏覽
     })
   }
-})
+}
+
+onMounted(loadPage)
+
+// 從相關商品點進另一個商品時,路由元件會被重用,需要手動重新載入
+watch(
+  () => props.id,
+  () => {
+    window.scrollTo({ top: 0 })
+    loadPage()
+  },
+)
 </script>
 
 <template>
@@ -318,11 +342,33 @@ onMounted(async () => {
           @current-change="handleReviewPageChange"
         />
       </div>
+
+      <div v-if="relatedProducts.length" class="related-section">
+        <h2 class="related-title">你可能也會喜歡</h2>
+        <div class="related-grid">
+          <ProductCard v-for="item in relatedProducts" :key="item.id" :product="item" />
+        </div>
+      </div>
     </template>
   </div>
 </template>
 
 <style scoped>
+.related-section {
+  margin-top: 24px;
+}
+
+.related-title {
+  font-size: 18px;
+  margin-bottom: 12px;
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
 .detail-layout {
   display: flex;
   gap: 32px;

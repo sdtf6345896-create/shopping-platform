@@ -11,6 +11,7 @@ import com.example.shopping.product.dto.request.SkuRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
 import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
+import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
@@ -27,9 +28,11 @@ import org.springframework.data.domain.PageRequest;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -249,5 +252,46 @@ class ProductServiceImplTest {
     void listLowStock_rejectsNegativeThreshold() {
         assertThatThrownBy(() -> productService.listLowStock(-1, 20))
                 .isInstanceOf(BusinessException.class);
+    }
+
+    private Product onSaleProduct(long id, Category category) {
+        Product p = new Product();
+        p.setId(id);
+        p.setName("商品" + id);
+        p.setCategory(category);
+        p.setStatus(ProductStatus.ON_SALE);
+        return p;
+    }
+
+    @Test
+    void listRelated_prefersSameCategory_thenFillsWithBestSellers() {
+        Category category = new Category();
+        category.setId(7L);
+        Product current = onSaleProduct(1L, category);
+        Product sibling = onSaleProduct(2L, category);
+        Product other = onSaleProduct(3L, new Category());
+
+        when(productRepository.findById(1L)).thenReturn(Optional.of(current));
+        when(productRepository.findByCategoryIdAndStatusAndIdNotOrderBySalesCountDescIdDesc(
+                7L, ProductStatus.ON_SALE, 1L, PageRequest.of(0, 2))).thenReturn(List.of(sibling));
+        when(productRepository.findByStatusAndIdNotInOrderBySalesCountDescIdDesc(
+                ProductStatus.ON_SALE, Set.of(1L, 2L), PageRequest.of(0, 1))).thenReturn(List.of(other));
+
+        List<ProductListResponse> result = productService.listRelated(1L, 2);
+
+        assertThat(result).extracting(ProductListResponse::getId).containsExactly(2L, 3L);
+    }
+
+    @Test
+    void listRelated_skipsFallback_whenSameCategoryIsEnough() {
+        Category category = new Category();
+        category.setId(7L);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(onSaleProduct(1L, category)));
+        when(productRepository.findByCategoryIdAndStatusAndIdNotOrderBySalesCountDescIdDesc(
+                7L, ProductStatus.ON_SALE, 1L, PageRequest.of(0, 1)))
+                .thenReturn(List.of(onSaleProduct(2L, category)));
+
+        assertThat(productService.listRelated(1L, 1)).hasSize(1);
+        verify(productRepository, never()).findByStatusAndIdNotInOrderBySalesCountDescIdDesc(any(), any(), any());
     }
 }
