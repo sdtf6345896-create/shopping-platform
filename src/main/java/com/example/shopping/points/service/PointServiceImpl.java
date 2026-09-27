@@ -1,9 +1,11 @@
 package com.example.shopping.points.service;
 
+import com.example.shopping.common.enums.NotificationType;
 import com.example.shopping.common.enums.PointTransactionType;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
 import com.example.shopping.member.repository.MemberRepository;
+import com.example.shopping.notification.service.NotificationService;
 import com.example.shopping.points.dto.PointBalanceResponse;
 import com.example.shopping.points.dto.PointTransactionResponse;
 import com.example.shopping.points.entity.PointTransaction;
@@ -20,13 +22,16 @@ public class PointServiceImpl implements PointService {
     private final MemberRepository memberRepository;
     private final PointTransactionRepository transactionRepository;
     private final PointPolicy pointPolicy;
+    private final NotificationService notificationService;
 
     public PointServiceImpl(MemberRepository memberRepository,
                             PointTransactionRepository transactionRepository,
-                            PointPolicy pointPolicy) {
+                            PointPolicy pointPolicy,
+                            NotificationService notificationService) {
         this.memberRepository = memberRepository;
         this.transactionRepository = transactionRepository;
         this.pointPolicy = pointPolicy;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -57,6 +62,27 @@ public class PointServiceImpl implements PointService {
         requirePositive(amount);
         memberRepository.addPoints(memberId, amount);
         record(memberId, orderId, amount, type, description);
+    }
+
+    @Override
+    public PointBalanceResponse adjust(Long memberId, int amount, String reason) {
+        if (amount == 0) {
+            throw new BusinessException("調整點數不可為 0");
+        }
+        if (!memberRepository.existsById(memberId)) {
+            throw new ResourceNotFoundException("會員不存在");
+        }
+        String description = reason.trim();
+        if (amount > 0) {
+            credit(memberId, null, amount, PointTransactionType.ADJUST, description);
+            notificationService.notify(memberId, NotificationType.SYSTEM, "獲得 " + amount + " 點購物金",
+                    description + ",結帳時可折抵使用。", "/member/points");
+        } else {
+            deduct(memberId, null, -amount, PointTransactionType.ADJUST, description);
+            notificationService.notify(memberId, NotificationType.SYSTEM, "購物金調整 " + amount + " 點",
+                    description, "/member/points");
+        }
+        return getBalance(memberId);
     }
 
     private void record(Long memberId, Long orderId, int amount, PointTransactionType type, String description) {

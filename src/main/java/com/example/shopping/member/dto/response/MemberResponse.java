@@ -16,6 +16,8 @@ public class MemberResponse {
     private String name;
     private String phone;
     private AccountStatus status;
+    /** 購物金餘額 */
+    private int points;
     private LocalDateTime createdAt;
 
     public static MemberResponse from(Member member) {
@@ -25,6 +27,7 @@ public class MemberResponse {
                 member.getName(),
                 member.getPhone(),
                 member.getStatus(),
+                member.getPoints(),
                 member.getCreatedAt());
     }
 }

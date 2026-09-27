@@ -96,7 +96,7 @@ REFUNDED        → (終態)
 
 回應 `data`:`MemberResponse`
 ```json
-{ "id": 1, "email": "you@example.com", "name": "王小明", "phone": "0912345678", "status": "ACTIVE", "createdAt": "2026-09-14T20:02:59" }
+{ "id": 1, "email": "you@example.com", "name": "王小明", "phone": "0912345678", "status": "ACTIVE", "points": 0, "createdAt": "2026-09-14T20:02:59" }
 ```
 
 ### `POST /api/auth/verify-email`
@@ -519,6 +519,12 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
   "balanceAfter": 200, "createdAt": "2026-09-27T18:00:00" }
 ```
 
+### `POST /api/admin/members/{id}/points` — 需管理員登入
+手動調整會員購物金。請求:`{ "amount": 100, "reason": "客服補償" }`(`amount` 正數發放、負數扣除,單次上限 ±100000,不可為 0;扣除超過餘額回 400)。以 `ADJUST` 類型記入異動明細、寄送站內通知給會員,並記錄在管理員操作紀錄。回傳調整後的 `{ balance, earnRate, maxRedeemRatio }`。
+
+### `GET /api/admin/members/{id}/points/transactions` — 需管理員登入
+指定會員的購物金異動明細,格式同 `GET /api/points/transactions`。
+
 ---
 
 ## 商品問答(Q&A)
@@ -671,6 +677,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/members` | 管理員 |
 | GET | `/api/admin/members/{id}` | 管理員 |
 | PATCH | `/api/admin/members/{id}/status` | 管理員 |
+| POST | `/api/admin/members/{id}/points` | 管理員 |
+| GET | `/api/admin/members/{id}/points/transactions` | 管理員 |
 | GET | `/api/categories` | 公開 |
 | GET / POST | `/api/admin/categories` | 管理員 |
 | PUT / DELETE | `/api/admin/categories/{id}` | 管理員 |

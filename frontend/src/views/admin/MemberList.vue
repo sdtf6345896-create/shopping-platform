@@ -1,7 +1,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listAdminMembers, updateMemberStatus } from '../../api/admin/member'
+import { adjustMemberPoints, listAdminMembers, updateMemberStatus } from '../../api/admin/member'
 
 const members = ref([])
 const total = ref(0)
@@ -55,6 +55,32 @@ async function handleToggleStatus(row) {
   await load()
 }
 
+const pointsDialog = reactive({ visible: false, member: null, amount: 100, reason: '', saving: false })
+
+function openPointsDialog(row) {
+  Object.assign(pointsDialog, { visible: true, member: row, amount: 100, reason: '' })
+}
+
+async function submitPoints() {
+  if (!pointsDialog.amount) {
+    ElMessage.warning('調整點數不可為 0')
+    return
+  }
+  if (!pointsDialog.reason.trim()) {
+    ElMessage.warning('請輸入調整原因')
+    return
+  }
+  pointsDialog.saving = true
+  try {
+    const result = await adjustMemberPoints(pointsDialog.member.id, pointsDialog.amount, pointsDialog.reason)
+    ElMessage.success(`已調整,目前餘額 ${result.balance} 點`)
+    pointsDialog.visible = false
+    await load()
+  } finally {
+    pointsDialog.saving = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -91,11 +117,15 @@ onMounted(load)
           </el-tag>
         </template>
       </el-table-column>
+      <el-table-column label="購物金" width="90" align="right">
+        <template #default="{ row }">{{ row.points }}</template>
+      </el-table-column>
       <el-table-column label="註冊時間" width="160">
         <template #default="{ row }">{{ row.createdAt?.slice(0, 16).replace('T', ' ') }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="100">
+      <el-table-column label="操作" width="160">
         <template #default="{ row }">
+          <el-button link size="small" type="primary" @click="openPointsDialog(row)">調整購物金</el-button>
           <el-button link size="small" :type="row.status === 'ACTIVE' ? 'danger' : 'primary'" @click="handleToggleStatus(row)">
             {{ row.status === 'ACTIVE' ? '停用' : '啟用' }}
           </el-button>
@@ -113,10 +143,43 @@ onMounted(load)
       :current-page="filters.page + 1"
       @current-change="handlePageChange"
     />
+
+    <el-dialog v-model="pointsDialog.visible" title="調整購物金" width="420px">
+      <template v-if="pointsDialog.member">
+        <p class="dialog-member">
+          {{ pointsDialog.member.name }}({{ pointsDialog.member.email }})目前 {{ pointsDialog.member.points }} 點
+        </p>
+        <el-form label-width="80px" @submit.prevent>
+          <el-form-item label="調整點數">
+            <el-input-number v-model="pointsDialog.amount" :min="-100000" :max="100000" :step="50" />
+            <span class="hint">負數為扣除</span>
+          </el-form-item>
+          <el-form-item label="原因">
+            <el-input v-model="pointsDialog.reason" maxlength="100" placeholder="例如:客服補償、活動贈點" />
+          </el-form-item>
+        </el-form>
+        <p class="hint">會員會收到站內通知,此操作會記錄在操作紀錄中。</p>
+      </template>
+      <template #footer>
+        <el-button @click="pointsDialog.visible = false">取消</el-button>
+        <el-button type="primary" :loading="pointsDialog.saving" @click="submitPoints">確認調整</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
+.dialog-member {
+  margin: 0 0 16px;
+  color: #333;
+}
+
+.hint {
+  margin-left: 8px;
+  color: #999;
+  font-size: 12px;
+}
+
 .header-row {
   display: flex;
   justify-content: space-between;
