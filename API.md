@@ -270,12 +270,14 @@ REFUNDED        → (終態)
 ## 商品(Product)
 
 ### `GET /api/products`
-公開。只回傳 `ON_SALE` 的商品。Query:`categoryId`、`minPrice`、`maxPrice`、`keyword`、`page`、`size`、`sort`(例:`price,asc`、`salesCount,desc`)
+公開。只回傳 `ON_SALE` 的商品。Query:`categoryId`、`minPrice`、`maxPrice`、`keyword`、`page`、`size`、`sort`(例:`price,asc`、`salesCount,desc`、`ratingAverage,desc`)
 
 → `PageResponse<ProductListResponse>`,每筆:
 ```json
-{ "id": 1, "name": "經典圓領T恤", "mainImage": "https://...", "price": 590.00, "status": "ON_SALE", "salesCount": 3 }
+{ "id": 1, "name": "經典圓領T恤", "mainImage": "https://...", "price": 590.00, "status": "ON_SALE", "salesCount": 3,
+  "ratingAverage": 4.5, "reviewCount": 12 }
 ```
+> `ratingAverage`(平均星等,小數一位)與 `reviewCount` 存在商品上,評論新增 / 修改 / 刪除時即時更新,列表可直接顯示與排序。
 
 ### `GET /api/products/{id}`
 公開。商品詳情,若非 `ON_SALE` 回 404。

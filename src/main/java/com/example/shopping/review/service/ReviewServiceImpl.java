@@ -17,6 +17,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.EnumSet;
 import java.util.Optional;
 import java.util.Set;
@@ -72,7 +74,9 @@ public class ReviewServiceImpl implements ReviewService {
 
         review.setRating(request.getRating());
         review.setContent(request.getContent());
-        return ReviewResponse.from(productReviewRepository.save(review));
+        ReviewResponse response = ReviewResponse.from(productReviewRepository.save(review));
+        refreshProductRating(productId);
+        return response;
     }
 
     @Override
@@ -80,6 +84,17 @@ public class ReviewServiceImpl implements ReviewService {
         ProductReview review = productReviewRepository.findByProductIdAndMemberId(productId, memberId)
                 .orElseThrow(() -> new ResourceNotFoundException("你尚未評論過此商品"));
         productReviewRepository.delete(review);
+        refreshProductRating(productId);
+    }
+
+    @Override
+    public void refreshProductRating(Long productId) {
+        // JPQL 查詢前 Hibernate 會先 flush,剛存 / 刪的評論會算進去
+        ReviewSummaryResponse summary = getSummary(productId);
+        productRepository.findById(productId).ifPresent(product -> {
+            product.setRatingAverage(BigDecimal.valueOf(summary.getAverageRating()).setScale(1, RoundingMode.HALF_UP));
+            product.setReviewCount((int) summary.getReviewCount());
+        });
     }
 
     private ProductReview createNewReview(Long memberId, Long productId) {

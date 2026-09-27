@@ -19,4 +19,7 @@ public interface ReviewService {
     ReviewResponse upsert(Long memberId, Long productId, ReviewRequest request);
 
     void delete(Long memberId, Long productId);
+
+    /** 重新計算商品的平均星等與評論數(評論異動後呼叫) */
+    void refreshProductRating(Long productId);
 }

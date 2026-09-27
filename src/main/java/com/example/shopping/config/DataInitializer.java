@@ -18,6 +18,7 @@ import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.review.entity.ProductReview;
 import com.example.shopping.review.repository.ProductReviewRepository;
+import com.example.shopping.review.service.ReviewService;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -49,6 +50,7 @@ public class DataInitializer implements CommandLineRunner {
     private final OrderRepository orderRepository;
     private final ProductReviewRepository productReviewRepository;
     private final PointService pointService;
+    private final ReviewService reviewService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -59,6 +61,7 @@ public class DataInitializer implements CommandLineRunner {
                             OrderRepository orderRepository,
                             ProductReviewRepository productReviewRepository,
                             PointService pointService,
+                            ReviewService reviewService,
                             PasswordEncoder passwordEncoder,
                             JdbcTemplate jdbcTemplate) {
         this.adminRepository = adminRepository;
@@ -68,6 +71,7 @@ public class DataInitializer implements CommandLineRunner {
         this.orderRepository = orderRepository;
         this.productReviewRepository = productReviewRepository;
         this.pointService = pointService;
+        this.reviewService = reviewService;
         this.passwordEncoder = passwordEncoder;
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -208,6 +212,7 @@ public class DataInitializer implements CommandLineRunner {
             review.setRating(seed.rating());
             review.setContent(seed.content());
             productReviewRepository.save(review);
+            reviewService.refreshProductRating(sku.getProduct().getId());
         }
     }
 }

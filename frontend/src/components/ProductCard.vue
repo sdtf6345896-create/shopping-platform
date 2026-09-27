@@ -15,7 +15,13 @@ defineProps({
     </div>
     <div class="info">
       <p class="name">{{ product.name }}</p>
-      <p class="price">NT$ {{ product.price }}</p>
+      <div class="meta-row">
+        <p class="price">NT$ {{ product.price }}</p>
+        <span v-if="product.reviewCount > 0" class="rating" :title="`${product.reviewCount} 則評論`">
+          ★ {{ Number(product.ratingAverage).toFixed(1) }}
+          <span class="rating-count">({{ product.reviewCount }})</span>
+        </span>
+      </div>
     </div>
   </router-link>
 </template>
@@ -67,6 +73,23 @@ defineProps({
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   min-height: 38px;
+}
+
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.rating {
+  color: #f7ba2a;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rating-count {
+  color: #999;
 }
 
 .price {

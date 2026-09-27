@@ -48,6 +48,13 @@ public class Product {
     @Column(name = "sales_count", nullable = false)
     private int salesCount;
 
+    /** 平均星等(四捨五入到小數一位),評論新增 / 修改 / 刪除時更新 */
+    @Column(name = "rating_average", nullable = false, precision = 2, scale = 1)
+    private BigDecimal ratingAverage = BigDecimal.ZERO;
+
+    @Column(name = "review_count", nullable = false)
+    private int reviewCount;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductSku> skus = new ArrayList<>();
 

@@ -17,6 +17,8 @@ public class ProductListResponse {
     private BigDecimal price;
     private ProductStatus status;
     private int salesCount;
+    private BigDecimal ratingAverage;
+    private int reviewCount;
 
     public static ProductListResponse from(Product product) {
         return new ProductListResponse(
@@ -25,6 +27,8 @@ public class ProductListResponse {
                 product.getMainImage(),
                 product.getPrice(),
                 product.getStatus(),
-                product.getSalesCount());
+                product.getSalesCount(),
+                product.getRatingAverage(),
+                product.getReviewCount());
     }
 }

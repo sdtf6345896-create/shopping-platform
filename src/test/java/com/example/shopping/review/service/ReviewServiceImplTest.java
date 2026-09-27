@@ -21,6 +21,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -57,6 +58,20 @@ class ReviewServiceImplTest {
         member.setName("陳小美");
     }
 
+    private void stubSummary(Double average, Long count) {
+        when(productReviewRepository.summarizeByProductId(10L)).thenReturn(new ReviewSummaryProjection() {
+            @Override
+            public Double getAverageRating() {
+                return average;
+            }
+
+            @Override
+            public Long getReviewCount() {
+                return count;
+            }
+        });
+    }
+
     @Test
     void upsert_createsReview_whenMemberHasPurchased() {
         when(productReviewRepository.findByProductIdAndMemberId(10L, 1L)).thenReturn(Optional.empty());
@@ -65,6 +80,8 @@ class ReviewServiceImplTest {
         when(productRepository.getReferenceById(10L)).thenReturn(product);
         when(memberRepository.getReferenceById(1L)).thenReturn(member);
         when(productReviewRepository.save(any(ProductReview.class))).thenAnswer(inv -> inv.getArgument(0));
+        stubSummary(4.666, 3L);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
 
         ReviewRequest request = new ReviewRequest();
         request.setRating(5);
@@ -75,6 +92,9 @@ class ReviewServiceImplTest {
         assertThat(response.getRating()).isEqualTo(5);
         assertThat(response.getContent()).isEqualTo("很好用");
         assertThat(response.getMemberName()).isEqualTo("陳**");
+        // 商品上的評價摘要同步更新,供列表顯示與排序
+        assertThat(product.getRatingAverage()).isEqualByComparingTo("4.7");
+        assertThat(product.getReviewCount()).isEqualTo(3);
     }
 
     @Test
@@ -113,6 +133,8 @@ class ReviewServiceImplTest {
         existing.setContent("普通");
         when(productReviewRepository.findByProductIdAndMemberId(10L, 1L)).thenReturn(Optional.of(existing));
         when(productReviewRepository.save(any(ProductReview.class))).thenAnswer(inv -> inv.getArgument(0));
+        stubSummary(5.0, 1L);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
 
         ReviewRequest request = new ReviewRequest();
         request.setRating(5);
@@ -167,5 +189,22 @@ class ReviewServiceImplTest {
                 return count;
             }
         };
+    }
+
+    @Test
+    void delete_resetsProductRating_whenLastReviewRemoved() {
+        ProductReview existing = new ProductReview();
+        existing.setProduct(product);
+        existing.setMember(member);
+        product.setRatingAverage(new BigDecimal("4.0"));
+        product.setReviewCount(1);
+        when(productReviewRepository.findByProductIdAndMemberId(10L, 1L)).thenReturn(Optional.of(existing));
+        stubSummary(null, 0L);
+        when(productRepository.findById(10L)).thenReturn(Optional.of(product));
+
+        reviewService.delete(1L, 10L);
+
+        assertThat(product.getRatingAverage()).isEqualByComparingTo("0");
+        assertThat(product.getReviewCount()).isZero();
     }
 }

@@ -166,6 +166,7 @@ onMounted(() => {
               <el-option label="價格由低到高" value="price,asc" />
               <el-option label="價格由高到低" value="price,desc" />
               <el-option label="熱銷優先" value="salesCount,desc" />
+              <el-option label="評價最高" value="ratingAverage,desc" />
             </el-select>
           </div>
         </div>
