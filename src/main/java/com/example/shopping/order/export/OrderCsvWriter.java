@@ -4,6 +4,7 @@ import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
+import com.example.shopping.order.invoice.InvoiceInfo;
 
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -36,7 +37,7 @@ public final class OrderCsvWriter {
 
     private static final List<String> HEADERS = List.of(
             "訂單編號", "建立時間", "狀態", "付款方式", "會員 Email", "收件人", "收件電話", "收件地址",
-            "商品明細", "商品小計", "折抵金額", "優惠券", "購物金折抵", "運費", "實付金額", "物流業者", "物流單號", "訂單備註");
+            "商品明細", "商品小計", "折抵金額", "優惠券", "購物金折抵", "運費", "實付金額", "物流業者", "物流單號", "訂單備註", "發票");
 
     private OrderCsvWriter() {
     }
@@ -63,7 +64,8 @@ public final class OrderCsvWriter {
                     String.valueOf(order.getTotalAmount()),
                     nullToEmpty(order.getShippingCarrier()),
                     nullToEmpty(order.getTrackingNumber()),
-                    nullToEmpty(order.getBuyerNote())));
+                    nullToEmpty(order.getBuyerNote()),
+                    describeInvoice(order.getInvoice())));
         }
 
         byte[] body = sb.toString().getBytes(StandardCharsets.UTF_8);
@@ -71,6 +73,18 @@ public final class OrderCsvWriter {
         System.arraycopy(UTF8_BOM, 0, result, 0, UTF8_BOM.length);
         System.arraycopy(body, 0, result, UTF8_BOM.length, body.length);
         return result;
+    }
+
+    private static String describeInvoice(InvoiceInfo invoice) {
+        if (invoice == null || invoice.getType() == null) {
+            return "會員載具";
+        }
+        return switch (invoice.getType()) {
+            case MEMBER_CARRIER -> "會員載具";
+            case MOBILE_BARCODE -> "手機條碼 " + invoice.getCarrierCode();
+            case COMPANY -> "統編 " + invoice.getTaxId() + " " + invoice.getCompanyTitle();
+            case DONATION -> "捐贈 " + invoice.getDonationCode();
+        };
     }
 
     private static String describeItem(OrderItem item) {

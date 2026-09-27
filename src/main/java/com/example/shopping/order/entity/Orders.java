@@ -6,6 +6,7 @@ import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.coupon.entity.Coupon;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
+import com.example.shopping.order.invoice.InvoiceInfo;
 import com.example.shopping.returns.entity.ReturnRequest;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -95,6 +96,9 @@ public class Orders {
 
     @Column(name = "receiver_address", nullable = false, length = 255)
     private String receiverAddress;
+
+    @Embedded
+    private InvoiceInfo invoice = new InvoiceInfo();
 
     /** 會員結帳時留的備註 */
     @Column(name = "buyer_note", length = 200)

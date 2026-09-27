@@ -68,6 +68,7 @@
 | `CouponStatus` | `ACTIVE`, `DISABLED` |
 | `DiscountType` | `FIXED_AMOUNT`(固定金額折抵), `PERCENTAGE`(百分比折扣) |
 | `PointTransactionType` | `EARN`(訂單完成回饋), `REDEEM`(結帳折抵), `REFUND`(取消退還), `ADJUST`(活動贈送/調整) |
+| `InvoiceType` | `MEMBER_CARRIER`, `MOBILE_BARCODE`, `COMPANY`, `DONATION` |
 | `OrderActor` | `MEMBER`, `ADMIN`, `SYSTEM`(訂單歷程中觸發狀態變更的角色) |
 
 訂單狀態合法轉換(後台變更狀態、會員取消訂單都受此限制):
@@ -498,6 +499,13 @@ REFUNDED        → (終態)
 ```json
 { "addressId": 2, "paymentMethod": "CREDIT_CARD", "cartItemIds": [1, 2], "couponCode": "SAVE100", "pointsToUse": 100, "note": "請於平日配送" }
 ```
+`invoice` 選填,電子發票開立方式(不帶為會員載具):
+- `{ "type": "MEMBER_CARRIER" }` 會員載具
+- `{ "type": "MOBILE_BARCODE", "carrierCode": "/ABC1234" }` 手機條碼(斜線 + 7 碼,自動轉大寫)
+- `{ "type": "COMPANY", "taxId": "04595257", "companyTitle": "範例股份有限公司" }` 公司戶,統一編號以財政部檢查碼規則驗證(2023 年起被 5 整除即有效)
+- `{ "type": "DONATION", "donationCode": "919" }` 捐贈,愛心碼 3~7 位數字
+
+格式錯誤回 400;與開立方式無關的欄位會被忽略。訂單回應帶 `invoice` 物件。
 `note` 選填,給賣家的備註(最多 200 字),會顯示在訂單詳情、後台與揀貨單,回傳於 `OrderResponse.buyerNote`。
 `pointsToUse` 選填,使用購物金折抵(1 點 = NT$1),最多為「套用優惠券後應付金額的 50%」且不超過餘額,超過回 400。
 `cartItemIds` 選填,不帶則結帳購物車全部項目。`couponCode` 選填,不帶則不使用優惠券;若代碼無效、已停用/過期/兌換完畢,或未達最低消費門檻,回 400 且不會建立訂單。下單當下就會扣庫存與優惠券使用名額(非等付款);若購物車內有商品已下架或庫存不足,整筆交易失敗回 400,購物車項目不受影響。

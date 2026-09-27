@@ -7,6 +7,7 @@ import { checkout } from '../api/order'
 import { applyCoupon } from '../api/coupon'
 import { getPointBalance } from '../api/points'
 import { maxRedeemable } from '../utils/points'
+import { INVOICE_TYPE_LABELS, validateInvoice } from '../utils/invoice'
 import { getShippingPolicy } from '../api/shipping'
 import { amountToFreeShipping, shippingFeeFor } from '../utils/shipping'
 import { useCartStore } from '../stores/cart'
@@ -19,6 +20,7 @@ const selectedAddressId = ref(null)
 const paymentMethod = ref('CREDIT_CARD')
 const submitting = ref(false)
 const buyerNote = ref('')
+const invoice = reactive({ type: 'MEMBER_CARRIER', carrierCode: '', taxId: '', companyTitle: '', donationCode: '' })
 
 const showAddressDialog = ref(false)
 const addressFormRef = ref()
@@ -143,6 +145,12 @@ async function handleSubmit() {
     return
   }
 
+  const invoiceError = validateInvoice(invoice)
+  if (invoiceError) {
+    ElMessage.warning(invoiceError)
+    return
+  }
+
   submitting.value = true
   try {
     const order = await checkout({
@@ -152,6 +160,13 @@ async function handleSubmit() {
       couponCode: appliedCoupon.value?.code || null,
       pointsToUse: appliedPoints.value,
       note: buyerNote.value.trim() || null,
+      invoice: {
+        type: invoice.type,
+        carrierCode: invoice.type === 'MOBILE_BARCODE' ? invoice.carrierCode.trim().toUpperCase() : null,
+        taxId: invoice.type === 'COMPANY' ? invoice.taxId.trim() : null,
+        companyTitle: invoice.type === 'COMPANY' ? invoice.companyTitle.trim() : null,
+        donationCode: invoice.type === 'DONATION' ? invoice.donationCode.trim() : null,
+      },
     })
     cartStore.setCheckoutSelection(null)
     await cartStore.fetchCart()
@@ -249,6 +264,32 @@ onMounted(async () => {
       <p class="mock-hint">
         本筆最多可折抵 {{ pointLimit }} 點(應付金額的 {{ Math.round(pointInfo.maxRedeemRatio * 100) }}%),1 點 = NT$1
       </p>
+    </section>
+
+    <section class="block">
+      <div class="block-title">電子發票</div>
+      <el-radio-group v-model="invoice.type">
+        <el-radio v-for="(label, key) in INVOICE_TYPE_LABELS" :key="key" :value="key">{{ label }}</el-radio>
+      </el-radio-group>
+      <div class="invoice-fields">
+        <el-input
+          v-if="invoice.type === 'MOBILE_BARCODE'"
+          v-model="invoice.carrierCode"
+          maxlength="8"
+          placeholder="手機條碼,例如 /ABC1234"
+        />
+        <template v-else-if="invoice.type === 'COMPANY'">
+          <el-input v-model="invoice.taxId" maxlength="8" placeholder="統一編號(8 碼)" />
+          <el-input v-model="invoice.companyTitle" maxlength="60" placeholder="發票抬頭(公司名稱)" />
+        </template>
+        <el-input
+          v-else-if="invoice.type === 'DONATION'"
+          v-model="invoice.donationCode"
+          maxlength="7"
+          placeholder="愛心碼(3 到 7 位數字)"
+        />
+        <p v-else class="mock-hint">發票將存在您的會員帳號,中獎時會通知您。</p>
+      </div>
     </section>
 
     <section class="block">
@@ -373,6 +414,14 @@ onMounted(async () => {
   margin-top: 12px;
   font-size: 12px;
   color: #999;
+}
+
+.invoice-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+  max-width: 360px;
 }
 
 .shipping-hint {

@@ -29,6 +29,7 @@ public class OrderResponse {
     private String receiverPhone;
     private String receiverAddress;
     private String buyerNote;
+    private InvoiceResponse invoice;
     private String shippingCarrier;
     private String trackingNumber;
     private LocalDateTime shippedAt;
@@ -57,6 +58,7 @@ public class OrderResponse {
                 order.getReceiverPhone(),
                 order.getReceiverAddress(),
                 order.getBuyerNote(),
+                InvoiceResponse.from(order.getInvoice()),
                 order.getShippingCarrier(),
                 order.getTrackingNumber(),
                 order.getShippedAt(),

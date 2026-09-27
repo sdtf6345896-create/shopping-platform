@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { PAYMENT_METHOD_LABELS } from '../utils/orderEnums'
+import { describeInvoice } from '../utils/invoice'
 
 const props = defineProps({
   order: { type: Object, required: true },
@@ -25,6 +26,7 @@ const formatTime = (value) => value?.slice(0, 19).replace('T', ' ')
         <p>訂單編號:<strong>{{ order.orderNo }}</strong></p>
         <p>下單時間:{{ formatTime(order.createdAt) }}</p>
         <p v-if="isReceipt">付款方式:{{ PAYMENT_METHOD_LABELS[order.paymentMethod] }}</p>
+        <p v-if="isReceipt">發票:{{ describeInvoice(order.invoice) }}</p>
         <p>列印時間:{{ printedAt }}</p>
       </div>
     </header>

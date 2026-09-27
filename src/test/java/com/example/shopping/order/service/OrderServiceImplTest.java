@@ -25,6 +25,7 @@ import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
+import com.example.shopping.order.invoice.InvoiceService;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.order.shipping.ShippingPolicy;
@@ -85,6 +86,8 @@ class OrderServiceImplTest {
     private ProductRepository productRepository;
     @Mock
     private MemberTierService memberTierService;
+    @Spy
+    private InvoiceService invoiceService = new InvoiceService();
     @Spy
     private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("999"));
     @Mock

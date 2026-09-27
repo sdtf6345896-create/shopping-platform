@@ -1,4 +1,5 @@
 <script setup>
+import { describeInvoice } from '../../utils/invoice'
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -98,6 +99,7 @@ onMounted(load)
         <p class="meta">付款方式:{{ PAYMENT_METHOD_LABELS[order.paymentMethod] }}</p>
         <p class="meta">收件人:{{ order.receiverName }} {{ order.receiverPhone }}</p>
         <p class="meta">收件地址:{{ order.receiverAddress }}</p>
+        <p class="meta">發票:{{ describeInvoice(order.invoice) }}</p>
         <p v-if="order.buyerNote" class="meta buyer-note">訂單備註:{{ order.buyerNote }}</p>
         <template v-if="order.trackingNumber">
           <p class="meta">物流:{{ order.shippingCarrier }} / {{ order.trackingNumber }}</p>

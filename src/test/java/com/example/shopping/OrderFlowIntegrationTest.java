@@ -370,8 +370,15 @@ class OrderFlowIntegrationTest {
                 "code", onceCode, "name", "新客限用一次", "discountType", "FIXED_AMOUNT",
                 "discountValue", 50, "minSpendAmount", 0, "perMemberLimit", 1), 200);
         call(post("/api/coupons/apply"), memberToken, Map.of("code", onceCode), 200);
+        JsonNode badTaxId = call(post("/api/orders"), memberToken, Map.of("addressId", addressId, "paymentMethod", "COD",
+                "invoice", Map.of("type", "COMPANY", "taxId", "12345678", "companyTitle", "範例公司")), 400);
+        assertThat(badTaxId.at("/message").asText()).contains("統一編號");
         JsonNode couponOrder = call(post("/api/orders"), memberToken,
-                Map.of("addressId", addressId, "paymentMethod", "COD", "couponCode", onceCode), 200).at("/data");
+                Map.of("addressId", addressId, "paymentMethod", "COD", "couponCode", onceCode,
+                        "invoice", Map.of("type", "COMPANY", "taxId", "04595257", "companyTitle", "範例公司")), 200)
+                .at("/data");
+        assertThat(couponOrder.at("/invoice/type").asText()).isEqualTo("COMPANY");
+        assertThat(couponOrder.at("/invoice/taxId").asText()).isEqualTo("04595257");
         assertThat(couponOrder.at("/discountAmount").decimalValue()).isEqualByComparingTo("50");
         call(post("/api/cart/items"), memberToken, Map.of("skuId", newSkuId, "quantity", 1), 200);
         JsonNode reused = call(post("/api/coupons/apply"), memberToken, Map.of("code", onceCode), 400);

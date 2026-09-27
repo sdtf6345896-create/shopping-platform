@@ -24,6 +24,7 @@ import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.export.OrderCsvWriter;
+import com.example.shopping.order.invoice.InvoiceService;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.order.shipping.ShippingPolicy;
@@ -89,6 +90,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final ShippingPolicy shippingPolicy;
     private final MemberTierService memberTierService;
+    private final InvoiceService invoiceService;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -103,7 +105,8 @@ public class OrderServiceImpl implements OrderService {
                              ProductSkuRepository productSkuRepository,
                              ProductRepository productRepository,
                              ShippingPolicy shippingPolicy,
-                             MemberTierService memberTierService) {
+                             MemberTierService memberTierService,
+                             InvoiceService invoiceService) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -118,6 +121,7 @@ public class OrderServiceImpl implements OrderService {
         this.productRepository = productRepository;
         this.shippingPolicy = shippingPolicy;
         this.memberTierService = memberTierService;
+        this.invoiceService = invoiceService;
     }
 
     @Override
@@ -154,6 +158,7 @@ public class OrderServiceImpl implements OrderService {
         order.setReceiverPhone(address.getPhone());
         order.setReceiverAddress(address.getCity() + address.getDistrict() + address.getDetailAddress());
         order.setBuyerNote(blankToNull(request.getNote()));
+        order.setInvoice(invoiceService.resolve(request.getInvoice()));
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (CartItem cartItem : cartItems) {

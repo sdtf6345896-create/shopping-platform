@@ -1,6 +1,8 @@
 package com.example.shopping.order.dto.request;
 
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.order.invoice.InvoiceRequest;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -40,4 +42,8 @@ public class CheckoutRequest {
      */
     @Size(max = 200, message = "訂單備註最多 200 字")
     private String note;
+
+    /** 發票開立方式,不填為會員載具 */
+    @Valid
+    private InvoiceRequest invoice;
 }
