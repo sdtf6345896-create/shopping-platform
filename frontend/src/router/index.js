@@ -15,6 +15,21 @@ const routes = [
     props: true,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/orders/:id/receipt',
+    name: 'OrderReceipt',
+    component: () => import('../views/PrintOrder.vue'),
+    props: (route) => ({ id: route.params.id, variant: 'receipt' }),
+    meta: { requiresAuth: true },
+  },
+  // 揀貨單放在後台 layout 外面,列印時才不會帶到側邊選單
+  {
+    path: '/admin/orders/:id/packing-slip',
+    name: 'AdminPackingSlip',
+    component: () => import('../views/PrintOrder.vue'),
+    props: (route) => ({ id: route.params.id, variant: 'packing' }),
+    meta: { requiresAdminAuth: true },
+  },
   { path: '/login', name: 'Login', component: () => import('../views/Login.vue') },
   { path: '/register', name: 'Register', component: () => import('../views/Register.vue') },
   { path: '/forgot-password', name: 'ForgotPassword', component: () => import('../views/ForgotPassword.vue') },

@@ -165,6 +165,9 @@ onMounted(load)
         >
           {{ action.label }}
         </el-button>
+        <el-button v-if="['PAID', 'SHIPPING'].includes(order.status)" @click="router.push({ name: 'AdminPackingSlip', params: { id: order.id } })">
+          列印揀貨單
+        </el-button>
         <span v-if="ORDER_STATUS_TRANSITIONS[order.status]?.length === 0" class="no-action-hint">
           此訂單已無可執行的狀態變更
         </span>

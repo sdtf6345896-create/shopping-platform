@@ -234,6 +234,9 @@ onMounted(load)
         </el-button>
         <el-button v-if="canApplyReturn" :loading="acting" @click="handleApplyReturn">申請退貨</el-button>
         <el-button :loading="acting" @click="handleReorder">再買一次</el-button>
+        <el-button v-if="!['PENDING_PAYMENT', 'CANCELLED'].includes(order.status)" @click="router.push({ name: 'OrderReceipt', params: { id: order.id } })">
+          列印收據
+        </el-button>
       </div>
     </template>
   </div>

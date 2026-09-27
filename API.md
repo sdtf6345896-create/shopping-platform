@@ -442,7 +442,7 @@ REFUNDED        → (終態)
   "shippingCarrier": null, "trackingNumber": null, "shippedAt": null,
   "paymentDeadline": "2026-09-14T20:59:30",
   "createdAt": "2026-09-14T20:29:30",
-  "items": [ { "id": 1, "skuId": 2, "productName": "經典圓領T恤", "specName": "黑色/L",
+  "items": [ { "id": 1, "skuId": 2, "skuCode": "TSHIRT-BLK-L", "productName": "經典圓領T恤", "specName": "黑色/L",
                 "unitPrice": 590.00, "quantity": 1, "subtotal": 590.00 } ],
   "statusLogs": [
     { "fromStatus": null, "toStatus": "PENDING_PAYMENT", "actor": "MEMBER", "note": "訂單成立", "createdAt": "2026-09-14T20:29:30" },
