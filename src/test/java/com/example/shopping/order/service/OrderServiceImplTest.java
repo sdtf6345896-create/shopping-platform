@@ -30,6 +30,7 @@ import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductSkuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,7 +48,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -72,6 +75,8 @@ class OrderServiceImplTest {
     @Mock
     private OrderPaymentPolicy paymentPolicy;
     @Mock
+    private ProductSkuRepository productSkuRepository;
+    @Mock
     private PointService pointService;
     @Spy
     private PointPolicy pointPolicy = new PointPolicy(new BigDecimal("0.01"), new BigDecimal("0.5"));
@@ -86,6 +91,9 @@ class OrderServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        // 預設扣庫存成功;搶輸最後一件的情境由個別測試覆寫
+        lenient().when(productSkuRepository.decrementStock(anyLong(), anyInt())).thenReturn(1);
+
         Member member = new Member();
         member.setId(1L);
 
@@ -147,7 +155,7 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
         assertThat(response.getTotalAmount()).isEqualByComparingTo(new BigDecimal("1180.00"));
-        assertThat(sku.getStock()).isEqualTo(3);
+        verify(productSkuRepository).decrementStock(1L, 2);
         verify(cartItemRepository).deleteAll(List.of(cartItem));
         verify(orderNotifier).notifyStatusChanged(any(Orders.class));
     }
@@ -210,6 +218,20 @@ class OrderServiceImplTest {
         assertThatThrownBy(() -> orderService.checkout(1L, checkoutRequest()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("已下架");
+    }
+
+    @Test
+    void checkout_throws_whenAnotherBuyerTookTheLastUnit() {
+        // 讀到的庫存還夠,但條件式 UPDATE 扣不到(別人同時結帳先扣走了)
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(productSkuRepository.decrementStock(1L, 2)).thenReturn(0);
+
+        assertThatThrownBy(() -> orderService.checkout(1L, checkoutRequest()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("庫存不足");
+        verify(orderRepository, never()).save(any());
     }
 
     @Test
@@ -276,7 +298,7 @@ class OrderServiceImplTest {
 
         assertThat(cancelled).isEqualTo(1);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-        assertThat(sku.getStock()).isEqualTo(5);
+        verify(productSkuRepository).incrementStock(1L, 2);
         assertThat(order.getStatusLogs()).last()
                 .satisfies(log -> assertThat(log.getActor()).isEqualTo(OrderActor.SYSTEM));
         verify(couponService).release(5L);
@@ -304,7 +326,7 @@ class OrderServiceImplTest {
         OrderResponse response = orderService.cancelByMember(1L, 1L);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-        assertThat(sku.getStock()).isEqualTo(5);
+        verify(productSkuRepository).incrementStock(1L, 2);
         verify(orderNotifier).notifyStatusChanged(order);
     }
 
@@ -433,7 +455,7 @@ class OrderServiceImplTest {
         OrderResponse response = orderService.updateStatus(1L, request);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
-        assertThat(sku.getStock()).isEqualTo(5);
+        verify(productSkuRepository).incrementStock(1L, 2);
         assertThat(product.getSalesCount()).isEqualTo(0);
     }
 

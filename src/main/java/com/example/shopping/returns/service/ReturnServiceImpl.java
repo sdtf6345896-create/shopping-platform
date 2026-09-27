@@ -14,6 +14,7 @@ import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.returns.dto.request.ReturnApplyRequest;
 import com.example.shopping.returns.dto.request.ReturnDecisionRequest;
 import com.example.shopping.returns.dto.response.ReturnRequestResponse;
@@ -34,15 +35,18 @@ public class ReturnServiceImpl implements ReturnService {
     private final OrderRepository orderRepository;
     private final PointService pointService;
     private final OrderNotifier orderNotifier;
+    private final ProductSkuRepository productSkuRepository;
 
     public ReturnServiceImpl(ReturnRequestRepository returnRequestRepository,
                              OrderRepository orderRepository,
                              PointService pointService,
-                             OrderNotifier orderNotifier) {
+                             OrderNotifier orderNotifier,
+                             ProductSkuRepository productSkuRepository) {
         this.returnRequestRepository = returnRequestRepository;
         this.orderRepository = orderRepository;
         this.pointService = pointService;
         this.orderNotifier = orderNotifier;
+        this.productSkuRepository = productSkuRepository;
     }
 
     @Override
@@ -85,7 +89,7 @@ public class ReturnServiceImpl implements ReturnService {
 
         for (OrderItem item : order.getItems()) {
             ProductSku sku = item.getProductSku();
-            sku.setStock(sku.getStock() + item.getQuantity());
+            productSkuRepository.incrementStock(sku.getId(), item.getQuantity());
             Product product = sku.getProduct();
             product.setSalesCount(Math.max(0, product.getSalesCount() - item.getQuantity()));
         }

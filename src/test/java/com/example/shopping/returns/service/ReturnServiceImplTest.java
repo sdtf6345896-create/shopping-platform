@@ -16,6 +16,7 @@ import com.example.shopping.points.dto.PointBalanceResponse;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.returns.dto.request.ReturnApplyRequest;
 import com.example.shopping.returns.dto.request.ReturnDecisionRequest;
 import com.example.shopping.returns.entity.ReturnRequest;
@@ -51,6 +52,8 @@ class ReturnServiceImplTest {
     private PointService pointService;
     @Mock
     private OrderNotifier orderNotifier;
+    @Mock
+    private ProductSkuRepository productSkuRepository;
 
     @InjectMocks
     private ReturnServiceImpl returnService;
@@ -67,6 +70,7 @@ class ReturnServiceImplTest {
         product = new Product();
         product.setSalesCount(5);
         sku = new ProductSku();
+        sku.setId(4L);
         sku.setProduct(product);
         sku.setStock(3);
 
@@ -160,7 +164,7 @@ class ReturnServiceImplTest {
         assertThat(order.getStatus()).isEqualTo(OrderStatus.REFUNDED);
         assertThat(returnRequest.getStatus()).isEqualTo(ReturnStatus.APPROVED);
         assertThat(returnRequest.getProcessedAt()).isNotNull();
-        assertThat(sku.getStock()).isEqualTo(5);
+        verify(productSkuRepository).incrementStock(4L, 2);
         assertThat(product.getSalesCount()).isEqualTo(3);
         verify(pointService).credit(eq(1L), eq(7L), eq(50), eq(PointTransactionType.REFUND), any());
         verify(pointService).deduct(eq(1L), eq(7L), eq(10), eq(PointTransactionType.ADJUST), any());

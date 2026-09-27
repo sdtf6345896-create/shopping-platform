@@ -28,6 +28,7 @@ import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductSkuRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -80,6 +81,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderPaymentPolicy paymentPolicy;
     private final PointService pointService;
     private final PointPolicy pointPolicy;
+    private final ProductSkuRepository productSkuRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -90,7 +92,8 @@ public class OrderServiceImpl implements OrderService {
                              OrderNotifier orderNotifier,
                              OrderPaymentPolicy paymentPolicy,
                              PointService pointService,
-                             PointPolicy pointPolicy) {
+                             PointPolicy pointPolicy,
+                             ProductSkuRepository productSkuRepository) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -101,6 +104,7 @@ public class OrderServiceImpl implements OrderService {
         this.paymentPolicy = paymentPolicy;
         this.pointService = pointService;
         this.pointPolicy = pointPolicy;
+        this.productSkuRepository = productSkuRepository;
     }
 
     @Override
@@ -161,7 +165,10 @@ public class OrderServiceImpl implements OrderService {
             orderItem.setSubtotal(subtotal);
             order.addItem(orderItem);
 
-            sku.setStock(sku.getStock() - cartItem.getQuantity());
+            // 上面的檢查只是為了給清楚的錯誤訊息;真正防超賣靠條件式 UPDATE(同時結帳時只有一人扣得到)
+            if (productSkuRepository.decrementStock(sku.getId(), cartItem.getQuantity()) == 0) {
+                throw new BusinessException("「" + product.getName() + " " + sku.getSpecName() + "」庫存不足");
+            }
         }
 
         BigDecimal discountAmount = BigDecimal.ZERO;
@@ -362,8 +369,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("此訂單狀態無法取消");
         }
         for (OrderItem item : order.getItems()) {
-            ProductSku sku = item.getProductSku();
-            sku.setStock(sku.getStock() + item.getQuantity());
+            productSkuRepository.incrementStock(item.getProductSku().getId(), item.getQuantity());
         }
         if (order.getCoupon() != null) {
             couponService.release(order.getCoupon().getId());
