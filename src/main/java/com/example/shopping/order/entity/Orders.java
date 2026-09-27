@@ -96,6 +96,10 @@ public class Orders {
     @Column(name = "receiver_address", nullable = false, length = 255)
     private String receiverAddress;
 
+    /** 會員結帳時留的備註 */
+    @Column(name = "buyer_note", length = 200)
+    private String buyerNote;
+
     /** 物流業者(出貨時填寫) */
     @Column(name = "shipping_carrier", length = 30)
     private String shippingCarrier;

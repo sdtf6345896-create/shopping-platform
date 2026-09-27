@@ -98,6 +98,7 @@ onMounted(load)
         <p class="meta">付款方式:{{ PAYMENT_METHOD_LABELS[order.paymentMethod] }}</p>
         <p class="meta">收件人:{{ order.receiverName }} {{ order.receiverPhone }}</p>
         <p class="meta">收件地址:{{ order.receiverAddress }}</p>
+        <p v-if="order.buyerNote" class="meta buyer-note">訂單備註:{{ order.buyerNote }}</p>
         <template v-if="order.trackingNumber">
           <p class="meta">物流:{{ order.shippingCarrier }} / {{ order.trackingNumber }}</p>
           <p class="meta">出貨時間:{{ order.shippedAt?.slice(0, 19).replace('T', ' ') }}</p>
@@ -194,6 +195,11 @@ onMounted(load)
 </template>
 
 <style scoped>
+.buyer-note {
+  color: #e6a23c;
+  white-space: pre-wrap;
+}
+
 .back-link {
   display: inline-block;
   margin-bottom: 16px;

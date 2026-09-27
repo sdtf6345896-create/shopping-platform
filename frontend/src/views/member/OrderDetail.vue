@@ -163,6 +163,7 @@ onMounted(load)
         <p class="meta">付款方式:{{ PAYMENT_METHOD_LABELS[order.paymentMethod] }}</p>
         <p class="meta">收件人:{{ order.receiverName }} {{ order.receiverPhone }}</p>
         <p class="meta">收件地址:{{ order.receiverAddress }}</p>
+        <p v-if="order.buyerNote" class="meta buyer-note">訂單備註:{{ order.buyerNote }}</p>
       </div>
 
       <div v-if="order.trackingNumber" class="block">
@@ -262,6 +263,11 @@ onMounted(load)
 </template>
 
 <style scoped>
+.buyer-note {
+  color: #e6a23c;
+  white-space: pre-wrap;
+}
+
 .order-detail-page {
   max-width: 720px;
 }

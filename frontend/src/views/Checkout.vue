@@ -18,6 +18,7 @@ const addresses = ref([])
 const selectedAddressId = ref(null)
 const paymentMethod = ref('CREDIT_CARD')
 const submitting = ref(false)
+const buyerNote = ref('')
 
 const showAddressDialog = ref(false)
 const addressFormRef = ref()
@@ -150,6 +151,7 @@ async function handleSubmit() {
       cartItemIds: cartStore.checkoutSelection,
       couponCode: appliedCoupon.value?.code || null,
       pointsToUse: appliedPoints.value,
+      note: buyerNote.value.trim() || null,
     })
     cartStore.setCheckoutSelection(null)
     await cartStore.fetchCart()
@@ -247,6 +249,18 @@ onMounted(async () => {
       <p class="mock-hint">
         本筆最多可折抵 {{ pointLimit }} 點(應付金額的 {{ Math.round(pointInfo.maxRedeemRatio * 100) }}%),1 點 = NT$1
       </p>
+    </section>
+
+    <section class="block">
+      <div class="block-title">訂單備註</div>
+      <el-input
+        v-model="buyerNote"
+        type="textarea"
+        :rows="2"
+        maxlength="200"
+        show-word-limit
+        placeholder="給賣家的話,例如:請於平日白天配送(選填)"
+      />
     </section>
 
     <section class="block">

@@ -153,6 +153,7 @@ public class OrderServiceImpl implements OrderService {
         order.setReceiverName(address.getRecipientName());
         order.setReceiverPhone(address.getPhone());
         order.setReceiverAddress(address.getCity() + address.getDistrict() + address.getDetailAddress());
+        order.setBuyerNote(blankToNull(request.getNote()));
 
         BigDecimal totalAmount = BigDecimal.ZERO;
         for (CartItem cartItem : cartItems) {

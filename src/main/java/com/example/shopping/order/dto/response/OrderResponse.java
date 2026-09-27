@@ -28,6 +28,7 @@ public class OrderResponse {
     private String receiverName;
     private String receiverPhone;
     private String receiverAddress;
+    private String buyerNote;
     private String shippingCarrier;
     private String trackingNumber;
     private LocalDateTime shippedAt;
@@ -55,6 +56,7 @@ public class OrderResponse {
                 order.getReceiverName(),
                 order.getReceiverPhone(),
                 order.getReceiverAddress(),
+                order.getBuyerNote(),
                 order.getShippingCarrier(),
                 order.getTrackingNumber(),
                 order.getShippedAt(),

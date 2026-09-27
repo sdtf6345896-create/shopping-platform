@@ -3,6 +3,7 @@ package com.example.shopping.order.dto.request;
 import com.example.shopping.common.enums.PaymentMethod;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -33,4 +34,10 @@ public class CheckoutRequest {
      */
     @Min(value = 0, message = "購物金點數不可為負數")
     private Integer pointsToUse;
+
+    /**
+     * 給賣家的備註(例如配送時段),選填。
+     */
+    @Size(max = 200, message = "訂單備註最多 200 字")
+    private String note;
 }

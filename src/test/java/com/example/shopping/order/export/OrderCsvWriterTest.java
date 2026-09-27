@@ -37,6 +37,7 @@ class OrderCsvWriterTest {
         order.setCouponCode("SAVE100");
         order.setShippingCarrier("黑貓宅急便");
         order.setTrackingNumber("TRK123");
+        order.setBuyerNote("請於平日配送,謝謝");
         OrderItem item = new OrderItem();
         item.setProductName("經典圓領T恤");
         item.setSpecName("黑色/M");
@@ -50,7 +51,7 @@ class OrderCsvWriterTest {
         assertThat(lines).hasSize(2);
         assertThat(lines[0]).startsWith("訂單編號,建立時間,狀態");
         assertThat(lines[1]).isEqualTo("ORD001,2026-09-27 15:30:00,出貨中,信用卡,member@example.com,王小明,0912345678,"
-                + "台北市大安區復興南路一段1號,經典圓領T恤 黑色/M x2,1180.00,100.00,SAVE100,0,0,1080.00,黑貓宅急便,TRK123");
+                + "台北市大安區復興南路一段1號,經典圓領T恤 黑色/M x2,1180.00,100.00,SAVE100,0,0,1080.00,黑貓宅急便,TRK123,\"請於平日配送,謝謝\"");
     }
 
     @Test

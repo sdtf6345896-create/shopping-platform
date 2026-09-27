@@ -163,9 +163,12 @@ class OrderServiceImplTest {
         when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
         when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
 
-        OrderResponse response = orderService.checkout(1L, checkoutRequest());
+        CheckoutRequest request = checkoutRequest();
+        request.setNote("  請於平日配送  ");
+        OrderResponse response = orderService.checkout(1L, request);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+        assertThat(response.getBuyerNote()).isEqualTo("請於平日配送");
         assertThat(response.getTotalAmount()).isEqualByComparingTo(new BigDecimal("1180.00"));
         assertThat(response.getShippingFee()).isZero();
         verify(productSkuRepository).decrementStock(1L, 2);
