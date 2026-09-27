@@ -3,6 +3,8 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCartStore } from '../stores/cart'
+import { getShippingPolicy } from '../api/shipping'
+import { amountToFreeShipping } from '../utils/shipping'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -11,6 +13,20 @@ const selectedIds = ref([])
 
 const selectedItems = computed(() => cartStore.items.filter((item) => selectedIds.value.includes(item.id)))
 const selectedTotal = computed(() => selectedItems.value.reduce((sum, item) => sum + item.subtotal, 0))
+
+// 免運進度(以勾選商品的金額估算,實際以結帳套用優惠券後為準)
+const shippingPolicy = ref(null)
+getShippingPolicy()
+  .then((policy) => {
+    shippingPolicy.value = policy
+  })
+  .catch(() => {})
+const toFreeShipping = computed(() => amountToFreeShipping(selectedTotal.value, shippingPolicy.value))
+const freeShippingPercent = computed(() =>
+  shippingPolicy.value
+    ? Math.min(100, Math.round((selectedTotal.value / Number(shippingPolicy.value.freeThreshold)) * 100))
+    : 0,
+)
 const allSelected = computed(
   () => cartStore.items.length > 0 && selectedIds.value.length === cartStore.items.length,
 )
@@ -110,6 +126,14 @@ onMounted(load)
           </div>
         </div>
 
+        <div v-if="shippingPolicy && selectedItems.length" class="free-shipping">
+          <span v-if="toFreeShipping > 0">
+            再買 <strong>NT$ {{ toFreeShipping }}</strong> 即可免運(滿 NT$ {{ shippingPolicy.freeThreshold }})
+          </span>
+          <span v-else class="reached">已達免運門檻 🎉</span>
+          <el-progress :percentage="freeShippingPercent" :show-text="false" :stroke-width="6" />
+        </div>
+
         <div class="cart-footer">
           <el-button @click="handleClear">清空購物車</el-button>
           <div class="summary">
@@ -192,6 +216,23 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.free-shipping {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #666;
+}
+
+.free-shipping strong {
+  color: #e4393c;
+}
+
+.free-shipping .reached {
+  color: #67c23a;
 }
 
 .summary {

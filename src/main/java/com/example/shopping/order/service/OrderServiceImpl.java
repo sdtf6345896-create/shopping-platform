@@ -24,6 +24,7 @@ import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.export.OrderCsvWriter;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.order.shipping.ShippingPolicy;
 import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
@@ -84,6 +85,7 @@ public class OrderServiceImpl implements OrderService {
     private final PointPolicy pointPolicy;
     private final ProductSkuRepository productSkuRepository;
     private final ProductRepository productRepository;
+    private final ShippingPolicy shippingPolicy;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -96,7 +98,8 @@ public class OrderServiceImpl implements OrderService {
                              PointService pointService,
                              PointPolicy pointPolicy,
                              ProductSkuRepository productSkuRepository,
-                             ProductRepository productRepository) {
+                             ProductRepository productRepository,
+                             ShippingPolicy shippingPolicy) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -109,6 +112,7 @@ public class OrderServiceImpl implements OrderService {
         this.pointPolicy = pointPolicy;
         this.productSkuRepository = productSkuRepository;
         this.productRepository = productRepository;
+        this.shippingPolicy = shippingPolicy;
     }
 
     @Override
@@ -196,8 +200,10 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setSubtotalAmount(totalAmount);
         order.setDiscountAmount(discountAmount);
+        BigDecimal shippingFee = shippingPolicy.feeFor(payable);
         order.setPointsUsed(pointsToUse);
-        order.setTotalAmount(payable.subtract(BigDecimal.valueOf(pointsToUse)));
+        order.setShippingFee(shippingFee);
+        order.setTotalAmount(payable.subtract(BigDecimal.valueOf(pointsToUse)).add(shippingFee));
 
         Orders saved = orderRepository.save(order);
         if (pointsToUse > 0) {
@@ -320,7 +326,8 @@ public class OrderServiceImpl implements OrderService {
             markShipped(order, request, note);
         } else if (target == OrderStatus.COMPLETED) {
             order.changeStatus(target, OrderActor.ADMIN, note);
-            int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount());
+            // 回饋只算商品金額,運費不列入
+            int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount().subtract(order.getShippingFee()));
             order.setPointsEarned(earned);
             if (earned > 0) {
                 pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,

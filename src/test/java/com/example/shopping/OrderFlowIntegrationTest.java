@@ -116,6 +116,7 @@ class OrderFlowIntegrationTest {
         long orderId = order.at("/id").asLong();
         assertThat(order.at("/status").asText()).isEqualTo("PENDING_PAYMENT");
         assertThat(order.at("/totalAmount").decimalValue()).isEqualByComparingTo("1000");
+        assertThat(order.at("/shippingFee").decimalValue()).isZero();
         assertThat(order.at("/paymentDeadline").isNull()).isFalse();
         assertThat(order.at("/statusLogs")).hasSize(1);
 
@@ -151,7 +152,9 @@ class OrderFlowIntegrationTest {
         JsonNode secondOrder = call(post("/api/orders"), memberToken,
                 Map.of("addressId", addressId, "paymentMethod", "ATM", "pointsToUse", 10), 200).at("/data");
         assertThat(secondOrder.at("/pointsUsed").asInt()).isEqualTo(10);
-        assertThat(secondOrder.at("/totalAmount").decimalValue()).isEqualByComparingTo("490");
+        // 500 未達 999 免運門檻:500 - 10 點購物金 + 60 運費
+        assertThat(secondOrder.at("/shippingFee").decimalValue()).isEqualByComparingTo("60");
+        assertThat(secondOrder.at("/totalAmount").decimalValue()).isEqualByComparingTo("550");
         assertThat(call(get("/api/points"), memberToken, null, 200).at("/data/balance").asInt()).isZero();
 
         // 取消第二筆訂單,購物金退回

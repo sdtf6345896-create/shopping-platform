@@ -7,6 +7,8 @@ import { checkout } from '../api/order'
 import { applyCoupon } from '../api/coupon'
 import { getPointBalance } from '../api/points'
 import { maxRedeemable } from '../utils/points'
+import { getShippingPolicy } from '../api/shipping'
+import { amountToFreeShipping, shippingFeeFor } from '../utils/shipping'
 import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
@@ -59,7 +61,10 @@ const pointLimit = computed(() =>
     : 0,
 )
 const appliedPoints = computed(() => (usePoints.value ? Math.min(pointsToUse.value || 0, pointLimit.value) : 0))
-const totalAmount = computed(() => payableBeforePoints.value - appliedPoints.value)
+const shippingPolicy = ref(null)
+const shippingFee = computed(() => shippingFeeFor(payableBeforePoints.value, shippingPolicy.value))
+const toFreeShipping = computed(() => amountToFreeShipping(payableBeforePoints.value, shippingPolicy.value))
+const totalAmount = computed(() => payableBeforePoints.value - appliedPoints.value + shippingFee.value)
 
 function handleTogglePoints(enabled) {
   pointsToUse.value = enabled ? pointLimit.value : 0
@@ -160,7 +165,15 @@ onMounted(async () => {
     router.replace('/cart')
     return
   }
-  await Promise.all([loadAddresses(), loadPoints()])
+  await Promise.all([
+    loadAddresses(),
+    loadPoints(),
+    getShippingPolicy()
+      .then((policy) => {
+        shippingPolicy.value = policy
+      })
+      .catch(() => {}),
+  ])
 })
 </script>
 
@@ -254,6 +267,13 @@ onMounted(async () => {
         <span>購物金折抵</span>
         <span>- NT$ {{ appliedPoints }}</span>
       </div>
+      <div v-if="shippingPolicy" class="confirm-row">
+        <span>
+          運費
+          <small v-if="toFreeShipping > 0" class="shipping-hint">再買 NT$ {{ toFreeShipping }} 免運</small>
+        </span>
+        <span>{{ shippingFee > 0 ? `NT$ ${shippingFee}` : '免運' }}</span>
+      </div>
       <div class="confirm-total">
         <span>總金額</span>
         <span class="total-amount">NT$ {{ totalAmount }}</span>
@@ -339,6 +359,11 @@ onMounted(async () => {
   margin-top: 12px;
   font-size: 12px;
   color: #999;
+}
+
+.shipping-hint {
+  margin-left: 6px;
+  color: #e4393c;
 }
 
 .point-balance {

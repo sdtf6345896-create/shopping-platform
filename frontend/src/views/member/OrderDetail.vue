@@ -175,6 +175,10 @@ onMounted(load)
           <span>購物金折抵</span>
           <span>- NT$ {{ order.pointsUsed }}</span>
         </div>
+        <div class="item-row">
+          <span>運費</span>
+          <span>{{ order.shippingFee > 0 ? `NT$ ${order.shippingFee}` : '免運' }}</span>
+        </div>
         <div class="total-row">
           <span>總金額</span>
           <span class="total-amount">NT$ {{ order.totalAmount }}</span>

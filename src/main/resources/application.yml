@@ -56,6 +56,9 @@ app:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   upload:
     dir: ${UPLOAD_DIR:uploads}
+  shipping:
+    fee: 60                  # 未達免運門檻的運費
+    free-threshold: 999      # 商品金額(套用優惠券後)滿此金額免運
   points:
     earn-rate: 0.01          # 訂單完成回饋 1% 購物金(1 點 = NT$1)
     max-redeem-ratio: 0.5    # 單筆最多折抵應付金額的 50%

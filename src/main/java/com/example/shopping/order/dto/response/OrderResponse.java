@@ -23,6 +23,7 @@ public class OrderResponse {
     private BigDecimal totalAmount;
     private String couponCode;
     private int pointsUsed;
+    private BigDecimal shippingFee;
     private int pointsEarned;
     private String receiverName;
     private String receiverPhone;
@@ -49,6 +50,7 @@ public class OrderResponse {
                 order.getTotalAmount(),
                 order.getCouponCode(),
                 order.getPointsUsed(),
+                order.getShippingFee(),
                 order.getPointsEarned(),
                 order.getReceiverName(),
                 order.getReceiverPhone(),

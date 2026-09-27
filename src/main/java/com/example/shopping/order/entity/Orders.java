@@ -49,7 +49,11 @@ public class Orders {
     @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    /** 實付金額(= subtotalAmount - discountAmount - pointsUsed) */
+    /** 運費(未達免運門檻時收取) */
+    @Column(name = "shipping_fee", nullable = false, precision = 10, scale = 2)
+    private BigDecimal shippingFee = BigDecimal.ZERO;
+
+    /** 實付金額(= subtotalAmount - discountAmount - pointsUsed + shippingFee) */
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 

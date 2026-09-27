@@ -25,6 +25,7 @@ import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.order.shipping.ShippingPolicy;
 import com.example.shopping.points.dto.PointBalanceResponse;
 import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
@@ -79,6 +80,8 @@ class OrderServiceImplTest {
     private ProductSkuRepository productSkuRepository;
     @Mock
     private ProductRepository productRepository;
+    @Spy
+    private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("999"));
     @Mock
     private PointService pointService;
     @Spy
@@ -158,6 +161,7 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
         assertThat(response.getTotalAmount()).isEqualByComparingTo(new BigDecimal("1180.00"));
+        assertThat(response.getShippingFee()).isZero();
         verify(productSkuRepository).decrementStock(1L, 2);
         verify(cartItemRepository).deleteAll(List.of(cartItem));
         verify(orderNotifier).notifyStatusChanged(any(Orders.class));
@@ -623,8 +627,26 @@ class OrderServiceImplTest {
 
         OrderResponse response = orderService.checkout(1L, checkoutRequest());
 
-        // 590 × 80% = 472,兩件 944
+        // 590 × 80% = 472,兩件 944;未滿 999 免運門檻,加運費 60
         assertThat(response.getItems().get(0).getUnitPrice()).isEqualByComparingTo("472.00");
-        assertThat(response.getTotalAmount()).isEqualByComparingTo("944.00");
+        assertThat(response.getShippingFee()).isEqualByComparingTo("60");
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("1004.00");
+    }
+
+    @Test
+    void complete_earnsPointsOnMerchandiseOnly_notShippingFee() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD1");
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setShippingFee(new BigDecimal("60"));
+        order.setTotalAmount(new BigDecimal("560"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderStatusRequest request = new OrderStatusRequest();
+        request.setStatus(OrderStatus.COMPLETED);
+
+        orderService.updateStatus(1L, request);
+
+        verify(pointService).credit(eq(1L), eq(1L), eq(5), eq(PointTransactionType.EARN), any());
     }
 }

@@ -404,6 +404,13 @@ REFUNDED        → (終態)
 
 ---
 
+## 運費(Shipping)
+
+### `GET /api/shipping/policy`
+公開。運費規則:`{ "fee": 60, "freeThreshold": 999 }`。商品金額(套用優惠券後、折抵購物金前)達 `freeThreshold` 免運,否則結帳時加收 `fee`,記在訂單的 `shippingFee` 並包含在 `totalAmount`。購物金回饋只計算商品金額,不含運費。可用 `app.shipping.fee`、`app.shipping.free-threshold` 調整。
+
+---
+
 ## 訂單(Order）— 會員端需登入
 
 ### `GET /api/orders`
@@ -413,7 +420,7 @@ REFUNDED        → (終態)
 ```json
 {
   "id": 1, "orderNo": "ORD202609142029305718", "status": "PAID", "paymentMethod": "CREDIT_CARD",
-  "subtotalAmount": 1870.00, "discountAmount": 100.00, "totalAmount": 1770.00, "couponCode": "SAVE100", "pointsUsed": 0,
+  "subtotalAmount": 1870.00, "discountAmount": 100.00, "totalAmount": 1770.00, "couponCode": "SAVE100", "pointsUsed": 0, "shippingFee": 0,
   "receiverName": "王小明", "receiverPhone": "0912345678",
   "receiverAddress": "台北市大安區復興南路一段1號",
   "shippingCarrier": null, "trackingNumber": null, "shippedAt": null,
@@ -432,7 +439,7 @@ REFUNDED        → (終態)
 > `pointsEarned` 為訂單完成時回饋的購物金;`returnDeadline` 為可申請退貨的期限(完成後 7 天,非已完成訂單為 `null`);`returnRequest` 為退貨申請摘要(`{ id, status, reason, adminNote, createdAt, processedAt }`),沒申請過為 `null`。
 > `paymentDeadline` 為付款期限:線上付款(`CREDIT_CARD`/`ATM`)為下單後 30 分鐘(`app.order.payment-timeout-minutes` 可調),貨到付款(`COD`)為 `null`。逾期仍未付款的訂單會被背景排程(每分鐘掃描一次)自動取消,歸還庫存與優惠券名額,訂單歷程記為 `SYSTEM`。
 > `receiverName`/`receiverPhone`/`receiverAddress` 與商品名稱/規格/單價皆為**下單當下的快照**,之後會員改地址或商家改商品都不影響歷史訂單。
-> `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount` − `pointsUsed`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
+> `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount` − `pointsUsed` + `shippingFee`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
 
 ### `GET /api/orders/{id}`
 自己的訂單詳情,非本人訂單回 404。
@@ -705,6 +712,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/products` | 公開 |
 | GET | `/api/products/{id}` | 公開 |
 | GET | `/api/products/flash-sale` | 公開 |
+| GET | `/api/shipping/policy` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
 | GET | `/api/recommendations` | 會員 |
 | GET | `/api/products/{productId}/questions` | 公開 |
