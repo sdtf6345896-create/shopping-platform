@@ -55,7 +55,7 @@ DB_USERNAME=root DB_PASSWORD=<your-password> mvn spring-boot:run
 
 Flyway 會自動建表並灌入示範資料。啟動後:
 - API:`http://localhost:8080`
-- Swagger UI:`http://localhost:8080/swagger-ui.html`
+- Swagger UI:`http://localhost:8080/swagger-ui.html`(分「前台 API」/「後台 API」兩組;先呼叫登入 API 取得 token,再點右上角 Authorize 貼上即可測試需登入的 API)
 - 預設管理員帳號:`admin` / `admin123`
 
 ### 前端
