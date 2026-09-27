@@ -503,6 +503,19 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 
 ---
 
+## 貨到通知(Stock Alerts)— 需會員登入
+
+### `POST /api/stock-alerts/{skuId}`
+訂閱缺貨規格的貨到通知(只有庫存為 0 的規格可以訂閱,重複訂閱不會重複建立)。背景排程每分鐘檢查,規格一補貨(且商品上架中)就寄站內通知與 email,並刪除訂閱。
+
+### `DELETE /api/stock-alerts/{skuId}`
+取消訂閱。
+
+### `GET /api/stock-alerts?productId=`
+我在該商品已訂閱的規格 id 陣列,例如 `[3, 5]`。
+
+---
+
 ## 站內通知(Notifications)— 需會員登入
 
 訂單狀態變更(成立、付款、出貨、完成、取消、退款)、退貨申請未通過、商品提問獲得回覆時,除了寄 email,也會建立一則站內通知(`type`:`ORDER`/`RETURN`/`QUESTION`/`SYSTEM`)。
@@ -737,6 +750,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/admin/returns/{id}/approve` | 管理員 |
 | POST | `/api/admin/returns/{id}/reject` | 管理員 |
 | GET | `/api/points` | 會員 |
+| GET | `/api/stock-alerts` | 會員 |
+| POST / DELETE | `/api/stock-alerts/{skuId}` | 會員 |
 | GET | `/api/notifications` | 會員 |
 | GET | `/api/notifications/unread-count` | 會員 |
 | POST | `/api/notifications/{id}/read` | 會員 |

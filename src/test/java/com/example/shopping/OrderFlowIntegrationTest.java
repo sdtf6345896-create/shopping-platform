@@ -6,6 +6,7 @@ import com.example.shopping.member.entity.EmailVerificationToken;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.repository.EmailVerificationTokenRepository;
 import com.example.shopping.member.repository.MemberRepository;
+import com.example.shopping.stockalert.service.StockAlertService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
@@ -51,6 +52,8 @@ class OrderFlowIntegrationTest {
     private EmailVerificationTokenRepository emailVerificationTokenRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private StockAlertService stockAlertService;
 
     @Test
     void fullPurchaseFlow() throws Exception {
@@ -269,6 +272,20 @@ class OrderFlowIntegrationTest {
         assertThat(skuRemovalRejected.at("/message").asText()).contains("規格已有訂單");
         assertThat(call(get("/api/products/" + productId), null, null, 200).at("/data/skus/0/skuCode").asText())
                 .isEqualTo("IT-" + suffix);
+
+        // ---- 貨到通知:缺貨時訂閱 → 後台補貨 → 排程通知會員並移除訂閱 ----
+        call(patch("/api/admin/products/" + productId + "/skus/" + newSkuId + "/stock"), adminToken,
+                Map.of("stock", 0), 200);
+        call(post("/api/stock-alerts/" + newSkuId), memberToken, null, 200);
+        assertThat(call(get("/api/stock-alerts?productId=" + productId), memberToken, null, 200).at("/data/0").asLong())
+                .isEqualTo(newSkuId);
+        call(patch("/api/admin/products/" + productId + "/skus/" + newSkuId + "/stock"), adminToken,
+                Map.of("stock", 5), 200);
+        assertThat(stockAlertService.notifyRestocked()).isGreaterThanOrEqualTo(1);
+        JsonNode restockNotices = call(get("/api/notifications?size=50"), memberToken, null, 200).at("/data/content");
+        assertThat(restockNotices.findValuesAsText("title")).contains("貨到通知");
+        assertThat(call(get("/api/stock-alerts?productId=" + productId), memberToken, null, 200).at("/data").size())
+                .isZero();
 
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);

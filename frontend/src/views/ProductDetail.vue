@@ -10,6 +10,7 @@ import ProductQuestions from '../components/ProductQuestions.vue'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
 import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
 import { recordView } from '../api/browsingHistory'
+import { listMyStockAlerts, subscribeStockAlert, unsubscribeStockAlert } from '../api/stockAlert'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
@@ -98,6 +99,38 @@ async function handleAddToCart() {
 
 const favorited = ref(false)
 const togglingFavorite = ref(false)
+
+// 貨到通知:選到缺貨規格時可訂閱
+const alertSkuIds = ref([])
+const togglingAlert = ref(false)
+const alertSubscribed = computed(() => alertSkuIds.value.includes(selectedSkuId.value))
+
+async function loadStockAlerts() {
+  alertSkuIds.value = authStore.isLoggedIn ? await listMyStockAlerts(props.id) : []
+}
+
+async function handleToggleStockAlert() {
+  if (!authStore.isLoggedIn) {
+    ElMessage.warning('請先登入')
+    router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  togglingAlert.value = true
+  try {
+    const skuId = selectedSkuId.value
+    if (alertSubscribed.value) {
+      await unsubscribeStockAlert(skuId)
+      alertSkuIds.value = alertSkuIds.value.filter((id) => id !== skuId)
+      ElMessage.success('已取消貨到通知')
+    } else {
+      await subscribeStockAlert(skuId)
+      alertSkuIds.value = [...alertSkuIds.value, skuId]
+      ElMessage.success('補貨時會通知你')
+    }
+  } finally {
+    togglingAlert.value = false
+  }
+}
 
 async function loadFavoriteState() {
   if (!authStore.isLoggedIn) {
@@ -211,7 +244,7 @@ async function loadPage() {
   reviewsPage.value = 0
   quantity.value = 1
   await load()
-  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState(), loadRelated()])
+  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState(), loadRelated(), loadStockAlerts()])
 
   if (authStore.isLoggedIn) {
     recordView(props.id).catch(() => {
@@ -318,6 +351,16 @@ watch(
             >
               <el-icon><component :is="favorited ? StarFilled : Star" /></el-icon>
               {{ favorited ? '已收藏' : '收藏' }}
+            </el-button>
+            <el-button
+              v-if="product.status === 'ON_SALE' && selectedSku?.stock === 0"
+              size="large"
+              :type="alertSubscribed ? 'info' : 'warning'"
+              plain
+              :loading="togglingAlert"
+              @click="handleToggleStockAlert"
+            >
+              {{ alertSubscribed ? '已設定貨到通知(取消)' : '貨到通知我' }}
             </el-button>
           </div>
 
