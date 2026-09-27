@@ -3,7 +3,7 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, StarFilled } from '@element-plus/icons-vue'
-import { getProductDetail, listRelatedProducts } from '../api/product'
+import { getProductDetail, listBoughtTogether, listRelatedProducts } from '../api/product'
 import ProductCard from '../components/ProductCard.vue'
 import ReviewPhotos from '../components/ReviewPhotos.vue'
 import { uploadMemberImage } from '../api/upload'
@@ -281,6 +281,16 @@ async function handleDeleteReview() {
 
 const relatedProducts = ref([])
 
+const boughtTogether = ref([])
+
+async function loadBoughtTogether() {
+  try {
+    boughtTogether.value = await listBoughtTogether(props.id, { limit: 6 })
+  } catch {
+    boughtTogether.value = []
+  }
+}
+
 async function loadRelated() {
   try {
     relatedProducts.value = await listRelatedProducts(props.id, { limit: 6 })
@@ -293,7 +303,7 @@ async function loadPage() {
   reviewsPage.value = 0
   quantity.value = 1
   await load()
-  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState(), loadRelated(), loadStockAlerts()])
+  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState(), loadRelated(), loadStockAlerts(), loadBoughtTogether()])
 
   if (authStore.isLoggedIn) {
     recordView(props.id).catch(() => {
@@ -515,6 +525,16 @@ watch(
 
       <ProductQuestions :product-id="props.id" />
 
+      <div v-if="boughtTogether.length" class="related-section">
+        <h2 class="related-title">買了這個的人也買了</h2>
+        <div class="related-grid">
+          <div v-for="entry in boughtTogether" :key="entry.product.id">
+            <ProductCard :product="entry.product" />
+            <p class="together-count">{{ entry.orderCount }} 筆訂單一起購買</p>
+          </div>
+        </div>
+      </div>
+
       <div v-if="relatedProducts.length" class="related-section">
         <h2 class="related-title">你可能也會喜歡</h2>
         <div class="related-grid">
@@ -528,6 +548,13 @@ watch(
 <style scoped>
 .related-section {
   margin-top: 24px;
+}
+
+.together-count {
+  margin: 4px 0 0;
+  color: #999;
+  font-size: 12px;
+  text-align: center;
 }
 
 .related-title {

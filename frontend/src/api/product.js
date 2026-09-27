@@ -19,3 +19,8 @@ export function listRelatedProducts(id, params) {
 export function suggestProducts(keyword, limit = 8) {
   return request.get('/products/suggestions', { params: { keyword, limit } })
 }
+
+// [{ product, orderCount }]
+export function listBoughtTogether(id, params) {
+  return request.get(`/products/${id}/bought-together`, { params })
+}

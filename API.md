@@ -335,6 +335,12 @@ REFUNDED        → (終態)
 
 > **限時特價**:商品可設定 `saleDiscountPercent`(1~90)與 `saleStartAt` / `saleEndAt`,期間內所有規格依比例打折(四捨五入到整數元)。商品列表、詳情與 SKU 回應保留原價 `price`,另外提供 `salePrice`(非特價期間為 `null`);列表另有 `saleDiscountPercent`、`saleEndAt`。購物車 `price` 為實際售價並附 `originalPrice`,結帳與優惠券門檻都以特價計算,訂單明細的 `unitPrice` 會記錄下單當下的特價。
 
+### `GET /api/products/{id}/bought-together`
+公開。「買了這個的人也買了」:統計和此商品出現在同一筆**已付款 / 出貨中 / 已完成**訂單中的其他上架商品,依共同出現的訂單數排序。Query:`limit`(預設 6,最多 12)。
+```json
+[ { "product": { /* ProductListResponse */ }, "orderCount": 3 } ]
+```
+
 ### `GET /api/products/{id}/related`
 公開。相關商品推薦:同分類的其他上架商品依銷量排序,不足 `limit` 筆時以全站熱銷商品補齊(不含本商品)。Query:`limit`(預設 6,最多 20)。回傳格式同商品列表項目(`ProductListResponse` 陣列)。
 
@@ -806,6 +812,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/products/suggestions` | 公開 |
 | GET | `/api/products/flash-sale` | 公開 |
 | GET | `/api/shipping/policy` | 公開 |
+| GET | `/api/products/{id}/bought-together` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
 | GET | `/api/recommendations` | 會員 |
 | GET | `/api/products/{productId}/reviews` | 公開 |
