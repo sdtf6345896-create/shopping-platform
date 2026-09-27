@@ -556,7 +556,7 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 
 ## 站內通知(Notifications)— 需會員登入
 
-訂單狀態變更(成立、付款、出貨、完成、取消、退款)、退貨申請未通過、商品提問獲得回覆時,除了寄 email,也會建立一則站內通知(`type`:`ORDER`/`RETURN`/`QUESTION`/`SYSTEM`)。
+訂單狀態變更(成立、付款、出貨、完成、取消、退款)、退貨申請未通過、商品提問獲得回覆時、收藏的商品開始限時特價時(每 5 分鐘檢查,同一檔特價只通知一次),除了寄 email,也會建立一則站內通知(`type`:`ORDER`/`RETURN`/`QUESTION`/`SYSTEM`)。
 
 ### `GET /api/notifications`
 通知列表(新到舊)。Query:`page`、`size`

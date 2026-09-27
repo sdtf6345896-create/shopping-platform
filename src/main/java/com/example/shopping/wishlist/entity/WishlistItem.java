@@ -32,4 +32,8 @@ public class WishlistItem {
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
+
+    /** 已通知過的那一檔限時特價的開始時間;商品開新一檔特價時會再通知一次 */
+    @Column(name = "sale_notified_start")
+    private LocalDateTime saleNotifiedStart;
 }
