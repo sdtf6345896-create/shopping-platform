@@ -11,6 +11,8 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        # 延遲載入的關聯(訂單明細、狀態歷程、SKU…)以 IN 查詢批次載入,避免列表頁 N+1
+        default_batch_fetch_size: 50
 
   flyway:
     enabled: true

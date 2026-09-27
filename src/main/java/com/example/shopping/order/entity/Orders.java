@@ -68,8 +68,12 @@ public class Orders {
     @Column(name = "points_earned", nullable = false)
     private int pointsEarned;
 
-    @OneToOne(mappedBy = "order", fetch = FetchType.LAZY)
-    private ReturnRequest returnRequest;
+    /**
+     * 退貨申請(資料庫 unique 限制一筆訂單最多一筆)。刻意用 OneToMany 對應:
+     * 反向的 OneToOne 無法延遲/批次載入,訂單列表會變成每筆訂單各查一次(N+1)。
+     */
+    @OneToMany(mappedBy = "order")
+    private List<ReturnRequest> returnRequests = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 20)
@@ -117,6 +121,17 @@ public class Orders {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    public ReturnRequest getReturnRequest() {
+        return returnRequests.isEmpty() ? null : returnRequests.get(0);
+    }
+
+    public void setReturnRequest(ReturnRequest returnRequest) {
+        returnRequests.clear();
+        if (returnRequest != null) {
+            returnRequests.add(returnRequest);
+        }
+    }
 
     /** 最後一次變成 COMPLETED 的時間,沒有完成過回傳 null */
     public LocalDateTime getCompletedAt() {
