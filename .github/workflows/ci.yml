@@ -10,6 +10,24 @@ jobs:
   backend:
     name: Backend (Maven)
     runs-on: ubuntu-latest
+    services:
+      # 用真的 MySQL 驗證 Flyway migration 與 entity 對應(MysqlMigrationIntegrationTest)
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: shopping_platform
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      MIGRATION_TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/shopping_platform?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Taipei&allowPublicKeyRetrieval=true&useSSL=false
+      MIGRATION_TEST_DB_USERNAME: root
+      MIGRATION_TEST_DB_PASSWORD: root
     steps:
       - uses: actions/checkout@v4
 

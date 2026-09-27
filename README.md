@@ -74,8 +74,16 @@ MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=you@gmail.com MAIL_PASSWORD
 ## 測試
 
 ```bash
-mvn test              # 後端(JUnit + Mockito)
+mvn test              # 後端(JUnit + Mockito,另含 H2 上的 Spring context 啟動測試)
 cd frontend && npm test   # 前端(Vitest)
+```
+
+`MysqlMigrationIntegrationTest` 會在真的 MySQL 上跑完整 Flyway migration + schema 驗證 + 示範資料初始化,
+只有設定 `MIGRATION_TEST_DB_URL`(以及 `MIGRATION_TEST_DB_USERNAME` / `MIGRATION_TEST_DB_PASSWORD`)時才會執行,
+CI 會自動用 MySQL service container 跑這一項。本機想跑的話先建一個**空的**測試資料庫:
+
+```bash
+MIGRATION_TEST_DB_URL="jdbc:mysql://localhost:3306/shopping_platform_it?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false" MIGRATION_TEST_DB_PASSWORD=<your-password> mvn test -Dtest=MysqlMigrationIntegrationTest
 ```
 
 ## 文件
