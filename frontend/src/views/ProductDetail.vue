@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductDetail, listRelatedProducts } from '../api/product'
 import ProductCard from '../components/ProductCard.vue'
+import ProductQuestions from '../components/ProductQuestions.vue'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
 import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
 import { recordView } from '../api/browsingHistory'
@@ -342,6 +343,8 @@ watch(
           @current-change="handleReviewPageChange"
         />
       </div>
+
+      <ProductQuestions :product-id="props.id" />
 
       <div v-if="relatedProducts.length" class="related-section">
         <h2 class="related-title">你可能也會喜歡</h2>

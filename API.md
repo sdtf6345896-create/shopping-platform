@@ -435,6 +435,30 @@ CANCELLED       → (終態)
 
 ---
 
+## 商品問答(Q&A)
+
+### `GET /api/products/{productId}/questions`
+公開。商品的提問列表(新到舊),含未回覆的提問。Query:`page`、`size` → `PageResponse<QuestionResponse>`
+```json
+{ "id": 1, "memberName": "王**", "content": "請問有其他顏色嗎?", "answer": "目前只有黑色",
+  "answeredAt": "2026-09-27T18:00:00", "createdAt": "2026-09-27T17:30:00" }
+```
+> `memberName` 會遮罩成「姓氏 + **」;`answer`/`answeredAt` 尚未回覆時為 `null`。
+
+### `POST /api/products/{productId}/questions` — 需會員登入
+提問。請求:`{ "content": "請問有其他顏色嗎?" }`(最多 500 字)。只能對上架中商品提問;同一會員對同一商品一小時內最多 5 則,超過回 400。
+
+### `GET /api/admin/questions` — 需管理員登入
+所有提問。Query:`answered`(`true` 已回覆 / `false` 待回覆 / 不帶為全部)、`page`、`size`。回傳額外包含 `productId`、`productName`、`memberId`、`memberEmail` 與未遮罩的 `memberName`。
+
+### `PUT /api/admin/questions/{id}/answer` — 需管理員登入
+回覆(或修改回覆)。請求:`{ "answer": "目前只有黑色" }`(最多 1000 字)。第一次回覆時會寄 email 通知提問會員,修改回覆不會重複寄信。
+
+### `DELETE /api/admin/questions/{id}` — 需管理員登入
+刪除提問(例如廣告、不當內容)。
+
+---
+
 ## 優惠券(Coupon）
 
 ### `POST /api/coupons/apply` — 需會員登入
@@ -559,6 +583,11 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/products` | 公開 |
 | GET | `/api/products/{id}` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
+| GET | `/api/products/{productId}/questions` | 公開 |
+| POST | `/api/products/{productId}/questions` | 會員 |
+| GET | `/api/admin/questions` | 管理員 |
+| PUT | `/api/admin/questions/{id}/answer` | 管理員 |
+| DELETE | `/api/admin/questions/{id}` | 管理員 |
 | GET / POST | `/api/admin/products` | 管理員 |
 | GET / PUT / DELETE | `/api/admin/products/{id}` | 管理員 |
 | PATCH | `/api/admin/products/{id}/status` | 管理員 |

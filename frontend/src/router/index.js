@@ -64,6 +64,7 @@ const routes = [
       { path: 'reports', name: 'AdminReport', component: () => import('../views/admin/Report.vue') },
       { path: 'members', name: 'AdminMemberList', component: () => import('../views/admin/MemberList.vue') },
       { path: 'coupons', name: 'AdminCouponList', component: () => import('../views/admin/CouponList.vue') },
+      { path: 'questions', name: 'AdminQuestionList', component: () => import('../views/admin/QuestionList.vue') },
     ],
   },
 ]

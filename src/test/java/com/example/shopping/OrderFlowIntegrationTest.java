@@ -27,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 
 /**
  * 端到端走一次購物主流程(真的 HTTP → Security → Service → JPA,資料庫用 H2):
@@ -152,6 +153,18 @@ class OrderFlowIntegrationTest {
         String csv = new String(export.getContentAsByteArray(), StandardCharsets.UTF_8);
         assertThat(csv.lines()).hasSize(2);
         assertThat(csv).contains(shipped.at("/orderNo").asText()).contains("TRK-" + suffix);
+
+        // ---- 商品問答:會員提問 → 後台回覆 → 前台公開可見 ----
+        long questionId = call(post("/api/products/" + productId + "/questions"), memberToken,
+                Map.of("content", "請問有其他顏色嗎?"), 200).at("/data/id").asLong();
+        JsonNode pending = call(get("/api/admin/questions?answered=false"), adminToken, null, 200).at("/data/content");
+        assertThat(pending.findValuesAsText("id")).contains(String.valueOf(questionId));
+        call(put("/api/admin/questions/" + questionId + "/answer"), adminToken, Map.of("answer", "目前只有黑色"), 200);
+        JsonNode publicQuestions = call(get("/api/products/" + productId + "/questions"), null, null, 200)
+                .at("/data/content/0");
+        assertThat(publicQuestions.at("/answer").asText()).isEqualTo("目前只有黑色");
+        assertThat(publicQuestions.at("/memberName").asText()).isEqualTo("整**");
+        call(post("/api/products/" + productId + "/questions"), null, Map.of("content", "未登入提問"), 401);
 
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
