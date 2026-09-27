@@ -163,6 +163,12 @@ REFUNDED        → (終態)
 更新自己的姓名/手機。請求:`{ "name": "...", "phone": "..." }` → `MemberResponse`
 
 
+### `DELETE /api/members/me`
+刪除帳號。請求:`{ "password": "..." }`。密碼錯誤、仍有處理中的訂單(待付款 / 已付款 / 出貨中)或審核中的退貨時回 400。成功後:
+- 帳號匿名化並停用(Email 改為 `deleted-{id}@deleted.invalid`、姓名「已刪除會員」、清除電話與收件地址個資),所有 refresh token 撤銷
+- 購物車、收藏、瀏覽紀錄、站內通知、貨到通知訂閱一併刪除
+- 訂單、評論、購物金明細等交易紀錄保留(帳務需求),評論顯示名稱變為「已**」
+
 ### `PUT /api/members/me/password`
 登入狀態下修改密碼。請求:`{ "currentPassword": "...", "newPassword": "..." }`(新密碼至少 8 碼)。目前密碼錯誤、或新舊密碼相同回 400。成功後撤銷此會員**所有** refresh token(其他裝置須重新登入),並寄出「密碼已變更」安全通知信。
 > `POST /api/auth/reset-password`(忘記密碼)成功後同樣會撤銷所有 refresh token。
@@ -771,6 +777,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/auth/login` | 公開 |
 | GET / PUT | `/api/members/me` | 會員 |
 | PUT | `/api/members/me/password` | 會員 |
+| DELETE | `/api/members/me` | 會員 |
 | GET / POST | `/api/members/addresses` | 會員 |
 | PUT / DELETE | `/api/members/addresses/{id}` | 會員 |
 | POST | `/api/admin/auth/login` | 公開 |

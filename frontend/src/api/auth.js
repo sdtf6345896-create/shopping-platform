@@ -43,3 +43,7 @@ export function updateProfile(data) {
 export function changePassword(data) {
   return request.put('/members/me/password', data)
 }
+
+export function deleteAccount(password) {
+  return request.delete('/members/me', { data: { password } })
+}

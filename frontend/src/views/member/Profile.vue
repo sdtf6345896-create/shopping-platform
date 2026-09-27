@@ -1,9 +1,9 @@
 <script setup>
 import MemberTierCard from '../../components/MemberTierCard.vue'
 import { onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
-import { changePassword } from '../../api/auth'
+import { changePassword, deleteAccount } from '../../api/auth'
 import { useAuthStore } from '../../stores/auth'
 
 const authStore = useAuthStore()
@@ -80,6 +80,30 @@ async function handleChangePassword() {
   }
 }
 
+async function handleDeleteAccount() {
+  let password
+  try {
+    const { value } = await ElMessageBox.prompt(
+      '刪除後個人資料將被清除、無法復原,訂單紀錄會以匿名方式保留。請輸入密碼確認:',
+      '刪除帳號',
+      {
+        type: 'error',
+        inputType: 'password',
+        confirmButtonText: '永久刪除',
+        confirmButtonClass: 'el-button--danger',
+        inputValidator: (v) => !!v || '請輸入密碼',
+      },
+    )
+    password = value
+  } catch {
+    return
+  }
+  await deleteAccount(password)
+  authStore.logout()
+  ElMessage.success('帳號已刪除,感謝您曾經的支持')
+  router.push('/')
+}
+
 onMounted(load)
 </script>
 
@@ -123,10 +147,35 @@ onMounted(load)
         <span class="hint">變更後所有裝置都需要重新登入</span>
       </el-form-item>
     </el-form>
+
+    <div class="danger-zone">
+      <h3 class="section-title danger-title">刪除帳號</h3>
+      <p class="hint-block">
+        刪除後 Email、姓名、電話與收件地址會被清除,購物車、收藏、通知一併移除,且無法復原。
+        仍有處理中的訂單或退貨時無法刪除。
+      </p>
+      <el-button type="danger" plain @click="handleDeleteAccount">刪除我的帳號</el-button>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.danger-zone {
+  margin-top: 40px;
+  padding-top: 8px;
+  border-top: 1px dashed #f3c6c6;
+}
+
+.danger-title {
+  color: #e4393c;
+}
+
+.hint-block {
+  color: #999;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
 .section-title {
   margin-top: 32px;
 }

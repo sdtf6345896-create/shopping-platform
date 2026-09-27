@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,6 +18,8 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
     Optional<Orders> findByIdAndMemberId(Long id, Long memberId);
 
     long countByStatus(OrderStatus status);
+
+    boolean existsByMemberIdAndStatusIn(Long memberId, Collection<OrderStatus> statuses);
 
     long countByMemberIdAndCouponIdAndStatusNot(Long memberId, Long couponId, OrderStatus status);
 

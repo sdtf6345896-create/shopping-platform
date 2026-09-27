@@ -32,4 +32,8 @@ public interface StockAlertRepository extends JpaRepository<StockAlert, Long> {
     @Query("delete from StockAlert a where a.productSku.id in "
             + "(select s.id from ProductSku s where s.product.id = :productId)")
     int deleteByProductId(@Param("productId") Long productId);
+
+    @Modifying
+    @Query("delete from StockAlert a where a.member.id = :memberId")
+    int deleteAllByMemberId(@Param("memberId") Long memberId);
 }
