@@ -13,11 +13,14 @@ import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
+import com.example.shopping.product.dto.response.StockImportResponse;
 import com.example.shopping.product.service.ProductService;
+import com.example.shopping.product.service.StockImportService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Map;
@@ -27,9 +30,11 @@ import java.util.Map;
 public class AdminProductController {
 
     private final ProductService productService;
+    private final StockImportService stockImportService;
 
-    public AdminProductController(ProductService productService) {
+    public AdminProductController(ProductService productService, StockImportService stockImportService) {
         this.productService = productService;
+        this.stockImportService = stockImportService;
     }
 
     @GetMapping
@@ -48,6 +53,14 @@ public class AdminProductController {
     @PatchMapping("/status")
     public ApiResponse<Map<String, Integer>> updateStatusBatch(@Valid @RequestBody BatchProductStatusRequest request) {
         return ApiResponse.success("批次更新完成", Map.of("updated", productService.updateStatusBatch(request)));
+    }
+
+    @AdminAudit(action = "匯入庫存 CSV", target = AuditTarget.PRODUCT, targetId = "",
+            detail = "#file.originalFilename + ' → ' + (#result?.data?.applied() ? '已更新 ' + #result.data.updated() + ' 筆' : '有錯誤未套用')")
+    @PostMapping("/stock-import")
+    public ApiResponse<StockImportResponse> importStock(@RequestParam("file") MultipartFile file) {
+        StockImportResponse result = stockImportService.importCsv(file);
+        return ApiResponse.success(result.applied() ? "庫存已更新" : "資料有誤,未更新任何庫存", result);
     }
 
     @GetMapping("/low-stock")

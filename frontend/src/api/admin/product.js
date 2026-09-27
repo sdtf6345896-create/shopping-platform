@@ -24,6 +24,13 @@ export function updateProductStatusBatch(ids, status) {
   return request.patch('/admin/products/status', { ids, status })
 }
 
+// 回傳 { applied, totalRows, updated, errors: [{ line, message }] }
+export function importStockCsv(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/admin/products/stock-import', formData, { timeout: 60000 })
+}
+
 export function updateSkuStock(productId, skuId, stock) {
   return request.patch(`/admin/products/${productId}/skus/${skuId}/stock`, { stock })
 }

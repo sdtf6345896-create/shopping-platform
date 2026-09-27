@@ -350,6 +350,15 @@ REFUNDED        → (終態)
 ### `PATCH /api/admin/products/status`
 批次上 / 下架。請求:`{ "ids": [1, 2, 3], "status": "OFF_SHELF" }`(最多 100 個,重複 id 只算一次,不存在的 id 忽略)。回傳 `{ "updated": 3 }`,並記入管理員操作紀錄。
 
+### `POST /api/admin/products/stock-import`
+以 CSV 批次設定庫存。`multipart/form-data`,欄位名 `file`,UTF-8(可含 BOM),每列 `SKU 編號,庫存`,第一列可為標題列。最多 5,000 列、1MB。
+**全有或全無**:先驗證所有資料列(SKU 不存在、庫存不是 0~1,000,000 的整數、SKU 重複、欄位不足),任何一列有問題就完全不更新。
+```json
+{ "applied": false, "totalRows": 3, "updated": 0,
+  "errors": [ { "line": 3, "message": "找不到 SKU:NO-SUCH-SKU" } ] }
+```
+會記入管理員操作紀錄(檔名與結果)。
+
 ### `GET /api/admin/products/low-stock`
 需管理員登入。庫存警示:列出**上架中**商品裡庫存小於等於門檻的規格,庫存最少的排前面。Query:`threshold`(預設 10)、`limit`(預設 50,最多 200)。
 ```json
@@ -852,6 +861,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/points/transactions` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | PATCH | `/api/admin/products/status` | 管理員 |
+| POST | `/api/admin/products/stock-import` | 管理員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |
 | GET | `/api/admin/orders/export` | 管理員 |

@@ -2,7 +2,14 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listAdminProducts, updateProductStatus, updateProductStatusBatch, deleteProduct } from '../../api/admin/product'
+import {
+  deleteProduct,
+  importStockCsv,
+  listAdminProducts,
+  updateProductStatus,
+  updateProductStatusBatch,
+} from '../../api/admin/product'
+import { saveBlob } from '../../utils/download'
 import { listAdminCategories } from '../../api/admin/category'
 import { flattenCategories } from '../../utils/categoryTree'
 
@@ -79,6 +86,28 @@ async function handleBatchStatus(status) {
   await loadProducts()
 }
 
+// 庫存 CSV 匯入:全有或全無,有錯誤時列出每一行的問題
+const importing = ref(false)
+const importResult = ref(null)
+
+function downloadTemplate() {
+  const bom = '\uFEFF'
+  const sample = `${bom}sku_code,stock\r\nTSHIRT-BLK-M,20\r\nBOTTLE-WHT,0\r\n`
+  saveBlob(new Blob([sample], { type: 'text/csv;charset=utf-8' }), 'stock-template.csv')
+}
+
+async function handleImportStock({ file }) {
+  importing.value = true
+  try {
+    importResult.value = await importStockCsv(file)
+    if (importResult.value.applied) {
+      await loadProducts()
+    }
+  } finally {
+    importing.value = false
+  }
+}
+
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`確定要刪除「${row.name}」嗎?`, '提示', { type: 'warning' })
@@ -100,7 +129,13 @@ onMounted(() => {
   <div>
     <div class="header-row">
       <h3>商品管理</h3>
-      <el-button type="primary" @click="router.push({ name: 'AdminProductCreate' })">新增商品</el-button>
+      <div class="header-actions">
+        <el-button link @click="downloadTemplate">下載庫存範本</el-button>
+        <el-upload :show-file-list="false" accept=".csv,text/csv" :http-request="handleImportStock">
+          <el-button :loading="importing">匯入庫存 CSV</el-button>
+        </el-upload>
+        <el-button type="primary" @click="router.push({ name: 'AdminProductCreate' })">新增商品</el-button>
+      </div>
     </div>
 
     <div class="filter-bar">
@@ -177,10 +212,43 @@ onMounted(() => {
       :current-page="filters.page + 1"
       @current-change="handlePageChange"
     />
+
+    <el-dialog :model-value="!!importResult" title="庫存匯入結果" width="520px" @close="importResult = null">
+      <template v-if="importResult">
+        <el-alert
+          v-if="importResult.applied"
+          type="success"
+          :closable="false"
+          :title="`已更新 ${importResult.updated} 個規格的庫存`"
+        />
+        <template v-else>
+          <el-alert
+            type="error"
+            :closable="false"
+            :title="`共 ${importResult.totalRows} 筆資料,有 ${importResult.errors.length} 個錯誤,未更新任何庫存`"
+            description="請修正後重新上傳整份檔案"
+          />
+          <el-table :data="importResult.errors" size="small" max-height="300" class="import-errors">
+            <el-table-column prop="line" label="行號" width="70" />
+            <el-table-column prop="message" label="問題" />
+          </el-table>
+        </template>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.import-errors {
+  margin-top: 12px;
+}
+
 .batch-bar {
   display: flex;
   align-items: center;

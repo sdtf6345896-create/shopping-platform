@@ -338,6 +338,27 @@ class OrderFlowIntegrationTest {
                 .at("/data/tier").asText()).isEqualTo("NORMAL");
         call(get("/api/admin/members/" + member.getId() + "/tier"), memberToken, null, 403);
 
+        // ---- 庫存 CSV 匯入:有錯誤全部不套用;正確則更新 ----
+        String badCsv = "sku,stock\nIT-" + suffix + ",8\nNO-SUCH-SKU,1\n";
+        var rejected = mockMvc.perform(multipart("/api/admin/products/stock-import")
+                        .file(new MockMultipartFile("file", "stock.csv", "text/csv", badCsv.getBytes(StandardCharsets.UTF_8)))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andReturn().getResponse();
+        JsonNode rejectedBody = objectMapper.readTree(rejected.getContentAsString(StandardCharsets.UTF_8)).at("/data");
+        assertThat(rejectedBody.at("/applied").asBoolean()).isFalse();
+        assertThat(rejectedBody.at("/errors/0/line").asInt()).isEqualTo(3);
+        String goodCsv = "sku,stock\nIT-" + suffix + ",8\n";
+        var imported = mockMvc.perform(multipart("/api/admin/products/stock-import")
+                        .file(new MockMultipartFile("file", "stock.csv", "text/csv", goodCsv.getBytes(StandardCharsets.UTF_8)))
+                        .header("Authorization", "Bearer " + adminToken))
+                .andReturn().getResponse();
+        assertThat(objectMapper.readTree(imported.getContentAsString(StandardCharsets.UTF_8)).at("/data/updated").asInt())
+                .isEqualTo(1);
+        assertThat(call(get("/api/products/" + productId), null, null, 200).at("/data/skus/0/stock").asInt())
+                .isEqualTo(8);
+        assertThat(call(get("/api/admin/audit-logs?targetType=PRODUCT"), adminToken, null, 200)
+                .at("/data/content").findValuesAsText("detail")).anyMatch(d -> d.contains("stock.csv → 已更新 1 筆"));
+
         // ---- 搜尋建議:公開、不分大小寫、% 不會被當萬用字元 ----
         JsonNode suggestions = call(get("/api/products/suggestions?keyword=整合測試"), null, null, 200).at("/data");
         assertThat(suggestions.findValuesAsText("name")).contains("整合測試商品");

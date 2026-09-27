@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,8 @@ public interface ProductSkuRepository extends JpaRepository<ProductSku, Long> {
     Optional<ProductSku> findByIdAndProductId(Long id, Long productId);
 
     Optional<ProductSku> findBySkuCode(String skuCode);
+
+    List<ProductSku> findBySkuCodeIn(Collection<String> skuCodes);
 
     /**
      * 扣庫存:檢查與扣除在同一條 UPDATE 完成(庫存不足則不更新),多人同時結帳也不會超賣。
