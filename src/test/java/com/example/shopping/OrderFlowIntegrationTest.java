@@ -226,6 +226,14 @@ class OrderFlowIntegrationTest {
         assertThat(call(get("/api/notifications/unread-count"), memberToken, null, 200).at("/data/count").asLong())
                 .isZero();
 
+        // ---- 為你推薦:看過商品後變成個人化推薦,且不推薦已看過的商品 ----
+        assertThat(call(get("/api/recommendations"), memberToken, null, 200).at("/data/personalized").asBoolean())
+                .isFalse();
+        call(post("/api/browsing-history/" + productId), memberToken, null, 200);
+        JsonNode recommended = call(get("/api/recommendations"), memberToken, null, 200).at("/data");
+        assertThat(recommended.at("/personalized").asBoolean()).isTrue();
+        assertThat(recommended.at("/products").findValuesAsText("id")).doesNotContain(String.valueOf(productId));
+
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
     }

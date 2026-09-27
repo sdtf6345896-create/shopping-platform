@@ -209,6 +209,17 @@ REFUNDED        → (終態)
 
 ---
 
+## 為你推薦(Recommendations)— 需會員登入
+
+### `GET /api/recommendations`
+依會員最近 20 筆瀏覽紀錄中最常看的(最多 3 個)分類,推薦這些分類裡**還沒看過**的熱銷上架商品,不足時以全站熱銷補齊。Query:`limit`(預設 8,最多 20)。
+```json
+{ "personalized": true, "products": [ /* ProductListResponse */ ] }
+```
+沒有瀏覽紀錄時 `personalized` 為 `false`,`products` 只是全站熱銷(前台首頁此時不顯示「為你推薦」區塊)。
+
+---
+
 ## 管理員登入(Admin Auth)
 
 ### `POST /api/admin/auth/login`
@@ -688,6 +699,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/products` | 公開 |
 | GET | `/api/products/{id}` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
+| GET | `/api/recommendations` | 會員 |
 | GET | `/api/products/{productId}/questions` | 公開 |
 | POST | `/api/products/{productId}/questions` | 會員 |
 | GET | `/api/admin/questions` | 管理員 |

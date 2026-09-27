@@ -4,6 +4,8 @@ import { useRouter } from 'vue-router'
 import { getCategoryTree } from '../api/category'
 import { listProducts } from '../api/product'
 import { getBanners } from '../api/banner'
+import { getRecommendations } from '../api/recommendation'
+import { useAuthStore } from '../stores/auth'
 import ProductCard from '../components/ProductCard.vue'
 
 const router = useRouter()
@@ -11,8 +13,22 @@ const categories = ref([])
 const hotProducts = ref([])
 const banners = ref([])
 const loading = ref(true)
+const authStore = useAuthStore()
+// 依瀏覽紀錄的個人化推薦,只有登入且有瀏覽紀錄時才顯示
+const recommended = ref([])
+
+async function loadRecommendations() {
+  if (!authStore.isLoggedIn) return
+  try {
+    const data = await getRecommendations({ limit: 8 })
+    recommended.value = data.personalized ? data.products : []
+  } catch {
+    recommended.value = []
+  }
+}
 
 onMounted(async () => {
+  loadRecommendations()
   try {
     const [categoryData, productData, bannerData] = await Promise.all([
       getCategoryTree(),
@@ -74,6 +90,13 @@ function goToBanner(banner) {
       </div>
     </section>
 
+    <section v-if="recommended.length" class="section">
+      <h3 class="section-title">為你推薦 <span class="section-hint">依你最近瀏覽的商品</span></h3>
+      <div class="product-grid">
+        <ProductCard v-for="product in recommended" :key="product.id" :product="product" />
+      </div>
+    </section>
+
     <section class="section">
       <h3 class="section-title">熱銷推薦</h3>
       <div v-loading="loading" class="product-grid">
@@ -85,6 +108,13 @@ function goToBanner(banner) {
 </template>
 
 <style scoped>
+.section-hint {
+  font-size: 12px;
+  font-weight: normal;
+  color: #999;
+  margin-left: 6px;
+}
+
 .banner-slide {
   height: 100%;
   display: flex;

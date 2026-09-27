@@ -17,6 +17,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     List<Product> findByCategoryIdAndStatusAndIdNotOrderBySalesCountDescIdDesc(
             Long categoryId, ProductStatus status, Long excludeId, Pageable pageable);
 
+    /** 指定分類群中、排除指定商品後的熱銷商品(個人化推薦用) */
+    List<Product> findByCategoryIdInAndStatusAndIdNotInOrderBySalesCountDescIdDesc(
+            Collection<Long> categoryIds, ProductStatus status, Collection<Long> excludeIds, Pageable pageable);
+
     /** 排除指定商品後的熱銷商品(同分類不夠時補位用) */
     List<Product> findByStatusAndIdNotInOrderBySalesCountDescIdDesc(
             ProductStatus status, Collection<Long> excludeIds, Pageable pageable);
