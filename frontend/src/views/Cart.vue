@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCartStore } from '../stores/cart'
+import { addToWishlist } from '../api/wishlist'
 import { getShippingPolicy } from '../api/shipping'
 import { amountToFreeShipping } from '../utils/shipping'
 
@@ -58,6 +59,14 @@ async function handleRemove(item) {
   await cartStore.removeItem(item.id)
   selectedIds.value = selectedIds.value.filter((id) => id !== item.id)
   ElMessage.success('已移除')
+}
+
+// 先加入收藏再從購物車移除(加入收藏是冪等的,已收藏過也會成功)
+async function handleMoveToWishlist(item) {
+  await addToWishlist(item.productId)
+  await cartStore.removeItem(item.id)
+  selectedIds.value = selectedIds.value.filter((id) => id !== item.id)
+  ElMessage.success('已移到收藏')
 }
 
 async function handleClear() {
@@ -122,6 +131,7 @@ onMounted(load)
               @change="(v) => handleQuantityChange(item, v)"
             />
             <span class="subtotal">NT$ {{ item.subtotal }}</span>
+            <el-button link @click="handleMoveToWishlist(item)">移到收藏</el-button>
             <el-button link type="danger" @click="handleRemove(item)">移除</el-button>
           </div>
         </div>

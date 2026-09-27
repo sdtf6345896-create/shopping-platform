@@ -17,8 +17,9 @@ import java.util.List;
 
 public interface ProductService {
 
+    /** @param inStockOnly true 時只列出至少一個規格有庫存的商品 */
     Page<ProductListResponse> listPublic(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-                                          String keyword, Pageable pageable);
+                                          String keyword, boolean inStockOnly, Pageable pageable);
 
     Page<ProductListResponse> listAdmin(Long categoryId, ProductStatus status, String keyword, Pageable pageable);
 

@@ -59,13 +59,14 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional(readOnly = true)
     public Page<ProductListResponse> listPublic(Long categoryId, BigDecimal minPrice, BigDecimal maxPrice,
-                                                 String keyword, Pageable pageable) {
+                                                 String keyword, boolean inStockOnly, Pageable pageable) {
         Specification<Product> spec = Specification
                 .where(hasStatus(ProductStatus.ON_SALE))
                 .and(hasCategoryId(categoryId))
                 .and(priceGreaterOrEqual(minPrice))
                 .and(priceLessOrEqual(maxPrice))
-                .and(nameContains(keyword));
+                .and(nameContains(keyword))
+                .and(inStock(inStockOnly));
 
         return productRepository.findAll(spec, pageable).map(ProductListResponse::from);
     }

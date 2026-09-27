@@ -2,6 +2,9 @@ package com.example.shopping.product.repository;
 
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.product.entity.Product;
+import com.example.shopping.product.entity.ProductSku;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -25,6 +28,20 @@ public final class ProductSpecifications {
 
     public static Specification<Product> priceLessOrEqual(BigDecimal maxPrice) {
         return (root, query, cb) -> maxPrice == null ? null : cb.lessThanOrEqualTo(root.get("price"), maxPrice);
+    }
+
+    /** 至少一個規格有庫存 */
+    public static Specification<Product> inStock(boolean inStockOnly) {
+        return (root, query, cb) -> {
+            if (!inStockOnly) {
+                return null;
+            }
+            Subquery<Long> sku = query.subquery(Long.class);
+            Root<ProductSku> skuRoot = sku.from(ProductSku.class);
+            sku.select(skuRoot.get("id"))
+                    .where(cb.equal(skuRoot.get("product"), root), cb.greaterThan(skuRoot.get("stock"), 0));
+            return cb.exists(sku);
+        };
     }
 
     public static Specification<Product> nameContains(String keyword) {

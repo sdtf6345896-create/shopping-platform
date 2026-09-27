@@ -32,10 +32,11 @@ public class ProductController {
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
             @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "false") boolean inStock,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
         return ApiResponse.success(PageResponse.from(
-                productService.listPublic(categoryId, minPrice, maxPrice, keyword, pageable)));
+                productService.listPublic(categoryId, minPrice, maxPrice, keyword, inStock, pageable)));
     }
 
     @GetMapping("/suggestions")

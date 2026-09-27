@@ -21,6 +21,7 @@ const filters = reactive({
   maxPrice: route.query.maxPrice ? Number(route.query.maxPrice) : null,
   keyword: typeof route.query.keyword === 'string' ? route.query.keyword : null,
   sort: route.query.sort || 'createdAt,desc',
+  inStock: route.query.inStock === 'true',
   page: route.query.page ? Number(route.query.page) : 0,
 })
 
@@ -54,6 +55,7 @@ async function loadProducts() {
       minPrice: filters.minPrice ?? undefined,
       maxPrice: filters.maxPrice ?? undefined,
       keyword: filters.keyword || undefined,
+      inStock: filters.inStock || undefined,
       sort: filters.sort,
       page: filters.page,
       size: 12,
@@ -72,6 +74,7 @@ function syncQuery() {
       ...(filters.minPrice != null ? { minPrice: filters.minPrice } : {}),
       ...(filters.maxPrice != null ? { maxPrice: filters.maxPrice } : {}),
       ...(filters.keyword ? { keyword: filters.keyword } : {}),
+      ...(filters.inStock ? { inStock: 'true' } : {}),
       sort: filters.sort,
       page: filters.page,
     },
@@ -161,6 +164,7 @@ onMounted(() => {
                 <el-icon class="search-icon" @click="applyKeyword"><Search /></el-icon>
               </template>
             </el-input>
+            <el-checkbox v-model="filters.inStock" size="small">只看有庫存</el-checkbox>
             <el-select v-model="filters.sort" size="small" style="width: 160px">
               <el-option label="最新上架" value="createdAt,desc" />
               <el-option label="價格由低到高" value="price,asc" />

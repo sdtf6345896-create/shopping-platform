@@ -304,7 +304,7 @@ REFUNDED        → (終態)
 ## 商品(Product)
 
 ### `GET /api/products`
-公開。只回傳 `ON_SALE` 的商品。Query:`categoryId`、`minPrice`、`maxPrice`、`keyword`、`page`、`size`、`sort`(例:`price,asc`、`salesCount,desc`、`ratingAverage,desc`)
+公開。只回傳 `ON_SALE` 的商品。Query:`categoryId`、`minPrice`、`maxPrice`、`keyword`、`inStock`(`true` 只看至少一個規格有庫存的商品)、`page`、`size`、`sort`(例:`price,asc`、`salesCount,desc`、`ratingAverage,desc`)
 
 → `PageResponse<ProductListResponse>`,每筆:
 ```json

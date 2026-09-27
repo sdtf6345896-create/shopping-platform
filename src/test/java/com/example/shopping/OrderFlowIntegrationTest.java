@@ -280,6 +280,10 @@ class OrderFlowIntegrationTest {
         // ---- 貨到通知:缺貨時訂閱 → 後台補貨 → 排程通知會員並移除訂閱 ----
         call(patch("/api/admin/products/" + productId + "/skus/" + newSkuId + "/stock"), adminToken,
                 Map.of("stock", 0), 200);
+        assertThat(call(get("/api/products?keyword=整合測試商品&inStock=true"), null, null, 200)
+                .at("/data/totalElements").asLong()).as("缺貨商品不出現在「只看有庫存」").isZero();
+        assertThat(call(get("/api/products?keyword=整合測試商品"), null, null, 200)
+                .at("/data/totalElements").asLong()).isEqualTo(1);
         call(post("/api/stock-alerts/" + newSkuId), memberToken, null, 200);
         assertThat(call(get("/api/stock-alerts?productId=" + productId), memberToken, null, 200).at("/data/0").asLong())
                 .isEqualTo(newSkuId);
