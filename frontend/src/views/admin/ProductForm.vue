@@ -34,7 +34,22 @@ const form = reactive({
   mainImage: '',
   images: [],
   skus: [],
+  // 限時特價
+  saleEnabled: false,
+  saleDiscountPercent: 20,
+  salePeriod: null, // ['YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DDTHH:mm:ss']
 })
+
+// 送出時把表單轉成 API 需要的格式(特價關閉時三個欄位都送 null)
+function buildPayload() {
+  const { saleEnabled, saleDiscountPercent, salePeriod, ...rest } = form
+  return {
+    ...rest,
+    saleDiscountPercent: saleEnabled ? saleDiscountPercent : null,
+    saleStartAt: saleEnabled ? salePeriod?.[0] : null,
+    saleEndAt: saleEnabled ? salePeriod?.[1] : null,
+  }
+}
 
 const MAX_GALLERY_IMAGES = 8
 const uploadingGallery = ref(false)
@@ -115,6 +130,9 @@ async function loadProduct() {
     form.price = data.price
     form.mainImage = data.mainImage
     form.images = [...(data.images || [])]
+    form.saleEnabled = data.saleDiscountPercent != null
+    form.saleDiscountPercent = data.saleDiscountPercent ?? 20
+    form.salePeriod = data.saleStartAt && data.saleEndAt ? [data.saleStartAt, data.saleEndAt] : null
     form.skus = data.skus.map((s) => ({
       skuCode: s.skuCode,
       specName: s.specName,
@@ -128,6 +146,10 @@ async function loadProduct() {
 
 async function handleSubmit() {
   await formRef.value.validate()
+  if (form.saleEnabled && !form.salePeriod) {
+    ElMessage.warning('請選擇限時特價的開始與結束時間')
+    return
+  }
   if (form.skus.length === 0) {
     ElMessage.warning('請至少新增一個規格(SKU)')
     return
@@ -135,10 +157,10 @@ async function handleSubmit() {
   saving.value = true
   try {
     if (isEdit.value) {
-      await updateProduct(props.id, form)
+      await updateProduct(props.id, buildPayload())
       ElMessage.success('更新成功')
     } else {
-      await createProduct(form)
+      await createProduct(buildPayload())
       ElMessage.success('新增成功')
     }
     router.push({ name: 'AdminProductList' })
@@ -176,6 +198,25 @@ onMounted(async () => {
       <el-form-item label="價格" prop="price">
         <el-input-number v-model="form.price" :min="0" :precision="2" />
       </el-form-item>
+      <el-form-item label="限時特價">
+        <div class="sale-editor">
+          <el-switch v-model="form.saleEnabled" active-text="啟用" />
+          <template v-if="form.saleEnabled">
+            <span>折扣</span>
+            <el-input-number v-model="form.saleDiscountPercent" :min="1" :max="90" size="small" />
+            <span>%</span>
+            <el-date-picker
+              v-model="form.salePeriod"
+              type="datetimerange"
+              value-format="YYYY-MM-DDTHH:mm:ss"
+              start-placeholder="開始時間"
+              end-placeholder="結束時間"
+              size="small"
+            />
+          </template>
+        </div>
+      </el-form-item>
+
       <el-form-item label="商品主圖">
         <div v-loading="uploading" class="image-upload">
           <el-upload
@@ -271,6 +312,13 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.sale-editor {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
 .gallery-editor {

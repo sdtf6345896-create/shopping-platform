@@ -1,10 +1,11 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductDetail, listRelatedProducts } from '../api/product'
 import ProductCard from '../components/ProductCard.vue'
+import { formatCountdown, remainingMs } from '../utils/countdown'
 import ProductQuestions from '../components/ProductQuestions.vue'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
 import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
@@ -33,6 +34,20 @@ const galleryImages = computed(() => {
 })
 const activeImage = ref(null)
 const displayedImage = computed(() => activeImage.value || galleryImages.value[0])
+
+// 限時特價:以選取規格的價格為準;倒數到活動結束
+const listPrice = computed(() => selectedSku.value?.price ?? product.value?.price)
+const salePrice = computed(() =>
+  selectedSku.value ? selectedSku.value.salePrice : product.value?.salePrice,
+)
+const nowTick = ref(Date.now())
+const saleTimer = setInterval(() => {
+  nowTick.value = Date.now()
+}, 1000)
+onUnmounted(() => clearInterval(saleTimer))
+const saleTimeLeft = computed(() =>
+  product.value?.saleEndAt && salePrice.value != null ? remainingMs(product.value.saleEndAt, nowTick.value) : 0,
+)
 
 const selectedSku = computed(() => product.value?.skus.find((s) => s.id === selectedSkuId.value))
 const isSoldOut = computed(() => product.value?.status !== 'ON_SALE' || product.value?.skus.every((s) => s.stock === 0))
@@ -244,7 +259,14 @@ watch(
         <div class="info">
           <h1 class="name">{{ product.name }}</h1>
           <p class="category">分類:{{ product.categoryName }}</p>
-          <p class="price">NT$ {{ selectedSku?.price ?? product.price }}</p>
+          <div v-if="salePrice != null" class="sale-banner">
+            <span class="sale-tag">限時特價 -{{ product.saleDiscountPercent }}%</span>
+            <span v-if="saleTimeLeft > 0" class="sale-countdown">剩餘 {{ formatCountdown(saleTimeLeft) }}</span>
+          </div>
+          <p class="price">
+            NT$ {{ salePrice ?? listPrice }}
+            <span v-if="salePrice != null" class="original-price">NT$ {{ listPrice }}</span>
+          </p>
 
           <el-tag v-if="product.status !== 'ON_SALE'" type="info">此商品已下架</el-tag>
 
@@ -489,6 +511,36 @@ watch(
   font-size: 26px;
   font-weight: 700;
   margin: 0 0 16px;
+}
+
+.original-price {
+  margin-left: 8px;
+  color: #999;
+  font-size: 15px;
+  font-weight: normal;
+  text-decoration: line-through;
+}
+
+.sale-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.sale-tag {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #e4393c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sale-countdown {
+  color: #e4393c;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .label {

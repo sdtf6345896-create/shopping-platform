@@ -92,7 +92,12 @@ onMounted(load)
                 <el-tag v-if="item.productStatus !== 'ON_SALE'" type="danger" size="small">已下架,請移除</el-tag>
               </div>
             </div>
-            <span>NT$ {{ item.price }}</span>
+            <span>
+              NT$ {{ item.price }}
+              <span v-if="item.originalPrice && item.originalPrice !== item.price" class="original-price">
+                NT$ {{ item.originalPrice }}
+              </span>
+            </span>
             <el-input-number
               :model-value="item.quantity"
               :min="1"
@@ -119,6 +124,13 @@ onMounted(load)
 </template>
 
 <style scoped>
+.original-price {
+  display: block;
+  color: #999;
+  font-size: 12px;
+  text-decoration: line-through;
+}
+
 .cart-table {
   background: #fff;
   border: 1px solid #eee;

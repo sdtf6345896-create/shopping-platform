@@ -2,7 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getCategoryTree } from '../api/category'
-import { listProducts } from '../api/product'
+import { listFlashSaleProducts, listProducts } from '../api/product'
 import { getBanners } from '../api/banner'
 import { getRecommendations } from '../api/recommendation'
 import { useAuthStore } from '../stores/auth'
@@ -16,6 +16,7 @@ const loading = ref(true)
 const authStore = useAuthStore()
 // 依瀏覽紀錄的個人化推薦,只有登入且有瀏覽紀錄時才顯示
 const recommended = ref([])
+const flashSale = ref([])
 
 async function loadRecommendations() {
   if (!authStore.isLoggedIn) return
@@ -30,11 +31,13 @@ async function loadRecommendations() {
 onMounted(async () => {
   loadRecommendations()
   try {
-    const [categoryData, productData, bannerData] = await Promise.all([
+    const [categoryData, productData, bannerData, flashSaleData] = await Promise.all([
       getCategoryTree(),
       listProducts({ sort: 'salesCount,desc', size: 8 }),
       getBanners(),
+      listFlashSaleProducts({ limit: 8 }).catch(() => []),
     ])
+    flashSale.value = flashSaleData
     categories.value = categoryData
     hotProducts.value = productData.content
     banners.value = bannerData
@@ -90,6 +93,13 @@ function goToBanner(banner) {
       </div>
     </section>
 
+    <section v-if="flashSale.length" class="section">
+      <h3 class="section-title flash-title">⚡ 限時特價 <span class="section-hint">數量有限,結束時間以商品頁為準</span></h3>
+      <div class="product-grid">
+        <ProductCard v-for="product in flashSale" :key="product.id" :product="product" />
+      </div>
+    </section>
+
     <section v-if="recommended.length" class="section">
       <h3 class="section-title">為你推薦 <span class="section-hint">依你最近瀏覽的商品</span></h3>
       <div class="product-grid">
@@ -108,6 +118,10 @@ function goToBanner(banner) {
 </template>
 
 <style scoped>
+.flash-title {
+  color: #e4393c;
+}
+
 .section-hint {
   font-size: 12px;
   font-weight: normal;

@@ -19,4 +19,21 @@ describe('ProductCard', () => {
 
     expect(wrapper.find('.rating').exists()).toBe(false)
   })
+
+  it('shows the sale price, a discount badge and the struck-through list price during a flash sale', () => {
+    const wrapper = mountCard({
+      id: 3, name: '耳機', price: 1000, salePrice: 800, saleDiscountPercent: 20, reviewCount: 0,
+    })
+
+    expect(wrapper.find('.sale-badge').text()).toBe('-20%')
+    expect(wrapper.find('.price').text()).toContain('NT$ 800')
+    expect(wrapper.find('.original-price').text()).toBe('NT$ 1000')
+  })
+
+  it('shows only the list price when not on sale', () => {
+    const wrapper = mountCard({ id: 4, name: '耳機', price: 1000, salePrice: null, reviewCount: 0 })
+
+    expect(wrapper.find('.sale-badge').exists()).toBe(false)
+    expect(wrapper.find('.original-price').exists()).toBe(false)
+  })
 })

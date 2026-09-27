@@ -304,6 +304,11 @@ REFUNDED        → (終態)
 }
 ```
 
+### `GET /api/products/flash-sale`
+公開。目前限時特價中的上架商品,最快結束的排前面。Query:`limit`(預設 8,最多 20)。回傳 `ProductListResponse` 陣列。
+
+> **限時特價**:商品可設定 `saleDiscountPercent`(1~90)與 `saleStartAt` / `saleEndAt`,期間內所有規格依比例打折(四捨五入到整數元)。商品列表、詳情與 SKU 回應保留原價 `price`,另外提供 `salePrice`(非特價期間為 `null`);列表另有 `saleDiscountPercent`、`saleEndAt`。購物車 `price` 為實際售價並附 `originalPrice`,結帳與優惠券門檻都以特價計算,訂單明細的 `unitPrice` 會記錄下單當下的特價。
+
 ### `GET /api/products/{id}/related`
 公開。相關商品推薦:同分類的其他上架商品依銷量排序,不足 `limit` 筆時以全站熱銷商品補齊(不含本商品)。Query:`limit`(預設 6,最多 20)。回傳格式同商品列表項目(`ProductListResponse` 陣列)。
 
@@ -333,6 +338,7 @@ REFUNDED        → (終態)
   ]
 }
 ```
+`saleDiscountPercent`(1~90)、`saleStartAt`、`saleEndAt` 選填,設定限時特價時三者都要填且結束須晚於開始;不帶 `saleDiscountPercent` 表示取消特價。更新商品時規格以 `skuCode` 比對:同編號就地更新(id 不變),新編號新增,移除的規格若已有訂單會回 400。
 `images` 選填,為主圖以外的商品圖片網址(依陣列順序顯示,最多 8 張);更新時整批取代,不帶或空陣列表示清空圖庫。
 `skus` 至少 1 筆。新商品預設 `OFF_SHELF`(下架)。
 
@@ -346,7 +352,7 @@ REFUNDED        → (終態)
 單獨調整某規格庫存。請求:`{ "stock": 100 }` → `SkuResponse`
 
 ### `DELETE /api/admin/products/{id}`
-刪除商品(連同其 SKU)。
+刪除商品(連同其 SKU、圖庫)。已有訂單的商品無法刪除(回 400,請改為下架);沒有訂單的商品會一併清除購物車、收藏、瀏覽紀錄、提問與評論中的相關資料。
 
 ---
 
@@ -698,6 +704,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/categories/{id}/status` | 管理員 |
 | GET | `/api/products` | 公開 |
 | GET | `/api/products/{id}` | 公開 |
+| GET | `/api/products/flash-sale` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
 | GET | `/api/recommendations` | 會員 |
 | GET | `/api/products/{productId}/questions` | 公開 |
