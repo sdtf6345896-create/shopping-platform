@@ -19,6 +19,15 @@ public class OrderMailSender {
         mailSender.send(toEmail, subjectFor(order.getStatus()), bodyFor(order));
     }
 
+    public void notifyReturnRejected(Orders order, String note) {
+        String body = String.format("您好 %s,%n%n訂單編號:%s%n%n很抱歉,您的退貨申請未通過審核。",
+                order.getReceiverName(), order.getOrderNo());
+        if (note != null) {
+            body += System.lineSeparator() + "說明:" + note;
+        }
+        mailSender.send(order.getMember().getEmail(), "退貨申請結果通知", body);
+    }
+
     private String subjectFor(OrderStatus status) {
         return switch (status) {
             case PENDING_PAYMENT -> "訂單成立通知";
@@ -26,6 +35,7 @@ public class OrderMailSender {
             case SHIPPING -> "商品出貨通知";
             case COMPLETED -> "訂單完成通知";
             case CANCELLED -> "訂單取消通知";
+            case REFUNDED -> "退貨退款完成通知";
         };
     }
 
@@ -39,6 +49,7 @@ public class OrderMailSender {
                     : "");
             case COMPLETED -> "您的訂單已完成,感謝您的購買。";
             case CANCELLED -> "您的訂單已取消。";
+            case REFUNDED -> "您的退貨申請已核准,款項將退回原付款方式。";
         };
     }
 

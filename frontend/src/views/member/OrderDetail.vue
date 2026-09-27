@@ -2,9 +2,15 @@
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrderDetail, payOrder, cancelOrder, reorder } from '../../api/order'
+import { applyReturn, getOrderDetail, payOrder, cancelOrder, reorder } from '../../api/order'
 import { useCartStore } from '../../stores/cart'
-import { ORDER_STATUS_LABELS, ORDER_STATUS_TAG_TYPES, PAYMENT_METHOD_LABELS } from '../../utils/orderEnums'
+import {
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_TAG_TYPES,
+  PAYMENT_METHOD_LABELS,
+  RETURN_STATUS_LABELS,
+  RETURN_STATUS_TAG_TYPES,
+} from '../../utils/orderEnums'
 import { formatCountdown, remainingMs } from '../../utils/countdown'
 import OrderTimeline from '../../components/OrderTimeline.vue'
 
@@ -86,6 +92,40 @@ const timer = setInterval(() => {
 }, 1000)
 onUnmounted(() => clearInterval(timer))
 
+// 已完成、還在鑑賞期內、沒申請過才能申請退貨
+const canApplyReturn = computed(
+  () =>
+    order.value?.status === 'COMPLETED' &&
+    !order.value.returnRequest &&
+    order.value.returnDeadline &&
+    remainingMs(order.value.returnDeadline, now.value) > 0,
+)
+
+async function handleApplyReturn() {
+  let reason
+  try {
+    const { value } = await ElMessageBox.prompt(
+      `請說明退貨原因(鑑賞期至 ${order.value.returnDeadline.slice(0, 16).replace('T', ' ')})`,
+      '申請退貨',
+      {
+        inputType: 'textarea',
+        inputPlaceholder: '例如:尺寸不合、商品瑕疵',
+        inputValidator: (v) => (!!v && !!v.trim() && v.length <= 500) || '請填寫原因(最多 500 字)',
+      },
+    )
+    reason = value
+  } catch {
+    return
+  }
+  acting.value = true
+  try {
+    order.value = await applyReturn(props.id, reason)
+    ElMessage.success('退貨申請已送出,審核結果會以 email 通知')
+  } finally {
+    acting.value = false
+  }
+}
+
 const awaitingPayment = computed(() => order.value?.status === 'PENDING_PAYMENT')
 const hasDeadline = computed(() => awaitingPayment.value && !!order.value?.paymentDeadline)
 const timeLeft = computed(() => (hasDeadline.value ? remainingMs(order.value.paymentDeadline, now.value) : 0))
@@ -141,6 +181,18 @@ onMounted(load)
         </div>
       </div>
 
+      <div v-if="order.returnRequest" class="block">
+        <div class="block-title">
+          <span>退貨申請</span>
+          <el-tag :type="RETURN_STATUS_TAG_TYPES[order.returnRequest.status]">
+            {{ RETURN_STATUS_LABELS[order.returnRequest.status] }}
+          </el-tag>
+        </div>
+        <p class="meta">申請時間:{{ order.returnRequest.createdAt?.slice(0, 19).replace('T', ' ') }}</p>
+        <p class="meta">退貨原因:{{ order.returnRequest.reason }}</p>
+        <p v-if="order.returnRequest.adminNote" class="meta">處理說明:{{ order.returnRequest.adminNote }}</p>
+      </div>
+
       <div class="block">
         <div class="block-title">訂單進度</div>
         <OrderTimeline :logs="order.statusLogs" />
@@ -176,6 +228,7 @@ onMounted(load)
         >
           取消訂單
         </el-button>
+        <el-button v-if="canApplyReturn" :loading="acting" @click="handleApplyReturn">申請退貨</el-button>
         <el-button :loading="acting" @click="handleReorder">再買一次</el-button>
       </div>
     </template>

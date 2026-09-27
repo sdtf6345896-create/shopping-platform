@@ -20,6 +20,10 @@ export function reorder(id) {
   return request.post(`/orders/${id}/reorder`)
 }
 
+export function applyReturn(id, reason) {
+  return request.post(`/orders/${id}/return`, { reason })
+}
+
 export function cancelOrder(id) {
   return request.post(`/orders/${id}/cancel`)
 }

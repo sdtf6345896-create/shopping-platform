@@ -8,6 +8,8 @@ import {
   ORDER_STATUS_TAG_TYPES,
   ORDER_STATUS_TRANSITIONS,
   PAYMENT_METHOD_LABELS,
+  RETURN_STATUS_LABELS,
+  RETURN_STATUS_TAG_TYPES,
   SHIPPING_CARRIERS,
 } from '../../utils/orderEnums'
 import OrderTimeline from '../../components/OrderTimeline.vue'
@@ -124,6 +126,24 @@ onMounted(load)
           <span>總金額</span>
           <span class="total-amount">NT$ {{ order.totalAmount }}</span>
         </div>
+      </div>
+
+      <div v-if="order.returnRequest" class="block">
+        <div class="block-title">
+          <span>退貨申請</span>
+          <el-tag :type="RETURN_STATUS_TAG_TYPES[order.returnRequest.status]">
+            {{ RETURN_STATUS_LABELS[order.returnRequest.status] }}
+          </el-tag>
+        </div>
+        <p class="meta">退貨原因:{{ order.returnRequest.reason }}</p>
+        <p v-if="order.returnRequest.adminNote" class="meta">處理說明:{{ order.returnRequest.adminNote }}</p>
+        <router-link
+          v-if="order.returnRequest.status === 'PENDING'"
+          :to="{ name: 'AdminReturnList' }"
+          class="meta"
+        >
+          前往退貨管理審核 →
+        </router-link>
       </div>
 
       <div class="block">

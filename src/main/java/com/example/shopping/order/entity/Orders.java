@@ -6,6 +6,7 @@ import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.coupon.entity.Coupon;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
+import com.example.shopping.returns.entity.ReturnRequest;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -63,6 +64,13 @@ public class Orders {
     @Column(name = "points_used", nullable = false)
     private int pointsUsed;
 
+    /** 訂單完成時回饋的購物金點數,退貨時據此收回 */
+    @Column(name = "points_earned", nullable = false)
+    private int pointsEarned;
+
+    @OneToOne(mappedBy = "order", fetch = FetchType.LAZY)
+    private ReturnRequest returnRequest;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 20)
     private PaymentMethod paymentMethod;
@@ -109,6 +117,25 @@ public class Orders {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /** 最後一次變成 COMPLETED 的時間,沒有完成過回傳 null */
+    public LocalDateTime getCompletedAt() {
+        LocalDateTime completedAt = null;
+        for (OrderStatusLog log : statusLogs) {
+            if (log.getToStatus() == OrderStatus.COMPLETED) {
+                completedAt = log.getCreatedAt();
+            }
+        }
+        return completedAt;
+    }
+
+    /** 可申請退貨的期限(完成時間 + 鑑賞期);非已完成訂單回傳 null */
+    public LocalDateTime getReturnDeadline() {
+        LocalDateTime completedAt = getCompletedAt();
+        return status == OrderStatus.COMPLETED && completedAt != null
+                ? completedAt.plus(ReturnRequest.RETURN_WINDOW)
+                : null;
+    }
 
     public void addItem(OrderItem item) {
         item.setOrder(this);

@@ -159,6 +159,23 @@ class OrderFlowIntegrationTest {
         assertThat(history.findValuesAsText("type")).containsExactly("REFUND", "REDEEM", "EARN");
         assertThat(history.at("/0/balanceAfter").asInt()).isEqualTo(10);
 
+        // ---- 退貨:會員申請 → 後台核准 → 訂單退款、回庫存、收回回饋購物金 ----
+        JsonNode completed = call(get("/api/orders/" + orderId), memberToken, null, 200).at("/data");
+        assertThat(completed.at("/returnDeadline").isNull()).isFalse();
+        JsonNode applied = call(post("/api/orders/" + orderId + "/return"), memberToken,
+                Map.of("reason", "尺寸不合"), 200).at("/data/returnRequest");
+        assertThat(applied.at("/status").asText()).isEqualTo("PENDING");
+        call(post("/api/orders/" + orderId + "/return"), memberToken, Map.of("reason", "再申請一次"), 400);
+
+        long returnId = applied.at("/id").asLong();
+        call(post("/api/admin/returns/" + returnId + "/approve"), adminToken, Map.of(), 200);
+        JsonNode refunded = call(get("/api/orders/" + orderId), memberToken, null, 200).at("/data");
+        assertThat(refunded.at("/status").asText()).isEqualTo("REFUNDED");
+        assertThat(refunded.at("/returnRequest/status").asText()).isEqualTo("APPROVED");
+        assertThat(call(get("/api/points"), memberToken, null, 200).at("/data/balance").asInt()).isZero();
+        JsonNode restocked = call(get("/api/admin/products/" + productId), adminToken, null, 200).at("/data");
+        assertThat(restocked.at("/skus/0/stock").asInt()).isEqualTo(3);
+
         // ---- 後台:關鍵字搜尋與 CSV 匯出 ----
         JsonNode found = call(get("/api/admin/orders?keyword=" + suffix), adminToken, null, 200).at("/data");
         // 會員有兩筆訂單(第二筆已取消),Email 含 suffix 所以都搜得到

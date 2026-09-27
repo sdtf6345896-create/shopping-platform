@@ -23,6 +23,7 @@ public class OrderResponse {
     private BigDecimal totalAmount;
     private String couponCode;
     private int pointsUsed;
+    private int pointsEarned;
     private String receiverName;
     private String receiverPhone;
     private String receiverAddress;
@@ -33,6 +34,9 @@ public class OrderResponse {
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
     private List<OrderStatusLogResponse> statusLogs;
+    /** 可申請退貨的期限,只有已完成的訂單才有值 */
+    private LocalDateTime returnDeadline;
+    private ReturnSummaryResponse returnRequest;
 
     public static OrderResponse from(Orders order) {
         return new OrderResponse(
@@ -45,6 +49,7 @@ public class OrderResponse {
                 order.getTotalAmount(),
                 order.getCouponCode(),
                 order.getPointsUsed(),
+                order.getPointsEarned(),
                 order.getReceiverName(),
                 order.getReceiverPhone(),
                 order.getReceiverAddress(),
@@ -54,6 +59,8 @@ public class OrderResponse {
                 order.getPaymentDeadline(),
                 order.getCreatedAt(),
                 order.getItems().stream().map(OrderItemResponse::from).toList(),
-                order.getStatusLogs().stream().map(OrderStatusLogResponse::from).toList());
+                order.getStatusLogs().stream().map(OrderStatusLogResponse::from).toList(),
+                order.getReturnDeadline(),
+                ReturnSummaryResponse.from(order.getReturnRequest()));
     }
 }

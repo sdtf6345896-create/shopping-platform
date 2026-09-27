@@ -22,6 +22,7 @@ const statusRows = computed(() => {
     SHIPPING: '出貨中',
     COMPLETED: '已完成',
     CANCELLED: '已取消',
+    REFUNDED: '已退款',
   }
   return Object.entries(summary.value.statusCounts).map(([key, count]) => ({
     label: labels[key] || key,

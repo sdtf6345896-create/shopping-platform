@@ -66,6 +66,7 @@ const routes = [
       { path: 'members', name: 'AdminMemberList', component: () => import('../views/admin/MemberList.vue') },
       { path: 'coupons', name: 'AdminCouponList', component: () => import('../views/admin/CouponList.vue') },
       { path: 'questions', name: 'AdminQuestionList', component: () => import('../views/admin/QuestionList.vue') },
+      { path: 'returns', name: 'AdminReturnList', component: () => import('../views/admin/ReturnList.vue') },
     ],
   },
 ]

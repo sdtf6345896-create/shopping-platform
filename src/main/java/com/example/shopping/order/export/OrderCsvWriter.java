@@ -26,7 +26,8 @@ public final class OrderCsvWriter {
             OrderStatus.PAID, "已付款",
             OrderStatus.SHIPPING, "出貨中",
             OrderStatus.COMPLETED, "已完成",
-            OrderStatus.CANCELLED, "已取消"));
+            OrderStatus.CANCELLED, "已取消",
+            OrderStatus.REFUNDED, "已退款"));
 
     private static final Map<PaymentMethod, String> PAYMENT_LABELS = new EnumMap<>(Map.of(
             PaymentMethod.CREDIT_CARD, "信用卡",

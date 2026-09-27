@@ -66,6 +66,8 @@ public class OrderServiceImpl implements OrderService {
         ALLOWED_TRANSITIONS.put(OrderStatus.SHIPPING, EnumSet.of(OrderStatus.COMPLETED));
         ALLOWED_TRANSITIONS.put(OrderStatus.COMPLETED, EnumSet.noneOf(OrderStatus.class));
         ALLOWED_TRANSITIONS.put(OrderStatus.CANCELLED, EnumSet.noneOf(OrderStatus.class));
+        // REFUNDED 只能經由退貨核准(ReturnService)進入,不開放後台直接切換
+        ALLOWED_TRANSITIONS.put(OrderStatus.REFUNDED, EnumSet.noneOf(OrderStatus.class));
     }
 
     private final OrderRepository orderRepository;
@@ -306,6 +308,7 @@ public class OrderServiceImpl implements OrderService {
         } else if (target == OrderStatus.COMPLETED) {
             order.changeStatus(target, OrderActor.ADMIN, note);
             int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount());
+            order.setPointsEarned(earned);
             if (earned > 0) {
                 pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,
                         "訂單 " + order.getOrderNo() + " 完成回饋");

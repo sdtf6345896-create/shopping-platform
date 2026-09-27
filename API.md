@@ -62,7 +62,8 @@
 | `AccountStatus` | `ACTIVE`, `DISABLED` |
 | `CategoryStatus` | `ACTIVE`, `DISABLED` |
 | `ProductStatus` | `ON_SALE`, `OFF_SHELF` |
-| `OrderStatus` | `PENDING_PAYMENT`, `PAID`, `SHIPPING`, `COMPLETED`, `CANCELLED` |
+| `OrderStatus` | `PENDING_PAYMENT`, `PAID`, `SHIPPING`, `COMPLETED`, `CANCELLED`, `REFUNDED` |
+| `ReturnStatus` | `PENDING`(審核中), `APPROVED`(已核准退款), `REJECTED`(未通過) |
 | `PaymentMethod` | `CREDIT_CARD`, `ATM`, `COD` |
 | `CouponStatus` | `ACTIVE`, `DISABLED` |
 | `DiscountType` | `FIXED_AMOUNT`(固定金額折抵), `PERCENTAGE`(百分比折扣) |
@@ -75,8 +76,9 @@
 PENDING_PAYMENT → PAID, CANCELLED
 PAID            → SHIPPING, CANCELLED
 SHIPPING        → COMPLETED
-COMPLETED       → (終態)
+COMPLETED       → (終態;僅能透過退貨核准變成 REFUNDED)
 CANCELLED       → (終態)
+REFUNDED        → (終態)
 ```
 
 ---
@@ -406,6 +408,7 @@ CANCELLED       → (終態)
 ```
 > `statusLogs` 為訂單狀態歷程,依時間由舊到新排列,每一次狀態變更(會員付款/取消、管理員出貨/取消、系統自動處理)都會新增一筆。
 > `shippingCarrier`/`trackingNumber`/`shippedAt` 在管理員出貨後才有值。
+> `pointsEarned` 為訂單完成時回饋的購物金;`returnDeadline` 為可申請退貨的期限(完成後 7 天,非已完成訂單為 `null`);`returnRequest` 為退貨申請摘要(`{ id, status, reason, adminNote, createdAt, processedAt }`),沒申請過為 `null`。
 > `paymentDeadline` 為付款期限:線上付款(`CREDIT_CARD`/`ATM`)為下單後 30 分鐘(`app.order.payment-timeout-minutes` 可調),貨到付款(`COD`)為 `null`。逾期仍未付款的訂單會被背景排程(每分鐘掃描一次)自動取消,歸還庫存與優惠券名額,訂單歷程記為 `SYSTEM`。
 > `receiverName`/`receiverPhone`/`receiverAddress` 與商品名稱/規格/單價皆為**下單當下的快照**,之後會員改地址或商家改商品都不影響歷史訂單。
 > `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount` − `pointsUsed`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
@@ -434,6 +437,27 @@ CANCELLED       → (終態)
 取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存;若該訂單有使用優惠券,也會歸還一次使用名額。
 
 > 訂單成立、付款成功、出貨、完成、取消時,都會寄一封通知信給下單會員(標題依狀態而異,例如「商品出貨通知」)。實際寄送方式與忘記密碼信共用同一套 SMTP 設定(見 README),未設定時以 log 模擬,寄送失敗也不會讓 API request 失敗。
+
+---
+
+## 退貨(Return)
+
+### `POST /api/orders/{orderId}/return` — 需會員登入
+申請退貨。請求:`{ "reason": "尺寸不合" }`(最多 500 字)。只有 `COMPLETED` 且在完成後 7 天鑑賞期內的訂單可申請,每筆訂單只能申請一次,否則回 400。回傳更新後的 `OrderResponse`(含 `returnRequest`)。
+
+### `GET /api/admin/returns` — 需管理員登入
+退貨申請列表(新到舊)。Query:`status`(選填)、`page`、`size`。
+```json
+{ "id": 1, "orderId": 12, "orderNo": "ORD2026...", "orderTotalAmount": 1080.00, "memberEmail": "you@example.com",
+  "receiverName": "王小明", "reason": "尺寸不合", "status": "PENDING", "adminNote": null,
+  "createdAt": "2026-09-27T18:00:00", "processedAt": null }
+```
+
+### `POST /api/admin/returns/{id}/approve` — 需管理員登入
+核准退貨。請求(選填):`{ "note": "已收到退回商品" }`。訂單狀態變為 `REFUNDED`(寫入訂單歷程)、商品數量加回庫存並扣回銷量、退還該訂單使用的購物金、收回該訂單完成時回饋的購物金(若會員已花掉,只收回剩餘餘額,不會變負數),並寄送「退貨退款完成通知」。優惠券名額不退還。
+
+### `POST /api/admin/returns/{id}/reject` — 需管理員登入
+拒絕退貨。請求(選填):`{ "note": "商品已拆封使用" }`,說明會寄給會員。訂單維持 `COMPLETED`。已處理過的申請不能再核准/拒絕(400)。
 
 ---
 
@@ -623,6 +647,10 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/orders/{id}` | 會員 |
 | POST | `/api/orders/{id}/pay` | 會員 |
 | POST | `/api/orders/{id}/reorder` | 會員 |
+| POST | `/api/orders/{orderId}/return` | 會員 |
+| GET | `/api/admin/returns` | 管理員 |
+| POST | `/api/admin/returns/{id}/approve` | 管理員 |
+| POST | `/api/admin/returns/{id}/reject` | 管理員 |
 | GET | `/api/points` | 會員 |
 | GET | `/api/points/transactions` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |

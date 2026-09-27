@@ -14,6 +14,7 @@ const TIMELINE_TYPES = {
   SHIPPING: 'primary',
   COMPLETED: 'success',
   CANCELLED: 'info',
+  REFUNDED: 'danger',
 }
 
 // 最新的狀態排最上面

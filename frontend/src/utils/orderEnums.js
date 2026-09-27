@@ -4,6 +4,7 @@ export const ORDER_STATUS_LABELS = {
   SHIPPING: '出貨中',
   COMPLETED: '已完成',
   CANCELLED: '已取消',
+  REFUNDED: '已退款',
 }
 
 export const ORDER_STATUS_TAG_TYPES = {
@@ -12,6 +13,7 @@ export const ORDER_STATUS_TAG_TYPES = {
   SHIPPING: 'primary',
   COMPLETED: 'success',
   CANCELLED: 'info',
+  REFUNDED: 'danger',
 }
 
 export const PAYMENT_METHOD_LABELS = {
@@ -33,6 +35,19 @@ export const ORDER_STATUS_TRANSITIONS = {
   SHIPPING: [{ status: 'COMPLETED', label: '標記完成', type: 'success' }],
   COMPLETED: [],
   CANCELLED: [],
+  REFUNDED: [],
+}
+
+export const RETURN_STATUS_LABELS = {
+  PENDING: '審核中',
+  APPROVED: '已核准退款',
+  REJECTED: '未通過',
+}
+
+export const RETURN_STATUS_TAG_TYPES = {
+  PENDING: 'warning',
+  APPROVED: 'success',
+  REJECTED: 'info',
 }
 
 export const ORDER_ACTOR_LABELS = {

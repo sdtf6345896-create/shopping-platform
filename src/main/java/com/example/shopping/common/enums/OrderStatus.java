@@ -5,5 +5,7 @@ public enum OrderStatus {
     PAID,
     SHIPPING,
     COMPLETED,
-    CANCELLED
+    CANCELLED,
+    /** 已完成的訂單經退貨核准後退款 */
+    REFUNDED
 }
