@@ -23,7 +23,7 @@ import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
-import com.example.shopping.order.mail.OrderMailSender;
+import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.dto.PointBalanceResponse;
 import com.example.shopping.points.service.PointPolicy;
@@ -68,7 +68,7 @@ class OrderServiceImplTest {
     @Mock
     private CouponRepository couponRepository;
     @Mock
-    private OrderMailSender orderMailSender;
+    private OrderNotifier orderNotifier;
     @Mock
     private OrderPaymentPolicy paymentPolicy;
     @Mock
@@ -149,7 +149,7 @@ class OrderServiceImplTest {
         assertThat(response.getTotalAmount()).isEqualByComparingTo(new BigDecimal("1180.00"));
         assertThat(sku.getStock()).isEqualTo(3);
         verify(cartItemRepository).deleteAll(List.of(cartItem));
-        verify(orderMailSender).notifyStatusChanged(any(Orders.class));
+        verify(orderNotifier).notifyStatusChanged(any(Orders.class));
     }
 
     @Test
@@ -189,7 +189,7 @@ class OrderServiceImplTest {
         assertThatThrownBy(() -> orderService.checkout(1L, checkoutRequest()))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("購物車是空的");
-        verify(orderMailSender, never()).notifyStatusChanged(any());
+        verify(orderNotifier, never()).notifyStatusChanged(any());
     }
 
     @Test
@@ -232,7 +232,7 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PAID);
         assertThat(product.getSalesCount()).isEqualTo(2);
-        verify(orderMailSender).notifyStatusChanged(order);
+        verify(orderNotifier).notifyStatusChanged(order);
     }
 
     @Test
@@ -280,7 +280,7 @@ class OrderServiceImplTest {
         assertThat(order.getStatusLogs()).last()
                 .satisfies(log -> assertThat(log.getActor()).isEqualTo(OrderActor.SYSTEM));
         verify(couponService).release(5L);
-        verify(orderMailSender).notifyStatusChanged(order);
+        verify(orderNotifier).notifyStatusChanged(order);
     }
 
     @Test
@@ -292,7 +292,7 @@ class OrderServiceImplTest {
         assertThatThrownBy(() -> orderService.pay(1L, 1L))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("無法付款");
-        verify(orderMailSender, never()).notifyStatusChanged(any());
+        verify(orderNotifier, never()).notifyStatusChanged(any());
     }
 
     @Test
@@ -305,7 +305,7 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(sku.getStock()).isEqualTo(5);
-        verify(orderMailSender).notifyStatusChanged(order);
+        verify(orderNotifier).notifyStatusChanged(order);
     }
 
     @Test
@@ -350,7 +350,7 @@ class OrderServiceImplTest {
         assertThat(response.getShippingCarrier()).isEqualTo("黑貓宅急便");
         assertThat(response.getTrackingNumber()).isEqualTo("TRK123456");
         assertThat(response.getShippedAt()).isNotNull();
-        verify(orderMailSender).notifyStatusChanged(order);
+        verify(orderNotifier).notifyStatusChanged(order);
     }
 
     @Test
@@ -368,7 +368,7 @@ class OrderServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("物流單號");
         assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
-        verify(orderMailSender, never()).notifyStatusChanged(any());
+        verify(orderNotifier, never()).notifyStatusChanged(any());
     }
 
     @Test

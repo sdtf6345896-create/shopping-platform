@@ -475,6 +475,29 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 
 ---
 
+## 站內通知(Notifications)— 需會員登入
+
+訂單狀態變更(成立、付款、出貨、完成、取消、退款)、退貨申請未通過、商品提問獲得回覆時,除了寄 email,也會建立一則站內通知(`type`:`ORDER`/`RETURN`/`QUESTION`/`SYSTEM`)。
+
+### `GET /api/notifications`
+通知列表(新到舊)。Query:`page`、`size`
+```json
+{ "id": 8, "type": "ORDER", "title": "商品出貨通知", "content": "訂單 ORD2026...:您的訂單已出貨...",
+  "link": "/orders/12", "read": false, "createdAt": "2026-09-27T18:00:00" }
+```
+`link` 為前台路徑,點擊通知時導向。
+
+### `GET /api/notifications/unread-count`
+未讀數量:`{ "count": 3 }`(導覽列小紅點用)。
+
+### `POST /api/notifications/{id}/read`
+標記單則已讀(只能標記自己的通知,否則 404)。
+
+### `POST /api/notifications/read-all`
+全部標為已讀:`{ "updated": 3 }`。
+
+---
+
 ## 購物金(Points)— 需會員登入
 
 ### `GET /api/points`
@@ -675,6 +698,10 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/admin/returns/{id}/approve` | 管理員 |
 | POST | `/api/admin/returns/{id}/reject` | 管理員 |
 | GET | `/api/points` | 會員 |
+| GET | `/api/notifications` | 會員 |
+| GET | `/api/notifications/unread-count` | 會員 |
+| POST | `/api/notifications/{id}/read` | 會員 |
+| POST | `/api/notifications/read-all` | 會員 |
 | GET | `/api/points/transactions` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |

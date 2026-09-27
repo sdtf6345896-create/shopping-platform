@@ -9,7 +9,7 @@ import com.example.shopping.common.exception.ResourceNotFoundException;
 import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
-import com.example.shopping.order.mail.OrderMailSender;
+import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
@@ -33,16 +33,16 @@ public class ReturnServiceImpl implements ReturnService {
     private final ReturnRequestRepository returnRequestRepository;
     private final OrderRepository orderRepository;
     private final PointService pointService;
-    private final OrderMailSender orderMailSender;
+    private final OrderNotifier orderNotifier;
 
     public ReturnServiceImpl(ReturnRequestRepository returnRequestRepository,
                              OrderRepository orderRepository,
                              PointService pointService,
-                             OrderMailSender orderMailSender) {
+                             OrderNotifier orderNotifier) {
         this.returnRequestRepository = returnRequestRepository;
         this.orderRepository = orderRepository;
         this.pointService = pointService;
-        this.orderMailSender = orderMailSender;
+        this.orderNotifier = orderNotifier;
     }
 
     @Override
@@ -100,7 +100,7 @@ public class ReturnServiceImpl implements ReturnService {
         returnRequest.setAdminNote(note);
         returnRequest.setProcessedAt(LocalDateTime.now());
         order.changeStatus(OrderStatus.REFUNDED, OrderActor.ADMIN, note != null ? note : "退貨核准,已退款");
-        orderMailSender.notifyStatusChanged(order);
+        orderNotifier.notifyStatusChanged(order);
         return ReturnRequestResponse.from(returnRequest);
     }
 
@@ -111,7 +111,7 @@ public class ReturnServiceImpl implements ReturnService {
         returnRequest.setStatus(ReturnStatus.REJECTED);
         returnRequest.setAdminNote(note);
         returnRequest.setProcessedAt(LocalDateTime.now());
-        orderMailSender.notifyReturnRejected(returnRequest.getOrder(), note);
+        orderNotifier.notifyReturnRejected(returnRequest.getOrder(), note);
         return ReturnRequestResponse.from(returnRequest);
     }
 

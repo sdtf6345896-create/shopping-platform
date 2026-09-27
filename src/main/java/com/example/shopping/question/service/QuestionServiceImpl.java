@@ -11,7 +11,7 @@ import com.example.shopping.question.dto.request.QuestionRequest;
 import com.example.shopping.question.dto.response.AdminQuestionResponse;
 import com.example.shopping.question.dto.response.QuestionResponse;
 import com.example.shopping.question.entity.ProductQuestion;
-import com.example.shopping.question.mail.QuestionMailSender;
+import com.example.shopping.question.mail.QuestionNotifier;
 import com.example.shopping.question.repository.ProductQuestionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -30,16 +30,16 @@ public class QuestionServiceImpl implements QuestionService {
     private final ProductQuestionRepository questionRepository;
     private final ProductRepository productRepository;
     private final MemberRepository memberRepository;
-    private final QuestionMailSender questionMailSender;
+    private final QuestionNotifier questionNotifier;
 
     public QuestionServiceImpl(ProductQuestionRepository questionRepository,
                                ProductRepository productRepository,
                                MemberRepository memberRepository,
-                               QuestionMailSender questionMailSender) {
+                               QuestionNotifier questionNotifier) {
         this.questionRepository = questionRepository;
         this.productRepository = productRepository;
         this.memberRepository = memberRepository;
-        this.questionMailSender = questionMailSender;
+        this.questionNotifier = questionNotifier;
     }
 
     @Override
@@ -90,7 +90,7 @@ public class QuestionServiceImpl implements QuestionService {
         question.setAnsweredAt(LocalDateTime.now());
         // 修改既有回覆不再重複寄信
         if (firstAnswer) {
-            questionMailSender.notifyAnswered(question);
+            questionNotifier.notifyAnswered(question);
         }
         return AdminQuestionResponse.from(question);
     }

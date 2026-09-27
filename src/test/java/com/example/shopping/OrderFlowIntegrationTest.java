@@ -215,6 +215,17 @@ class OrderFlowIntegrationTest {
                 adminToken, null, 200).at("/data/content");
         assertThat(productAudit.findValuesAsText("action")).contains("新增商品", "商品上下架");
 
+        // ---- 站內通知:訂單各階段、退貨、提問回覆都會通知,可全部標為已讀 ----
+        long unread = call(get("/api/notifications/unread-count"), memberToken, null, 200).at("/data/count").asLong();
+        assertThat(unread).isGreaterThanOrEqualTo(5);
+        JsonNode inbox = call(get("/api/notifications?size=50"), memberToken, null, 200).at("/data/content");
+        assertThat(inbox.findValuesAsText("title"))
+                .contains("商品出貨通知", "退貨退款完成通知", "您的商品提問已回覆");
+        assertThat(inbox.findValuesAsText("link")).contains("/orders/" + orderId, "/products/" + productId);
+        call(post("/api/notifications/read-all"), memberToken, null, 200);
+        assertThat(call(get("/api/notifications/unread-count"), memberToken, null, 200).at("/data/count").asLong())
+                .isZero();
+
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
     }

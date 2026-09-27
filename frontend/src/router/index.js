@@ -32,6 +32,11 @@ const routes = [
       { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue') },
       { path: 'points', name: 'MemberPoints', component: () => import('../views/member/Points.vue') },
       {
+        path: 'notifications',
+        name: 'MemberNotifications',
+        component: () => import('../views/member/Notifications.vue'),
+      },
+      {
         path: 'browsing-history',
         name: 'MemberBrowsingHistory',
         component: () => import('../views/member/BrowsingHistory.vue'),

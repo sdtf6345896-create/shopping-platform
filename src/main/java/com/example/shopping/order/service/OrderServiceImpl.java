@@ -22,7 +22,7 @@ import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.export.OrderCsvWriter;
-import com.example.shopping.order.mail.OrderMailSender;
+import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
@@ -76,7 +76,7 @@ public class OrderServiceImpl implements OrderService {
     private final MemberRepository memberRepository;
     private final CouponService couponService;
     private final CouponRepository couponRepository;
-    private final OrderMailSender orderMailSender;
+    private final OrderNotifier orderNotifier;
     private final OrderPaymentPolicy paymentPolicy;
     private final PointService pointService;
     private final PointPolicy pointPolicy;
@@ -87,7 +87,7 @@ public class OrderServiceImpl implements OrderService {
                              MemberRepository memberRepository,
                              CouponService couponService,
                              CouponRepository couponRepository,
-                             OrderMailSender orderMailSender,
+                             OrderNotifier orderNotifier,
                              OrderPaymentPolicy paymentPolicy,
                              PointService pointService,
                              PointPolicy pointPolicy) {
@@ -97,7 +97,7 @@ public class OrderServiceImpl implements OrderService {
         this.memberRepository = memberRepository;
         this.couponService = couponService;
         this.couponRepository = couponRepository;
-        this.orderMailSender = orderMailSender;
+        this.orderNotifier = orderNotifier;
         this.paymentPolicy = paymentPolicy;
         this.pointService = pointService;
         this.pointPolicy = pointPolicy;
@@ -192,7 +192,7 @@ public class OrderServiceImpl implements OrderService {
                     "訂單 " + saved.getOrderNo() + " 折抵");
         }
         cartItemRepository.deleteAll(cartItems);
-        orderMailSender.notifyStatusChanged(saved);
+        orderNotifier.notifyStatusChanged(saved);
 
         return OrderResponse.from(saved);
     }
@@ -208,7 +208,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("已超過付款期限,訂單將自動取消");
         }
         markPaid(order, OrderActor.MEMBER, "會員完成付款");
-        orderMailSender.notifyStatusChanged(order);
+        orderNotifier.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }
 
@@ -216,7 +216,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse cancelByMember(Long memberId, Long orderId) {
         Orders order = findOwnedOrThrow(memberId, orderId);
         cancelOrder(order, OrderActor.MEMBER, "會員取消訂單");
-        orderMailSender.notifyStatusChanged(order);
+        orderNotifier.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }
 
@@ -316,7 +316,7 @@ public class OrderServiceImpl implements OrderService {
         } else {
             order.changeStatus(target, OrderActor.ADMIN, note);
         }
-        orderMailSender.notifyStatusChanged(order);
+        orderNotifier.notifyStatusChanged(order);
 
         return OrderResponse.from(order);
     }
@@ -326,7 +326,7 @@ public class OrderServiceImpl implements OrderService {
         List<Orders> expired = orderRepository.findByStatusAndPaymentDeadlineBefore(OrderStatus.PENDING_PAYMENT, now);
         for (Orders order : expired) {
             cancelOrder(order, OrderActor.SYSTEM, "逾時未付款,系統自動取消");
-            orderMailSender.notifyStatusChanged(order);
+            orderNotifier.notifyStatusChanged(order);
         }
         return expired.size();
     }

@@ -10,7 +10,7 @@ import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.OrderStatusLog;
 import com.example.shopping.order.entity.Orders;
-import com.example.shopping.order.mail.OrderMailSender;
+import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.dto.PointBalanceResponse;
 import com.example.shopping.points.service.PointService;
@@ -50,7 +50,7 @@ class ReturnServiceImplTest {
     @Mock
     private PointService pointService;
     @Mock
-    private OrderMailSender orderMailSender;
+    private OrderNotifier orderNotifier;
 
     @InjectMocks
     private ReturnServiceImpl returnService;
@@ -164,7 +164,7 @@ class ReturnServiceImplTest {
         assertThat(product.getSalesCount()).isEqualTo(3);
         verify(pointService).credit(eq(1L), eq(7L), eq(50), eq(PointTransactionType.REFUND), any());
         verify(pointService).deduct(eq(1L), eq(7L), eq(10), eq(PointTransactionType.ADJUST), any());
-        verify(orderMailSender).notifyStatusChanged(order);
+        verify(orderNotifier).notifyStatusChanged(order);
     }
 
     @Test
@@ -191,7 +191,7 @@ class ReturnServiceImplTest {
 
         assertThat(returnRequest.getStatus()).isEqualTo(ReturnStatus.REJECTED);
         assertThat(order.getStatus()).isEqualTo(OrderStatus.COMPLETED);
-        verify(orderMailSender).notifyReturnRejected(order, "商品已拆封使用");
+        verify(orderNotifier).notifyReturnRejected(order, "商品已拆封使用");
         verify(pointService, never()).credit(any(), any(), anyInt(), any(), any());
     }
 

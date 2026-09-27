@@ -12,7 +12,7 @@ import com.example.shopping.question.dto.request.QuestionRequest;
 import com.example.shopping.question.dto.response.AdminQuestionResponse;
 import com.example.shopping.question.dto.response.QuestionResponse;
 import com.example.shopping.question.entity.ProductQuestion;
-import com.example.shopping.question.mail.QuestionMailSender;
+import com.example.shopping.question.mail.QuestionNotifier;
 import com.example.shopping.question.repository.ProductQuestionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,7 +46,7 @@ class QuestionServiceImplTest {
     @Mock
     private MemberRepository memberRepository;
     @Mock
-    private QuestionMailSender questionMailSender;
+    private QuestionNotifier questionNotifier;
 
     @InjectMocks
     private QuestionServiceImpl questionService;
@@ -129,7 +129,7 @@ class QuestionServiceImplTest {
 
         assertThat(response.getAnswer()).isEqualTo("目前只有黑色");
         assertThat(response.getAnsweredAt()).isNotNull();
-        verify(questionMailSender).notifyAnswered(question);
+        verify(questionNotifier).notifyAnswered(question);
     }
 
     @Test
@@ -142,7 +142,7 @@ class QuestionServiceImplTest {
         questionService.answer(5L, request);
 
         assertThat(question.getAnswer()).isEqualTo("新回覆");
-        verify(questionMailSender, never()).notifyAnswered(any());
+        verify(questionNotifier, never()).notifyAnswered(any());
     }
 
     @Test

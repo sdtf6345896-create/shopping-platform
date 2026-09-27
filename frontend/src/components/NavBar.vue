@@ -1,14 +1,16 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { Search, ShoppingCart, User } from '@element-plus/icons-vue'
+import { Bell, Search, ShoppingCart, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
+import { useNotificationStore } from '../stores/notification'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const cartStore = useCartStore()
+const notificationStore = useNotificationStore()
 
 const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
 
@@ -36,12 +38,32 @@ async function refreshCart() {
   }
 }
 
-onMounted(refreshCart)
-watch(() => authStore.isLoggedIn, refreshCart)
+function refreshNotifications() {
+  if (authStore.isLoggedIn) {
+    notificationStore.refreshUnread()
+  } else {
+    notificationStore.reset()
+  }
+}
+
+onMounted(() => {
+  refreshCart()
+  refreshNotifications()
+})
+watch(
+  () => authStore.isLoggedIn,
+  () => {
+    refreshCart()
+    refreshNotifications()
+  },
+)
+// 換頁時順便更新未讀數(例如剛付款、訂單狀態改變後)
+watch(() => route.path, refreshNotifications)
 
 function handleLogout() {
   authStore.logout()
   cartStore.reset()
+  notificationStore.reset()
   router.push('/login')
 }
 </script>
@@ -69,6 +91,12 @@ function handleLogout() {
       </el-input>
 
       <div class="nav-actions">
+        <router-link v-if="authStore.isLoggedIn" to="/member/notifications" class="cart-link" title="通知中心">
+          <el-badge :value="notificationStore.unreadCount" :max="99" :hidden="notificationStore.unreadCount === 0">
+            <el-icon :size="22"><Bell /></el-icon>
+          </el-badge>
+        </router-link>
+
         <router-link to="/cart" class="cart-link">
           <el-badge :value="cartStore.itemCount" :hidden="cartStore.itemCount === 0">
             <el-icon :size="22"><ShoppingCart /></el-icon>
@@ -86,6 +114,8 @@ function handleLogout() {
               <el-dropdown-item @click="router.push('/member/addresses')">收件地址</el-dropdown-item>
               <el-dropdown-item @click="router.push('/member/orders')">我的訂單</el-dropdown-item>
               <el-dropdown-item @click="router.push('/member/wishlist')">我的收藏</el-dropdown-item>
+              <el-dropdown-item @click="router.push('/member/points')">我的購物金</el-dropdown-item>
+              <el-dropdown-item @click="router.push('/member/notifications')">通知中心</el-dropdown-item>
               <el-dropdown-item divided @click="handleLogout">登出</el-dropdown-item>
             </el-dropdown-menu>
           </template>

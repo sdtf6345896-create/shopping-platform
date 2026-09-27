@@ -1,22 +1,30 @@
 package com.example.shopping.order.mail;
 
+import com.example.shopping.common.enums.NotificationType;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.notification.mail.MailSender;
+import com.example.shopping.notification.service.NotificationService;
 import com.example.shopping.order.entity.Orders;
 import org.springframework.stereotype.Component;
 
+/** 訂單相關通知:同時寄 email 並建立站內通知 */
 @Component
-public class OrderMailSender {
+public class OrderNotifier {
 
     private final MailSender mailSender;
+    private final NotificationService notificationService;
 
-    public OrderMailSender(MailSender mailSender) {
+    public OrderNotifier(MailSender mailSender, NotificationService notificationService) {
         this.mailSender = mailSender;
+        this.notificationService = notificationService;
     }
 
     public void notifyStatusChanged(Orders order) {
-        String toEmail = order.getMember().getEmail();
-        mailSender.send(toEmail, subjectFor(order.getStatus()), bodyFor(order));
+        String subject = subjectFor(order.getStatus());
+        mailSender.send(order.getMember().getEmail(), subject, bodyFor(order));
+        notificationService.notify(order.getMember().getId(),
+                order.getStatus() == OrderStatus.REFUNDED ? NotificationType.RETURN : NotificationType.ORDER,
+                subject, "訂單 " + order.getOrderNo() + ":" + messageFor(order), linkTo(order));
     }
 
     public void notifyReturnRejected(Orders order, String note) {
@@ -26,6 +34,13 @@ public class OrderMailSender {
             body += System.lineSeparator() + "說明:" + note;
         }
         mailSender.send(order.getMember().getEmail(), "退貨申請結果通知", body);
+        notificationService.notify(order.getMember().getId(), NotificationType.RETURN, "退貨申請未通過",
+                "訂單 " + order.getOrderNo() + " 的退貨申請未通過審核" + (note == null ? "。" : ":" + note),
+                linkTo(order));
+    }
+
+    private static String linkTo(Orders order) {
+        return "/orders/" + order.getId();
     }
 
     private String subjectFor(OrderStatus status) {
