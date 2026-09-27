@@ -153,6 +153,44 @@ class ProductServiceImplTest {
     }
 
     @Test
+    void update_replacesGalleryImagesInGivenOrder() {
+        existingProduct.replaceImages(List.of("https://img/old.jpg"));
+        Category category = new Category();
+        category.setId(5L);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+
+        ProductRequest request = new ProductRequest();
+        request.setCategoryId(5L);
+        request.setName("經典圓領T恤");
+        request.setPrice(BigDecimal.valueOf(590));
+        request.setSkus(List.of(skuRequest()));
+        request.setImages(List.of("https://img/b.jpg", " https://img/a.jpg "));
+
+        ProductDetailResponse response = productService.update(1L, request);
+
+        assertThat(response.getImages()).containsExactly("https://img/b.jpg", "https://img/a.jpg");
+        assertThat(existingProduct.getImages()).extracting("sortOrder").containsExactly(0, 1);
+    }
+
+    @Test
+    void update_clearsGallery_whenImagesOmitted() {
+        existingProduct.replaceImages(List.of("https://img/old.jpg"));
+        Category category = new Category();
+        category.setId(5L);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+
+        ProductRequest request = new ProductRequest();
+        request.setCategoryId(5L);
+        request.setName("經典圓領T恤");
+        request.setPrice(BigDecimal.valueOf(590));
+        request.setSkus(List.of(skuRequest()));
+
+        assertThat(productService.update(1L, request).getImages()).isEmpty();
+    }
+
+    @Test
     void delete_removesProduct() {
         when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
 

@@ -26,6 +26,14 @@ const selectedSkuId = ref(null)
 const quantity = ref(1)
 const submitting = ref(false)
 
+// 主圖 + 圖庫,去除重複與空值;點縮圖切換大圖
+const galleryImages = computed(() => {
+  if (!product.value) return []
+  return [...new Set([product.value.mainImage, ...(product.value.images || [])].filter(Boolean))]
+})
+const activeImage = ref(null)
+const displayedImage = computed(() => activeImage.value || galleryImages.value[0])
+
 const selectedSku = computed(() => product.value?.skus.find((s) => s.id === selectedSkuId.value))
 const isSoldOut = computed(() => product.value?.status !== 'ON_SALE' || product.value?.skus.every((s) => s.stock === 0))
 
@@ -33,6 +41,7 @@ async function load() {
   loading.value = true
   try {
     product.value = await getProductDetail(props.id)
+    activeImage.value = null
     const availableSku = product.value.skus.find((s) => s.stock > 0) || product.value.skus[0]
     selectedSkuId.value = availableSku?.id ?? null
   } finally {
@@ -204,9 +213,24 @@ watch(
   <div v-loading="loading" class="page-container">
     <template v-if="product">
       <div class="detail-layout">
-        <div class="gallery">
-          <img v-if="product.mainImage" :src="product.mainImage" :alt="product.name" />
-          <div v-else class="gallery-placeholder">無圖片</div>
+        <div class="gallery-column">
+          <div class="gallery">
+            <img v-if="displayedImage" :src="displayedImage" :alt="product.name" />
+            <div v-else class="gallery-placeholder">無圖片</div>
+          </div>
+          <div v-if="galleryImages.length > 1" class="thumbs">
+            <button
+              v-for="url in galleryImages"
+              :key="url"
+              type="button"
+              class="thumb"
+              :class="{ active: url === displayedImage }"
+              @click="activeImage = url"
+              @mouseenter="activeImage = url"
+            >
+              <img :src="url" :alt="product.name" />
+            </button>
+          </div>
         </div>
 
         <div class="info">
@@ -381,9 +405,42 @@ watch(
   padding: 24px;
 }
 
-.gallery {
+.gallery-column {
   width: 400px;
   flex-shrink: 0;
+}
+
+.thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.thumb {
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 4px;
+  background: #f5f5f5;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.thumb.active {
+  border-color: #e4393c;
+}
+
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery {
+  width: 400px;
   aspect-ratio: 1 / 1;
   background: #f5f5f5;
   display: flex;

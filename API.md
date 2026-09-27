@@ -285,6 +285,7 @@ REFUNDED        → (終態)
 {
   "id": 1, "categoryId": 2, "categoryName": "上衣", "name": "經典圓領T恤",
   "description": "100% 純棉,舒適透氣", "price": 590.00, "mainImage": "https://...",
+  "images": ["https://.../2.jpg", "https://.../3.jpg"],
   "status": "ON_SALE", "salesCount": 3,
   "skus": [ { "id": 1, "skuCode": "TSHIRT-BLK-M", "specName": "黑色/M", "price": 590.00, "stock": 3 } ]
 }
@@ -319,6 +320,7 @@ REFUNDED        → (終態)
   ]
 }
 ```
+`images` 選填,為主圖以外的商品圖片網址(依陣列順序顯示,最多 8 張);更新時整批取代,不帶或空陣列表示清空圖庫。
 `skus` 至少 1 筆。新商品預設 `OFF_SHELF`(下架)。
 
 ### `PUT /api/admin/products/{id}`

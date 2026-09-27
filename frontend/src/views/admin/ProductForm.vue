@@ -32,8 +32,12 @@ const form = reactive({
   description: '',
   price: 0,
   mainImage: '',
+  images: [],
   skus: [],
 })
+
+const MAX_GALLERY_IMAGES = 8
+const uploadingGallery = ref(false)
 
 const rules = {
   categoryId: [{ required: true, message: '請選擇分類', trigger: 'change' }],
@@ -64,6 +68,31 @@ async function handleImageUpload({ file }) {
   }
 }
 
+async function handleGalleryUpload({ file }) {
+  if (form.images.length >= MAX_GALLERY_IMAGES) {
+    ElMessage.warning(`商品圖片最多 ${MAX_GALLERY_IMAGES} 張`)
+    return
+  }
+  uploadingGallery.value = true
+  try {
+    const data = await uploadImage(file)
+    form.images.push(data.url)
+  } finally {
+    uploadingGallery.value = false
+  }
+}
+
+function removeGalleryImage(index) {
+  form.images.splice(index, 1)
+}
+
+function moveGalleryImage(index, offset) {
+  const target = index + offset
+  if (target < 0 || target >= form.images.length) return
+  const [image] = form.images.splice(index, 1)
+  form.images.splice(target, 0, image)
+}
+
 function addSku() {
   form.skus.push({ skuCode: '', specName: '', price: form.price || 0, stock: 0 })
 }
@@ -85,6 +114,7 @@ async function loadProduct() {
     form.description = data.description
     form.price = data.price
     form.mainImage = data.mainImage
+    form.images = [...(data.images || [])]
     form.skus = data.skus.map((s) => ({
       skuCode: s.skuCode,
       specName: s.specName,
@@ -166,6 +196,41 @@ onMounted(async () => {
         </div>
       </el-form-item>
 
+      <el-form-item label="商品圖庫">
+        <div v-loading="uploadingGallery" class="gallery-editor">
+          <div v-for="(url, index) in form.images" :key="url + index" class="gallery-item">
+            <img :src="url" class="gallery-thumb" />
+            <div class="gallery-actions">
+              <el-button link size="small" :disabled="index === 0" @click="moveGalleryImage(index, -1)">←</el-button>
+              <el-button link size="small" type="danger" @click="removeGalleryImage(index)">移除</el-button>
+              <el-button
+                link
+                size="small"
+                :disabled="index === form.images.length - 1"
+                @click="moveGalleryImage(index, 1)"
+              >
+                →
+              </el-button>
+            </div>
+          </div>
+          <el-upload
+            v-if="form.images.length < MAX_GALLERY_IMAGES"
+            class="gallery-uploader"
+            multiple
+            :show-file-list="false"
+            :before-upload="beforeImageUpload"
+            :http-request="handleGalleryUpload"
+            accept="image/jpeg,image/png,image/webp"
+          >
+            <div class="gallery-placeholder">
+              <el-icon :size="20"><Plus /></el-icon>
+              <span>新增圖片</span>
+            </div>
+          </el-upload>
+        </div>
+        <p class="upload-hint">主圖以外的商品圖片,最多 {{ MAX_GALLERY_IMAGES }} 張,可調整順序</p>
+      </el-form-item>
+
       <el-form-item label="規格 (SKU)">
         <div class="sku-editor">
           <div v-for="(sku, index) in form.skus" :key="index" class="sku-row">
@@ -206,6 +271,55 @@ onMounted(async () => {
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.gallery-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.gallery-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gallery-thumb {
+  width: 96px;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid #eee;
+}
+
+.gallery-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.gallery-uploader :deep(.el-upload) {
+  width: 96px;
+  height: 96px;
+  border: 1px dashed var(--el-border-color);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.gallery-uploader :deep(.el-upload):hover {
+  border-color: var(--el-color-primary);
+}
+
+.gallery-placeholder {
+  width: 96px;
+  height: 96px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: #999;
+  font-size: 12px;
 }
 
 .image-upload {

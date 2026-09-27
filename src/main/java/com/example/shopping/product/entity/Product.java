@@ -51,6 +51,11 @@ public class Product {
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductSku> skus = new ArrayList<>();
 
+    /** 主圖以外的商品圖庫 */
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC, id ASC")
+    private List<ProductImage> images = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -58,6 +63,22 @@ public class Product {
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    /** 以網址清單整批取代圖庫,清單順序即顯示順序 */
+    public void replaceImages(List<String> urls) {
+        images.clear();
+        if (urls == null) {
+            return;
+        }
+        int order = 0;
+        for (String url : urls) {
+            ProductImage image = new ProductImage();
+            image.setProduct(this);
+            image.setUrl(url.trim());
+            image.setSortOrder(order++);
+            images.add(image);
+        }
+    }
 
     public void replaceSkus(List<ProductSku> newSkus) {
         skus.clear();

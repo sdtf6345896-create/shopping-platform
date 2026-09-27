@@ -167,6 +167,7 @@ public class ProductServiceImpl implements ProductService {
         product.setDescription(request.getDescription());
         product.setPrice(request.getPrice());
         product.setMainImage(request.getMainImage());
+        product.replaceImages(request.getImages());
         product.replaceSkus(toSkus(request.getSkus()));
     }
 
