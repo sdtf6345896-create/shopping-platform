@@ -12,8 +12,11 @@ import org.springframework.stereotype.Component;
 /**
  * 統一的寄信出口:設定 SMTP(spring.mail.host)時真的寄出,否則(或寄送失敗時)以 log 模擬,
  * 比照專案付款流程「模擬」的做法,不需要真的申請信箱也能跑完整個流程。
+ * <p>
+ * Bean 名稱刻意不用預設的 "mailSender",避免與 Spring Boot MailSenderAutoConfiguration
+ * 產生的 JavaMailSender bean 撞名,導致應用程式啟動失敗。
  */
-@Component
+@Component("appMailSender")
 public class MailSender {
 
     private static final Logger log = LoggerFactory.getLogger(MailSender.class);

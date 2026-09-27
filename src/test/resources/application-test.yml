@@ -1,0 +1,20 @@
+# 整合測試:用 H2(MySQL 相容模式)取代本機 MySQL。
+# 既有 migration 用了 H2 不支援的 MySQL 語法(多欄位 ALTER TABLE),所以這裡改由 Hibernate 依 entity 建表,
+# 主要驗證 bean 設定、entity 對應與示範資料初始化;migration 本身在 CI 用真的 MySQL 驗證。
+spring:
+  datasource:
+    url: jdbc:h2:mem:shopping_test;MODE=MySQL;DATABASE_TO_LOWER=TRUE;CASE_INSENSITIVE_IDENTIFIERS=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  flyway:
+    enabled: false
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: create-drop
+
+logging:
+  level:
+    com.example.shopping: INFO
+    org.hibernate.SQL: WARN
