@@ -1,5 +1,7 @@
 package com.example.shopping.order.controller;
 
+import com.example.shopping.audit.AdminAudit;
+import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
 import com.example.shopping.order.dto.request.AdminOrderQuery;
@@ -37,6 +39,10 @@ public class AdminOrderController {
         return ApiResponse.success(PageResponse.from(orderService.listAdmin(query, pageable)));
     }
 
+    @AdminAudit(action = "匯出訂單 CSV", target = AuditTarget.ORDER,
+            targetId = "",
+            detail = "'status=' + #query.status + ', keyword=' + #query.keyword"
+                    + " + ', ' + #query.startDate + '~' + #query.endDate")
     @GetMapping("/export")
     public ResponseEntity<byte[]> export(AdminOrderQuery query) {
         String filename = "orders-" + LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv";
@@ -52,6 +58,9 @@ public class AdminOrderController {
         return ApiResponse.success(orderService.getAdminOrder(id));
     }
 
+    @AdminAudit(action = "更新訂單狀態", target = AuditTarget.ORDER,
+            detail = "(#request.status + ' ' + (#request.shippingCarrier ?: '') + ' ' + (#request.trackingNumber ?: '')"
+                    + " + ' ' + (#request.note ?: '')).trim()")
     @PatchMapping("/{id}/status")
     public ApiResponse<OrderResponse> updateStatus(@PathVariable Long id,
                                                     @Valid @RequestBody OrderStatusRequest request) {

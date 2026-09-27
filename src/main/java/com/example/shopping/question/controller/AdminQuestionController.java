@@ -1,5 +1,7 @@
 package com.example.shopping.question.controller;
 
+import com.example.shopping.audit.AdminAudit;
+import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
 import com.example.shopping.question.dto.request.AnswerRequest;
@@ -29,12 +31,14 @@ public class AdminQuestionController {
         return ApiResponse.success(PageResponse.from(questionService.listAdmin(answered, pageable)));
     }
 
+    @AdminAudit(action = "回覆商品提問", target = AuditTarget.QUESTION)
     @PutMapping("/{id}/answer")
     public ApiResponse<AdminQuestionResponse> answer(@PathVariable Long id,
                                                      @Valid @RequestBody AnswerRequest request) {
         return ApiResponse.success("回覆成功", questionService.answer(id, request));
     }
 
+    @AdminAudit(action = "刪除商品提問", target = AuditTarget.QUESTION)
     @DeleteMapping("/{id}")
     public ApiResponse<Void> delete(@PathVariable Long id) {
         questionService.delete(id);

@@ -17,6 +17,7 @@ const menu = [
   { name: 'AdminQuestionList', label: '商品問答' },
   { name: 'AdminReport', label: '銷售報表' },
   { name: 'AdminMemberList', label: '會員管理' },
+  { name: 'AdminAuditLogList', label: '操作紀錄' },
 ]
 
 function isActive(item) {

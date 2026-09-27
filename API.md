@@ -461,6 +461,20 @@ REFUNDED        → (終態)
 
 ---
 
+## 管理員操作紀錄(Audit Log)— 需管理員登入
+
+後台所有寫入操作(商品、分類、Banner、優惠券、訂單狀態、退貨審核、會員停用、問答、圖片上傳)以及訂單 CSV 匯出,都會由 AOP(`@AdminAudit` + `AdminAuditAspect`)自動記錄「哪位管理員、何時、對哪個對象、做了什麼、成功或失敗」。失敗的操作(例如不合法的狀態轉換)也會記錄錯誤訊息;紀錄以獨立交易寫入,寫入失敗不影響原本的 API。
+
+### `GET /api/admin/audit-logs`
+Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`COUPON`/`ORDER`/`RETURN`/`MEMBER`/`QUESTION`/`UPLOAD`)、`targetId`、`page`、`size`。新到舊排序。
+```json
+{ "id": 12, "adminId": 1, "adminUsername": "admin", "action": "更新訂單狀態", "targetType": "ORDER",
+  "targetId": "5", "detail": "SHIPPING 黑貓宅急便 TRK123", "success": true, "errorMessage": null,
+  "createdAt": "2026-09-27T18:00:00" }
+```
+
+---
+
 ## 購物金(Points)— 需會員登入
 
 ### `GET /api/points`
@@ -669,6 +683,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/orders/{id}` | 管理員 |
 | PATCH | `/api/admin/orders/{id}/status` | 管理員 |
 | GET | `/api/admin/reports/dashboard` | 管理員 |
+| GET | `/api/admin/audit-logs` | 管理員 |
 | GET | `/api/admin/reports/summary` | 管理員 |
 | GET | `/api/admin/reports/top-products` | 管理員 |
 | GET | `/api/admin/reports/daily` | 管理員 |

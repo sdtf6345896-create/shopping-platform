@@ -1,5 +1,7 @@
 package com.example.shopping.member.controller;
 
+import com.example.shopping.audit.AdminAudit;
+import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
 import com.example.shopping.common.enums.AccountStatus;
@@ -35,6 +37,7 @@ public class AdminMemberController {
         return ApiResponse.success(memberService.getAdminDetail(id));
     }
 
+    @AdminAudit(action = "會員啟用/停用", target = AuditTarget.MEMBER, detail = "#request.status")
     @PatchMapping("/{id}/status")
     public ApiResponse<MemberResponse> updateStatus(@PathVariable Long id,
                                                      @Valid @RequestBody MemberStatusRequest request) {

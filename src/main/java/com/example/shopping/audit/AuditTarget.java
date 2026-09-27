@@ -1,0 +1,14 @@
+package com.example.shopping.audit;
+
+/** 操作對象類型 */
+public enum AuditTarget {
+    PRODUCT,
+    CATEGORY,
+    BANNER,
+    COUPON,
+    ORDER,
+    RETURN,
+    MEMBER,
+    QUESTION,
+    UPLOAD
+}

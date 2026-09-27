@@ -68,6 +68,7 @@ const routes = [
       { path: 'coupons', name: 'AdminCouponList', component: () => import('../views/admin/CouponList.vue') },
       { path: 'questions', name: 'AdminQuestionList', component: () => import('../views/admin/QuestionList.vue') },
       { path: 'returns', name: 'AdminReturnList', component: () => import('../views/admin/ReturnList.vue') },
+      { path: 'audit-logs', name: 'AdminAuditLogList', component: () => import('../views/admin/AuditLogList.vue') },
     ],
   },
 ]

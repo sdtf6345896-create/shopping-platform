@@ -202,6 +202,19 @@ class OrderFlowIntegrationTest {
         assertThat(publicQuestions.at("/memberName").asText()).isEqualTo("整**");
         call(post("/api/products/" + productId + "/questions"), null, Map.of("content", "未登入提問"), 401);
 
+        // ---- 管理員操作紀錄:成功與失敗都有記,新增類操作從回傳結果取 id ----
+        JsonNode orderAudit = call(get("/api/admin/audit-logs?targetType=ORDER&targetId=" + orderId), adminToken,
+                null, 200).at("/data/content");
+        assertThat(orderAudit.findValuesAsText("action")).contains("更新訂單狀態");
+        assertThat(orderAudit.findValuesAsText("adminUsername")).containsOnly(admin.getUsername());
+        assertThat(orderAudit.findValuesAsText("success")).contains("true", "false");
+        assertThat(orderAudit.findValuesAsText("detail")).anyMatch(d -> d.contains("SHIPPING 黑貓宅急便 TRK-" + suffix));
+        assertThat(orderAudit.findValuesAsText("errorMessage")).anyMatch(m -> m.contains("物流單號"));
+
+        JsonNode productAudit = call(get("/api/admin/audit-logs?targetType=PRODUCT&targetId=" + productId),
+                adminToken, null, 200).at("/data/content");
+        assertThat(productAudit.findValuesAsText("action")).contains("新增商品", "商品上下架");
+
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
     }

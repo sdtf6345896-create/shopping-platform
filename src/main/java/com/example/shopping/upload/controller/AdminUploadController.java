@@ -1,5 +1,7 @@
 package com.example.shopping.upload.controller;
 
+import com.example.shopping.audit.AdminAudit;
+import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.upload.dto.UploadResponse;
 import com.example.shopping.upload.service.FileStorageService;
@@ -19,6 +21,9 @@ public class AdminUploadController {
         this.fileStorageService = fileStorageService;
     }
 
+    @AdminAudit(action = "上傳圖片", target = AuditTarget.UPLOAD,
+            targetId = "#result?.data?.url",
+            detail = "#file.originalFilename")
     @PostMapping("/image")
     public ApiResponse<UploadResponse> uploadImage(@RequestParam("file") MultipartFile file) {
         String url = fileStorageService.storeImage(file);
