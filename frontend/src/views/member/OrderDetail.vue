@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getOrderDetail, payOrder, cancelOrder } from '../../api/order'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TAG_TYPES, PAYMENT_METHOD_LABELS } from '../../utils/orderEnums'
+import OrderTimeline from '../../components/OrderTimeline.vue'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -65,6 +66,13 @@ onMounted(load)
         <p class="meta">收件地址:{{ order.receiverAddress }}</p>
       </div>
 
+      <div v-if="order.trackingNumber" class="block">
+        <div class="block-title">物流資訊</div>
+        <p class="meta">物流業者:{{ order.shippingCarrier }}</p>
+        <p class="meta">物流單號:<span class="tracking-no">{{ order.trackingNumber }}</span></p>
+        <p class="meta">出貨時間:{{ order.shippedAt?.slice(0, 19).replace('T', ' ') }}</p>
+      </div>
+
       <div class="block">
         <div class="block-title">商品明細</div>
         <div v-for="item in order.items" :key="item.id" class="item-row">
@@ -83,6 +91,11 @@ onMounted(load)
           <span>總金額</span>
           <span class="total-amount">NT$ {{ order.totalAmount }}</span>
         </div>
+      </div>
+
+      <div class="block">
+        <div class="block-title">訂單進度</div>
+        <OrderTimeline :logs="order.statusLogs" />
       </div>
 
       <div class="actions">
@@ -157,6 +170,11 @@ onMounted(load)
 
 .discount-row {
   color: #e4393c;
+}
+
+.tracking-no {
+  font-family: monospace;
+  color: #333;
 }
 
 .actions {

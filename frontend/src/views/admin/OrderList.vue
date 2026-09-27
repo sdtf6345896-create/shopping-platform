@@ -46,6 +46,11 @@ function handlePageChange(page) {
 }
 
 async function handleTransition(order, action) {
+  // 出貨需要填物流資訊,統一到詳情頁處理
+  if (action.status === 'SHIPPING') {
+    router.push({ name: 'AdminOrderDetail', params: { id: order.id } })
+    return
+  }
   if (action.status === 'CANCELLED') {
     try {
       await ElMessageBox.confirm(`確定要取消訂單「${order.orderNo}」嗎?`, '提示', { type: 'warning' })
@@ -53,7 +58,7 @@ async function handleTransition(order, action) {
       return
     }
   }
-  await updateOrderStatus(order.id, action.status)
+  await updateOrderStatus(order.id, { status: action.status })
   ElMessage.success('狀態更新成功')
   await load()
 }

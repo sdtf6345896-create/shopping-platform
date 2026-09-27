@@ -2,6 +2,7 @@ package com.example.shopping.order.service;
 
 import com.example.shopping.cart.entity.CartItem;
 import com.example.shopping.cart.repository.CartItemRepository;
+import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.common.enums.ProductStatus;
@@ -277,11 +278,69 @@ class OrderServiceImplTest {
 
         OrderStatusRequest request = new OrderStatusRequest();
         request.setStatus(OrderStatus.SHIPPING);
+        request.setShippingCarrier("黑貓宅急便");
+        request.setTrackingNumber("TRK123456");
 
         OrderResponse response = orderService.updateStatus(1L, request);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.SHIPPING);
+        assertThat(response.getShippingCarrier()).isEqualTo("黑貓宅急便");
+        assertThat(response.getTrackingNumber()).isEqualTo("TRK123456");
+        assertThat(response.getShippedAt()).isNotNull();
         verify(orderMailSender).notifyStatusChanged(order);
+    }
+
+    @Test
+    void adminUpdateStatus_toShipping_throws_whenTrackingNumberMissing() {
+        Orders order = pendingOrderWithItem(1);
+        order.setStatus(OrderStatus.PAID);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        OrderStatusRequest request = new OrderStatusRequest();
+        request.setStatus(OrderStatus.SHIPPING);
+        request.setShippingCarrier("黑貓宅急便");
+        request.setTrackingNumber("  ");
+
+        assertThatThrownBy(() -> orderService.updateStatus(1L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("物流單號");
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.PAID);
+        verify(orderMailSender, never()).notifyStatusChanged(any());
+    }
+
+    @Test
+    void checkout_recordsInitialStatusLog() {
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderResponse response = orderService.checkout(1L, checkoutRequest());
+
+        assertThat(response.getStatusLogs()).hasSize(1);
+        assertThat(response.getStatusLogs().get(0).getFromStatus()).isNull();
+        assertThat(response.getStatusLogs().get(0).getToStatus()).isEqualTo(OrderStatus.PENDING_PAYMENT);
+        assertThat(response.getStatusLogs().get(0).getActor()).isEqualTo(OrderActor.MEMBER);
+    }
+
+    @Test
+    void statusChanges_appendLogsWithActorAndNote() {
+        Orders order = pendingOrderWithItem(1);
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        orderService.pay(1L, 1L);
+        OrderStatusRequest cancel = new OrderStatusRequest();
+        cancel.setStatus(OrderStatus.CANCELLED);
+        cancel.setNote("缺貨無法出貨");
+        OrderResponse response = orderService.updateStatus(1L, cancel);
+
+        assertThat(response.getStatusLogs()).extracting("toStatus")
+                .containsExactly(OrderStatus.PAID, OrderStatus.CANCELLED);
+        assertThat(response.getStatusLogs()).extracting("actor")
+                .containsExactly(OrderActor.MEMBER, OrderActor.ADMIN);
+        assertThat(response.getStatusLogs().get(1).getFromStatus()).isEqualTo(OrderStatus.PAID);
+        assertThat(response.getStatusLogs().get(1).getNote()).isEqualTo("缺貨無法出貨");
     }
 
     @Test

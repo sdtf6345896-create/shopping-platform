@@ -1,5 +1,6 @@
 package com.example.shopping.order.entity;
 
+import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.coupon.entity.Coupon;
@@ -75,8 +76,23 @@ public class Orders {
     @Column(name = "receiver_address", nullable = false, length = 255)
     private String receiverAddress;
 
+    /** 物流業者(出貨時填寫) */
+    @Column(name = "shipping_carrier", length = 30)
+    private String shippingCarrier;
+
+    /** 物流追蹤單號(出貨時填寫) */
+    @Column(name = "tracking_number", length = 50)
+    private String trackingNumber;
+
+    @Column(name = "shipped_at")
+    private LocalDateTime shippedAt;
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("id ASC")
+    private List<OrderStatusLog> statusLogs = new ArrayList<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
@@ -89,5 +105,27 @@ public class Orders {
     public void addItem(OrderItem item) {
         item.setOrder(this);
         items.add(item);
+    }
+
+    /** 訂單建立時寫入第一筆歷程紀錄(沒有前一個狀態) */
+    public void markCreated(OrderActor actor) {
+        this.status = OrderStatus.PENDING_PAYMENT;
+        appendLog(null, OrderStatus.PENDING_PAYMENT, actor, "訂單成立");
+    }
+
+    /** 變更訂單狀態並寫入一筆歷程紀錄 */
+    public void changeStatus(OrderStatus target, OrderActor actor, String note) {
+        appendLog(this.status, target, actor, note);
+        this.status = target;
+    }
+
+    private void appendLog(OrderStatus from, OrderStatus to, OrderActor actor, String note) {
+        OrderStatusLog log = new OrderStatusLog();
+        log.setOrder(this);
+        log.setFromStatus(from);
+        log.setToStatus(to);
+        log.setActor(actor);
+        log.setNote(note);
+        statusLogs.add(log);
     }
 }

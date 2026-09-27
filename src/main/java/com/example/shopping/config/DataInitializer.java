@@ -2,6 +2,7 @@ package com.example.shopping.config;
 
 import com.example.shopping.admin.entity.Admin;
 import com.example.shopping.admin.repository.AdminRepository;
+import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.member.entity.Address;
@@ -138,7 +139,15 @@ public class DataInitializer implements CommandLineRunner {
             order.setMember(member);
             order.setAddress(address);
             order.setPaymentMethod(spec.paymentMethod());
-            order.setStatus(spec.status());
+            order.markCreated(OrderActor.SYSTEM);
+            if (spec.status() != OrderStatus.PENDING_PAYMENT) {
+                order.changeStatus(spec.status(), OrderActor.SYSTEM, "示範資料");
+            }
+            if (spec.status() == OrderStatus.SHIPPING || spec.status() == OrderStatus.COMPLETED) {
+                order.setShippingCarrier("黑貓宅急便");
+                order.setTrackingNumber("DEMO-TRK-" + String.format("%06d", sequence));
+                order.setShippedAt(LocalDateTime.now().minusDays(Math.max(spec.daysAgo() - 1, 0)));
+            }
             order.setReceiverName(address.getRecipientName());
             order.setReceiverPhone(address.getPhone());
             order.setReceiverAddress(address.getCity() + address.getDistrict() + address.getDetailAddress());

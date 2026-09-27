@@ -34,3 +34,12 @@ export const ORDER_STATUS_TRANSITIONS = {
   COMPLETED: [],
   CANCELLED: [],
 }
+
+export const ORDER_ACTOR_LABELS = {
+  MEMBER: '會員',
+  ADMIN: '管理員',
+  SYSTEM: '系統',
+}
+
+// 後台出貨時可選的物流業者(也可自行輸入)
+export const SHIPPING_CARRIERS = ['黑貓宅急便', '新竹物流', '中華郵政', '7-11 交貨便', '全家店到店']

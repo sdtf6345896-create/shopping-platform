@@ -25,8 +25,12 @@ public class OrderResponse {
     private String receiverName;
     private String receiverPhone;
     private String receiverAddress;
+    private String shippingCarrier;
+    private String trackingNumber;
+    private LocalDateTime shippedAt;
     private LocalDateTime createdAt;
     private List<OrderItemResponse> items;
+    private List<OrderStatusLogResponse> statusLogs;
 
     public static OrderResponse from(Orders order) {
         return new OrderResponse(
@@ -41,7 +45,11 @@ public class OrderResponse {
                 order.getReceiverName(),
                 order.getReceiverPhone(),
                 order.getReceiverAddress(),
+                order.getShippingCarrier(),
+                order.getTrackingNumber(),
+                order.getShippedAt(),
                 order.getCreatedAt(),
-                order.getItems().stream().map(OrderItemResponse::from).toList());
+                order.getItems().stream().map(OrderItemResponse::from).toList(),
+                order.getStatusLogs().stream().map(OrderStatusLogResponse::from).toList());
     }
 }

@@ -52,6 +52,18 @@ class OrderMailSenderTest {
     }
 
     @Test
+    void notifyStatusChanged_includesTrackingInfo_whenShipped() {
+        Orders order = order(OrderStatus.SHIPPING);
+        order.setShippingCarrier("黑貓宅急便");
+        order.setTrackingNumber("TRK123456");
+
+        new OrderMailSender(mailSender).notifyStatusChanged(order);
+
+        verify(mailSender).send(eq("member@example.com"), eq("商品出貨通知"),
+                argThat(body -> body.contains("黑貓宅急便") && body.contains("TRK123456")));
+    }
+
+    @Test
     void notifyStatusChanged_sendsCancelledNotification() {
         new OrderMailSender(mailSender).notifyStatusChanged(order(OrderStatus.CANCELLED));
 

@@ -33,7 +33,10 @@ public class OrderMailSender {
         return switch (order.getStatus()) {
             case PENDING_PAYMENT -> "您的訂單已成立,請於期限內完成付款。";
             case PAID -> "您的訂單已付款成功,我們將盡快為您出貨。";
-            case SHIPPING -> "您的訂單已出貨,請留意收件:" + order.getReceiverAddress();
+            case SHIPPING -> "您的訂單已出貨,請留意收件:" + order.getReceiverAddress()
+                    + (order.getTrackingNumber() != null
+                    ? String.format("%n物流業者:%s%n物流單號:%s", order.getShippingCarrier(), order.getTrackingNumber())
+                    : "");
             case COMPLETED -> "您的訂單已完成,感謝您的購買。";
             case CANCELLED -> "您的訂單已取消。";
         };

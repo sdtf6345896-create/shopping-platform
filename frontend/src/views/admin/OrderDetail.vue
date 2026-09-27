@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAdminOrder, updateOrderStatus } from '../../api/admin/order'
@@ -8,7 +8,9 @@ import {
   ORDER_STATUS_TAG_TYPES,
   ORDER_STATUS_TRANSITIONS,
   PAYMENT_METHOD_LABELS,
+  SHIPPING_CARRIERS,
 } from '../../utils/orderEnums'
+import OrderTimeline from '../../components/OrderTimeline.vue'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -28,21 +30,52 @@ async function load() {
   }
 }
 
+const shipDialogVisible = ref(false)
+const shipForm = reactive({ shippingCarrier: SHIPPING_CARRIERS[0], trackingNumber: '' })
+
+async function submitStatus(payload) {
+  acting.value = true
+  try {
+    await updateOrderStatus(props.id, payload)
+    ElMessage.success('狀態更新成功')
+    await load()
+    return true
+  } catch {
+    return false
+  } finally {
+    acting.value = false
+  }
+}
+
 async function handleTransition(action) {
+  if (action.status === 'SHIPPING') {
+    shipForm.trackingNumber = ''
+    shipDialogVisible.value = true
+    return
+  }
+  let note
   if (action.status === 'CANCELLED') {
     try {
-      await ElMessageBox.confirm('確定要取消此訂單嗎?', '提示', { type: 'warning' })
+      const { value } = await ElMessageBox.prompt('確定要取消此訂單嗎?可填寫取消原因(選填)', '取消訂單', {
+        type: 'warning',
+        inputPlaceholder: '例如:商品缺貨',
+        inputValidator: (v) => !v || v.length <= 255 || '最多 255 字',
+      })
+      note = value
     } catch {
       return
     }
   }
-  acting.value = true
-  try {
-    await updateOrderStatus(props.id, action.status)
-    ElMessage.success('狀態更新成功')
-    await load()
-  } finally {
-    acting.value = false
+  await submitStatus({ status: action.status, note })
+}
+
+async function handleShip() {
+  if (!shipForm.shippingCarrier?.trim() || !shipForm.trackingNumber.trim()) {
+    ElMessage.warning('請填寫物流業者與物流單號')
+    return
+  }
+  if (await submitStatus({ status: 'SHIPPING', ...shipForm })) {
+    shipDialogVisible.value = false
   }
 }
 
@@ -63,6 +96,10 @@ onMounted(load)
         <p class="meta">付款方式:{{ PAYMENT_METHOD_LABELS[order.paymentMethod] }}</p>
         <p class="meta">收件人:{{ order.receiverName }} {{ order.receiverPhone }}</p>
         <p class="meta">收件地址:{{ order.receiverAddress }}</p>
+        <template v-if="order.trackingNumber">
+          <p class="meta">物流:{{ order.shippingCarrier }} / {{ order.trackingNumber }}</p>
+          <p class="meta">出貨時間:{{ order.shippedAt?.slice(0, 19).replace('T', ' ') }}</p>
+        </template>
       </div>
 
       <div class="block">
@@ -85,6 +122,11 @@ onMounted(load)
         </div>
       </div>
 
+      <div class="block">
+        <div class="block-title">狀態歷程</div>
+        <OrderTimeline :logs="order.statusLogs" show-actor />
+      </div>
+
       <div class="actions">
         <el-button
           v-for="action in ORDER_STATUS_TRANSITIONS[order.status]"
@@ -100,6 +142,23 @@ onMounted(load)
         </span>
       </div>
     </template>
+
+    <el-dialog v-model="shipDialogVisible" title="填寫出貨資訊" width="420px">
+      <el-form label-width="80px" @submit.prevent>
+        <el-form-item label="物流業者" required>
+          <el-select v-model="shipForm.shippingCarrier" filterable allow-create style="width: 100%">
+            <el-option v-for="c in SHIPPING_CARRIERS" :key="c" :label="c" :value="c" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="物流單號" required>
+          <el-input v-model="shipForm.trackingNumber" maxlength="50" placeholder="請輸入物流追蹤單號" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="shipDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="acting" @click="handleShip">確認出貨</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

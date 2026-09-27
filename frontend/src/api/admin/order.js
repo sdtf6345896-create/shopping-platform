@@ -8,6 +8,7 @@ export function getAdminOrder(id) {
   return request.get(`/admin/orders/${id}`)
 }
 
-export function updateOrderStatus(id, status) {
-  return request.patch(`/admin/orders/${id}/status`, { status })
+// payload: { status, shippingCarrier?, trackingNumber?, note? }
+export function updateOrderStatus(id, payload) {
+  return request.patch(`/admin/orders/${id}/status`, payload)
 }

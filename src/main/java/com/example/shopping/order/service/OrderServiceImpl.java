@@ -2,6 +2,7 @@ package com.example.shopping.order.service;
 
 import com.example.shopping.cart.entity.CartItem;
 import com.example.shopping.cart.repository.CartItemRepository;
+import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.EnumMap;
 import java.util.EnumSet;
@@ -105,7 +107,7 @@ public class OrderServiceImpl implements OrderService {
         order.setMember(memberRepository.getReferenceById(memberId));
         order.setAddress(address);
         order.setPaymentMethod(request.getPaymentMethod());
-        order.setStatus(OrderStatus.PENDING_PAYMENT);
+        order.markCreated(OrderActor.MEMBER);
         order.setReceiverName(address.getRecipientName());
         order.setReceiverPhone(address.getPhone());
         order.setReceiverAddress(address.getCity() + address.getDistrict() + address.getDetailAddress());
@@ -162,7 +164,7 @@ public class OrderServiceImpl implements OrderService {
         if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
             throw new BusinessException("訂單狀態不正確,無法付款");
         }
-        markPaid(order);
+        markPaid(order, OrderActor.MEMBER, "會員完成付款");
         orderMailSender.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }
@@ -170,7 +172,7 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public OrderResponse cancelByMember(Long memberId, Long orderId) {
         Orders order = findOwnedOrThrow(memberId, orderId);
-        cancelOrder(order);
+        cancelOrder(order, OrderActor.MEMBER, "會員取消訂單");
         orderMailSender.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }
@@ -197,27 +199,47 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("不允許將訂單狀態從 " + order.getStatus() + " 變更為 " + target);
         }
 
+        String note = blankToNull(request.getNote());
         if (target == OrderStatus.PAID) {
-            markPaid(order);
+            markPaid(order, OrderActor.ADMIN, note);
         } else if (target == OrderStatus.CANCELLED) {
-            cancelOrder(order);
+            cancelOrder(order, OrderActor.ADMIN, note);
+        } else if (target == OrderStatus.SHIPPING) {
+            markShipped(order, request, note);
         } else {
-            order.setStatus(target);
+            order.changeStatus(target, OrderActor.ADMIN, note);
         }
         orderMailSender.notifyStatusChanged(order);
 
         return OrderResponse.from(order);
     }
 
-    private void markPaid(Orders order) {
-        order.setStatus(OrderStatus.PAID);
+    private void markPaid(Orders order, OrderActor actor, String note) {
+        order.changeStatus(OrderStatus.PAID, actor, note);
         for (OrderItem item : order.getItems()) {
             Product product = item.getProductSku().getProduct();
             product.setSalesCount(product.getSalesCount() + item.getQuantity());
         }
     }
 
-    private void cancelOrder(Orders order) {
+    private void markShipped(Orders order, OrderStatusRequest request, String note) {
+        String carrier = blankToNull(request.getShippingCarrier());
+        String trackingNumber = blankToNull(request.getTrackingNumber());
+        if (carrier == null || trackingNumber == null) {
+            throw new BusinessException("出貨需填寫物流業者與物流單號");
+        }
+        order.setShippingCarrier(carrier);
+        order.setTrackingNumber(trackingNumber);
+        order.setShippedAt(LocalDateTime.now());
+        order.changeStatus(OrderStatus.SHIPPING, OrderActor.ADMIN,
+                note != null ? note : carrier + " " + trackingNumber);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
+    private void cancelOrder(Orders order, OrderActor actor, String note) {
         if (!ALLOWED_TRANSITIONS.getOrDefault(order.getStatus(), EnumSet.noneOf(OrderStatus.class))
                 .contains(OrderStatus.CANCELLED)) {
             throw new BusinessException("此訂單狀態無法取消");
@@ -229,7 +251,7 @@ public class OrderServiceImpl implements OrderService {
         if (order.getCoupon() != null) {
             couponService.release(order.getCoupon().getId());
         }
-        order.setStatus(OrderStatus.CANCELLED);
+        order.changeStatus(OrderStatus.CANCELLED, actor, note);
     }
 
     private List<CartItem> resolveCartItems(Long memberId, List<Long> cartItemIds) {
@@ -243,7 +265,7 @@ public class OrderServiceImpl implements OrderService {
     }
 
     private String generateOrderNo() {
-        String timestamp = java.time.LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
         int random = ThreadLocalRandom.current().nextInt(1000, 9999);
         return "ORD" + timestamp + random;
     }

@@ -65,6 +65,7 @@
 | `PaymentMethod` | `CREDIT_CARD`, `ATM`, `COD` |
 | `CouponStatus` | `ACTIVE`, `DISABLED` |
 | `DiscountType` | `FIXED_AMOUNT`(固定金額折抵), `PERCENTAGE`(百分比折扣) |
+| `OrderActor` | `MEMBER`, `ADMIN`, `SYSTEM`(訂單歷程中觸發狀態變更的角色) |
 
 訂單狀態合法轉換(後台變更狀態、會員取消訂單都受此限制):
 
@@ -376,11 +377,19 @@ CANCELLED       → (終態)
   "id": 1, "orderNo": "ORD202609142029305718", "status": "PAID", "paymentMethod": "CREDIT_CARD",
   "subtotalAmount": 1870.00, "discountAmount": 100.00, "totalAmount": 1770.00, "couponCode": "SAVE100",
   "receiverName": "王小明", "receiverPhone": "0912345678",
-  "receiverAddress": "台北市大安區復興南路一段1號", "createdAt": "2026-09-14T20:29:30",
+  "receiverAddress": "台北市大安區復興南路一段1號",
+  "shippingCarrier": null, "trackingNumber": null, "shippedAt": null,
+  "createdAt": "2026-09-14T20:29:30",
   "items": [ { "id": 1, "skuId": 2, "productName": "經典圓領T恤", "specName": "黑色/L",
-                "unitPrice": 590.00, "quantity": 1, "subtotal": 590.00 } ]
+                "unitPrice": 590.00, "quantity": 1, "subtotal": 590.00 } ],
+  "statusLogs": [
+    { "fromStatus": null, "toStatus": "PENDING_PAYMENT", "actor": "MEMBER", "note": "訂單成立", "createdAt": "2026-09-14T20:29:30" },
+    { "fromStatus": "PENDING_PAYMENT", "toStatus": "PAID", "actor": "MEMBER", "note": "會員完成付款", "createdAt": "2026-09-14T20:30:02" }
+  ]
 }
 ```
+> `statusLogs` 為訂單狀態歷程,依時間由舊到新排列,每一次狀態變更(會員付款/取消、管理員出貨/取消、系統自動處理)都會新增一筆。
+> `shippingCarrier`/`trackingNumber`/`shippedAt` 在管理員出貨後才有值。
 > `receiverName`/`receiverPhone`/`receiverAddress` 與商品名稱/規格/單價皆為**下單當下的快照**,之後會員改地址或商家改商品都不影響歷史訂單。
 > `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
 
@@ -469,7 +478,11 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 任意訂單詳情。
 
 ### `PATCH /api/admin/orders/{id}/status`
-變更訂單狀態(出貨、標記完成、取消等)。請求:`{ "status": "SHIPPING" }`。不合法的狀態轉換回 400。取消訂單會歸還庫存與優惠券使用名額。
+變更訂單狀態(出貨、標記完成、取消等)。請求:
+```json
+{ "status": "SHIPPING", "shippingCarrier": "黑貓宅急便", "trackingNumber": "TRK123456", "note": "選填備註" }
+```
+改為 `SHIPPING` 時 `shippingCarrier`、`trackingNumber` 必填(缺少回 400),會一併記錄出貨時間,出貨通知信也會附上物流單號。`note` 選填,會寫入訂單歷程(例如取消原因)。不合法的狀態轉換回 400。取消訂單會歸還庫存與優惠券使用名額。
 
 ---
 
