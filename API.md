@@ -81,7 +81,7 @@ CANCELLED       → (終態)
 ## 會員驗證(Auth)
 
 ### `POST /api/auth/register`
-公開。註冊新會員。
+公開。註冊新會員。新帳號預設**未驗證 Email**,會寄出驗證信,驗證前無法登入。
 
 請求:
 ```json
@@ -94,8 +94,19 @@ CANCELLED       → (終態)
 { "id": 1, "email": "you@example.com", "name": "王小明", "phone": "0912345678", "status": "ACTIVE", "createdAt": "2026-09-14T20:02:59" }
 ```
 
+### `POST /api/auth/verify-email`
+公開。用註冊信中的 token 完成 Email 驗證,驗證成功後才能登入。
+
+請求:`{ "token": "..." }`
+- token 不存在、已過期(24 小時)或已使用過都會回 400「驗證連結無效或已過期」
+
+### `POST /api/auth/resend-verification`
+公開。重新寄送驗證信。不論 Email 是否存在、是否已驗證,都回傳相同成功訊息(避免帳號列舉)。
+
+請求:`{ "email": "..." }`
+
 ### `POST /api/auth/login`
-公開。會員登入。帳號被停用(`DISABLED`)時會回 400「帳號已被停用,請聯繫客服」。
+公開。會員登入。帳號被停用(`DISABLED`)時回 400「帳號已被停用,請聯繫客服」;Email 尚未驗證時回 400「請先完成 Email 驗證,請查看您的收件匣」。
 
 請求:`{ "email": "...", "password": "..." }`
 

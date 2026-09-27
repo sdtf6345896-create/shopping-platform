@@ -52,6 +52,9 @@ async function handleSubmit() {
       <p class="switch-link">
         還沒有帳號?<router-link to="/register">立即註冊</router-link>
       </p>
+      <p class="switch-link">
+        <router-link to="/verify-email">沒收到驗證信?</router-link>
+      </p>
     </el-card>
   </div>
 </template>

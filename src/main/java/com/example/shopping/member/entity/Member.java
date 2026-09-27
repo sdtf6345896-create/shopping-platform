@@ -37,6 +37,9 @@ public class Member {
     @Column(nullable = false, length = 20)
     private AccountStatus status = AccountStatus.ACTIVE;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

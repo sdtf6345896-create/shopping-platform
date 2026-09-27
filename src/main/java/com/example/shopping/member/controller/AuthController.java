@@ -5,7 +5,9 @@ import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
+import com.example.shopping.member.dto.request.ResendVerificationRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
+import com.example.shopping.member.dto.request.VerifyEmailRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.service.MemberService;
@@ -24,7 +26,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ApiResponse<MemberResponse> register(@Valid @RequestBody RegisterRequest request) {
-        return ApiResponse.success("註冊成功", memberService.register(request));
+        return ApiResponse.success("註冊成功,請至信箱完成 Email 驗證", memberService.register(request));
     }
 
     @PostMapping("/login")
@@ -41,6 +43,18 @@ public class AuthController {
     public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
         memberService.logout(request);
         return ApiResponse.success("已登出", null);
+    }
+
+    @PostMapping("/verify-email")
+    public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        memberService.verifyEmail(request);
+        return ApiResponse.success("Email 驗證成功,請重新登入", null);
+    }
+
+    @PostMapping("/resend-verification")
+    public ApiResponse<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
+        memberService.resendVerification(request);
+        return ApiResponse.success("若該 Email 尚未驗證,驗證信將重新寄出", null);
     }
 
     @PostMapping("/forgot-password")

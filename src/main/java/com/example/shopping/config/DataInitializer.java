@@ -93,6 +93,7 @@ public class DataInitializer implements CommandLineRunner {
         member.setPassword(passwordEncoder.encode("demo1234"));
         member.setName("陳小美");
         member.setPhone("0922333444");
+        member.setEmailVerified(true);
         memberRepository.save(member);
 
         Address address = new Address();

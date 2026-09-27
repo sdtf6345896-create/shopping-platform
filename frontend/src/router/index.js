@@ -19,6 +19,7 @@ const routes = [
   { path: '/register', name: 'Register', component: () => import('../views/Register.vue') },
   { path: '/forgot-password', name: 'ForgotPassword', component: () => import('../views/ForgotPassword.vue') },
   { path: '/reset-password', name: 'ResetPassword', component: () => import('../views/ResetPassword.vue') },
+  { path: '/verify-email', name: 'VerifyEmail', component: () => import('../views/VerifyEmail.vue') },
   {
     path: '/member',
     component: () => import('../views/member/MemberLayout.vue'),

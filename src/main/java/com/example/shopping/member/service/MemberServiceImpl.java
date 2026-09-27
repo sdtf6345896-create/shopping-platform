@@ -10,13 +10,18 @@ import com.example.shopping.member.dto.request.MemberStatusRequest;
 import com.example.shopping.member.dto.request.MemberUpdateRequest;
 import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
+import com.example.shopping.member.dto.request.ResendVerificationRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
+import com.example.shopping.member.dto.request.VerifyEmailRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
+import com.example.shopping.member.entity.EmailVerificationToken;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
 import com.example.shopping.member.entity.RefreshToken;
+import com.example.shopping.member.mail.EmailVerificationMailSender;
 import com.example.shopping.member.mail.PasswordResetMailSender;
+import com.example.shopping.member.repository.EmailVerificationTokenRepository;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
@@ -42,30 +47,37 @@ import static com.example.shopping.member.repository.MemberSpecifications.keywor
 public class MemberServiceImpl implements MemberService {
 
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
+    private static final int EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 
     private final MemberRepository memberRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordResetMailSender passwordResetMailSender;
+    private final EmailVerificationMailSender emailVerificationMailSender;
     private final String frontendOrigin;
     private final long refreshExpirationMs;
 
     public MemberServiceImpl(MemberRepository memberRepository,
                               PasswordResetTokenRepository passwordResetTokenRepository,
                               RefreshTokenRepository refreshTokenRepository,
+                              EmailVerificationTokenRepository emailVerificationTokenRepository,
                               PasswordEncoder passwordEncoder,
                               JwtTokenProvider jwtTokenProvider,
                               PasswordResetMailSender passwordResetMailSender,
+                              EmailVerificationMailSender emailVerificationMailSender,
                               @Value("${app.cors.allowed-origins}") String frontendOrigin,
                               @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         this.memberRepository = memberRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.emailVerificationTokenRepository = emailVerificationTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordResetMailSender = passwordResetMailSender;
+        this.emailVerificationMailSender = emailVerificationMailSender;
         this.frontendOrigin = frontendOrigin;
         this.refreshExpirationMs = refreshExpirationMs;
     }
@@ -82,7 +94,9 @@ public class MemberServiceImpl implements MemberService {
         member.setName(request.getName());
         member.setPhone(request.getPhone());
 
-        return MemberResponse.from(memberRepository.save(member));
+        Member saved = memberRepository.save(member);
+        sendVerificationEmail(saved);
+        return MemberResponse.from(saved);
     }
 
     @Override
@@ -96,6 +110,9 @@ public class MemberServiceImpl implements MemberService {
         }
         if (member.getStatus() != AccountStatus.ACTIVE) {
             throw new BusinessException("帳號已被停用,請聯繫客服");
+        }
+        if (!member.isEmailVerified()) {
+            throw new BusinessException("請先完成 Email 驗證,請查看您的收件匣");
         }
 
         String token = jwtTokenProvider.generateToken(member.getId(), member.getEmail(), Role.MEMBER);
@@ -128,6 +145,39 @@ public class MemberServiceImpl implements MemberService {
     public void logout(RefreshTokenRequest request) {
         refreshTokenRepository.findByToken(request.getRefreshToken())
                 .ifPresent(storedToken -> storedToken.setRevoked(true));
+    }
+
+    @Override
+    public void verifyEmail(VerifyEmailRequest request) {
+        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new BusinessException("驗證連結無效或已過期"));
+
+        if (verificationToken.isUsed() || verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("驗證連結無效或已過期");
+        }
+
+        Member member = findMemberOrThrow(verificationToken.getMemberId());
+        member.setEmailVerified(true);
+        verificationToken.setUsed(true);
+    }
+
+    @Override
+    public void resendVerification(ResendVerificationRequest request) {
+        // 不論 email 是否存在、是否已驗證都視為成功,避免被用來探測已註冊帳號
+        memberRepository.findByEmail(request.getEmail())
+                .filter(member -> !member.isEmailVerified())
+                .ifPresent(this::sendVerificationEmail);
+    }
+
+    private void sendVerificationEmail(Member member) {
+        EmailVerificationToken verificationToken = new EmailVerificationToken();
+        verificationToken.setMemberId(member.getId());
+        verificationToken.setToken(UUID.randomUUID().toString());
+        verificationToken.setExpiresAt(LocalDateTime.now().plusHours(EMAIL_VERIFICATION_EXPIRY_HOURS));
+        emailVerificationTokenRepository.save(verificationToken);
+
+        String verifyLink = frontendOrigin + "/verify-email?token=" + verificationToken.getToken();
+        emailVerificationMailSender.sendVerificationLink(member.getEmail(), verifyLink);
     }
 
     private String issueRefreshToken(Long memberId) {

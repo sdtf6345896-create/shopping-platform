@@ -16,6 +16,14 @@ export function logout(refreshToken) {
   return request.post('/auth/logout', { refreshToken })
 }
 
+export function verifyEmail(token) {
+  return request.post('/auth/verify-email', { token })
+}
+
+export function resendVerification(email) {
+  return request.post('/auth/resend-verification', { email })
+}
+
 export function forgotPassword(data) {
   return request.post('/auth/forgot-password', data)
 }

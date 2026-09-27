@@ -33,8 +33,8 @@ async function handleSubmit() {
   loading.value = true
   try {
     await authStore.register(form)
-    ElMessage.success('註冊成功,請登入')
-    router.push('/login')
+    ElMessage.success('註冊成功,請至信箱完成 Email 驗證')
+    router.push({ path: '/verify-email', query: { email: form.email } })
   } finally {
     loading.value = false
   }

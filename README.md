@@ -15,7 +15,7 @@
 ## 功能
 
 **會員前台**
-- 註冊 / 登入(JWT)、忘記密碼 / 重設密碼
+- 註冊(需 Email 驗證後才能登入)/ 登入(JWT)、忘記密碼 / 重設密碼
 - 首頁:輪播 banner(後台可管理)、分類導覽、熱銷推薦商品
 - 商品列表:分類篩選、價格區間、搜尋、排序
 - 商品詳情:規格選擇、評論與評分
@@ -63,7 +63,7 @@ npm run dev
 
 ### 寄信設定(選用,真實 SMTP)
 
-忘記密碼信、訂單狀態通知信都走同一套寄信機制。預設不設定 `MAIL_HOST` 時,信件內容只會輸出到後端 log(模擬寄信)。要改成真的寄出 email,啟動時加上:
+註冊驗證信、忘記密碼信、訂單狀態通知信都走同一套寄信機制。預設不設定 `MAIL_HOST` 時,信件內容只會輸出到後端 log(模擬寄信)——本機測試註冊流程時,驗證連結要從後端 console 的 `[模擬寄信]` 那行複製貼上瀏覽器。要改成真的寄出 email,啟動時加上:
 
 ```bash
 MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=you@gmail.com MAIL_PASSWORD=<app-password> mvn spring-boot:run

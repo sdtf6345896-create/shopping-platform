@@ -10,13 +10,18 @@ import com.example.shopping.member.dto.request.MemberStatusRequest;
 import com.example.shopping.member.dto.request.MemberUpdateRequest;
 import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
+import com.example.shopping.member.dto.request.ResendVerificationRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
+import com.example.shopping.member.dto.request.VerifyEmailRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
+import com.example.shopping.member.entity.EmailVerificationToken;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
 import com.example.shopping.member.entity.RefreshToken;
+import com.example.shopping.member.mail.EmailVerificationMailSender;
 import com.example.shopping.member.mail.PasswordResetMailSender;
+import com.example.shopping.member.repository.EmailVerificationTokenRepository;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
@@ -50,11 +55,15 @@ class MemberServiceImplTest {
     @Mock
     private RefreshTokenRepository refreshTokenRepository;
     @Mock
+    private EmailVerificationTokenRepository emailVerificationTokenRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtTokenProvider jwtTokenProvider;
     @Mock
     private PasswordResetMailSender passwordResetMailSender;
+    @Mock
+    private EmailVerificationMailSender emailVerificationMailSender;
 
     private MemberServiceImpl memberService;
 
@@ -64,7 +73,8 @@ class MemberServiceImplTest {
     void setUp() {
         // 建構子帶有 String/long 這類非 mock 參數,Mockito 的 @InjectMocks 無法可靠處理,改手動 new
         memberService = new MemberServiceImpl(memberRepository, passwordResetTokenRepository,
-                refreshTokenRepository, passwordEncoder, jwtTokenProvider, passwordResetMailSender,
+                refreshTokenRepository, emailVerificationTokenRepository, passwordEncoder, jwtTokenProvider,
+                passwordResetMailSender, emailVerificationMailSender,
                 "http://localhost:5173", 1209600000L);
 
         activeMember = new Member();
@@ -73,6 +83,7 @@ class MemberServiceImplTest {
         activeMember.setPassword("encoded-password");
         activeMember.setName("測試會員");
         activeMember.setStatus(AccountStatus.ACTIVE);
+        activeMember.setEmailVerified(true);
     }
 
     @Test
@@ -90,6 +101,9 @@ class MemberServiceImplTest {
 
         assertThat(response.getEmail()).isEqualTo("new@example.com");
         verify(memberRepository).save(argThatPasswordEquals("hashed"));
+        verify(emailVerificationTokenRepository).save(any(EmailVerificationToken.class));
+        verify(emailVerificationMailSender).sendVerificationLink(
+                eq("new@example.com"), argThat(link -> link.startsWith("http://localhost:5173/verify-email?token=")));
     }
 
     @Test
@@ -154,6 +168,109 @@ class MemberServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("已被停用");
         verify(jwtTokenProvider, never()).generateToken(any(), any(), any());
+    }
+
+    @Test
+    void login_throws_whenEmailNotVerified() {
+        activeMember.setEmailVerified(false);
+        LoginRequest request = new LoginRequest();
+        request.setEmail("test@example.com");
+        request.setPassword("password123");
+
+        when(memberRepository.findByEmail("test@example.com")).thenReturn(Optional.of(activeMember));
+        when(passwordEncoder.matches("password123", "encoded-password")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberService.login(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("Email 驗證");
+        verify(jwtTokenProvider, never()).generateToken(any(), any(), any());
+    }
+
+    @Test
+    void verifyEmail_marksMemberVerified_whenTokenValid() {
+        activeMember.setEmailVerified(false);
+        EmailVerificationToken token = new EmailVerificationToken();
+        token.setMemberId(1L);
+        token.setToken("valid-verify-token");
+        token.setExpiresAt(LocalDateTime.now().plusHours(1));
+
+        VerifyEmailRequest request = new VerifyEmailRequest();
+        request.setToken("valid-verify-token");
+
+        when(emailVerificationTokenRepository.findByToken("valid-verify-token")).thenReturn(Optional.of(token));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(activeMember));
+
+        memberService.verifyEmail(request);
+
+        assertThat(activeMember.isEmailVerified()).isTrue();
+        assertThat(token.isUsed()).isTrue();
+    }
+
+    @Test
+    void verifyEmail_throws_whenTokenNotFound() {
+        VerifyEmailRequest request = new VerifyEmailRequest();
+        request.setToken("missing-token");
+
+        when(emailVerificationTokenRepository.findByToken("missing-token")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.verifyEmail(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("無效或已過期");
+    }
+
+    @Test
+    void verifyEmail_throws_whenTokenExpired() {
+        EmailVerificationToken token = new EmailVerificationToken();
+        token.setMemberId(1L);
+        token.setToken("expired-token");
+        token.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        VerifyEmailRequest request = new VerifyEmailRequest();
+        request.setToken("expired-token");
+
+        when(emailVerificationTokenRepository.findByToken("expired-token")).thenReturn(Optional.of(token));
+
+        assertThatThrownBy(() -> memberService.verifyEmail(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("無效或已過期");
+        verify(memberRepository, never()).findById(any());
+    }
+
+    @Test
+    void resendVerification_sendsEmail_whenNotVerified() {
+        activeMember.setEmailVerified(false);
+        ResendVerificationRequest request = new ResendVerificationRequest();
+        request.setEmail("test@example.com");
+
+        when(memberRepository.findByEmail("test@example.com")).thenReturn(Optional.of(activeMember));
+
+        memberService.resendVerification(request);
+
+        verify(emailVerificationMailSender).sendVerificationLink(eq("test@example.com"), any());
+    }
+
+    @Test
+    void resendVerification_doesNothing_whenAlreadyVerified() {
+        ResendVerificationRequest request = new ResendVerificationRequest();
+        request.setEmail("test@example.com");
+
+        when(memberRepository.findByEmail("test@example.com")).thenReturn(Optional.of(activeMember));
+
+        memberService.resendVerification(request);
+
+        verify(emailVerificationMailSender, never()).sendVerificationLink(any(), any());
+    }
+
+    @Test
+    void resendVerification_doesNothing_whenEmailNotFound() {
+        ResendVerificationRequest request = new ResendVerificationRequest();
+        request.setEmail("unknown@example.com");
+
+        when(memberRepository.findByEmail("unknown@example.com")).thenReturn(Optional.empty());
+
+        memberService.resendVerification(request);
+
+        verify(emailVerificationMailSender, never()).sendVerificationLink(any(), any());
     }
 
     @Test
