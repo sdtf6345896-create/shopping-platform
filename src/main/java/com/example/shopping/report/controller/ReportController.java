@@ -2,8 +2,10 @@ package com.example.shopping.report.controller;
 
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.report.dto.DailySalesResponse;
+import com.example.shopping.report.dto.DashboardResponse;
 import com.example.shopping.report.dto.SalesSummaryResponse;
 import com.example.shopping.report.dto.TopProductResponse;
+import com.example.shopping.report.service.DashboardService;
 import com.example.shopping.report.service.ReportService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,9 +21,16 @@ import java.util.List;
 public class ReportController {
 
     private final ReportService reportService;
+    private final DashboardService dashboardService;
 
-    public ReportController(ReportService reportService) {
+    public ReportController(ReportService reportService, DashboardService dashboardService) {
         this.reportService = reportService;
+        this.dashboardService = dashboardService;
+    }
+
+    @GetMapping("/dashboard")
+    public ApiResponse<DashboardResponse> dashboard() {
+        return ApiResponse.success(dashboardService.getDashboard());
     }
 
     @GetMapping("/summary")

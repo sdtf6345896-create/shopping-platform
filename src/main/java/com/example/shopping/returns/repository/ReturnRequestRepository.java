@@ -10,5 +10,7 @@ public interface ReturnRequestRepository extends JpaRepository<ReturnRequest, Lo
 
     boolean existsByOrderId(Long orderId);
 
+    long countByStatus(ReturnStatus status);
+
     Page<ReturnRequest> findByStatus(ReturnStatus status, Pageable pageable);
 }

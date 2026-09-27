@@ -7,6 +7,7 @@ const router = useRouter()
 const adminAuthStore = useAdminAuthStore()
 
 const menu = [
+  { name: 'AdminDashboard', label: '總覽' },
   { name: 'AdminProductList', label: '商品管理' },
   { name: 'AdminBannerList', label: 'Banner 管理' },
   { name: 'AdminCategoryList', label: '分類管理' },

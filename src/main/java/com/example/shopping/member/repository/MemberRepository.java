@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecificationExecutor<Member> {
@@ -14,6 +15,8 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     Optional<Member> findByEmail(String email);
 
     boolean existsByEmail(String email);
+
+    long countByCreatedAtGreaterThanEqual(LocalDateTime since);
 
     /** 餘額足夠才扣除,回傳受影響筆數(0 = 餘額不足) */
     @Modifying(flushAutomatically = true)

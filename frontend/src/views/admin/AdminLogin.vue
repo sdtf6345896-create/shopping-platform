@@ -26,7 +26,7 @@ async function handleSubmit() {
   try {
     await adminAuthStore.login(form)
     ElMessage.success('登入成功')
-    router.push(route.query.redirect || '/admin/products')
+    router.push(route.query.redirect || '/admin/dashboard')
   } finally {
     loading.value = false
   }

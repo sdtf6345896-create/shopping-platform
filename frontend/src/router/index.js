@@ -44,7 +44,8 @@ const routes = [
     component: () => import('../views/admin/AdminLayout.vue'),
     meta: { requiresAdminAuth: true },
     children: [
-      { path: '', redirect: { name: 'AdminProductList' } },
+      { path: '', redirect: { name: 'AdminDashboard' } },
+      { path: 'dashboard', name: 'AdminDashboard', component: () => import('../views/admin/Dashboard.vue') },
       { path: 'products', name: 'AdminProductList', component: () => import('../views/admin/ProductList.vue') },
       { path: 'products/new', name: 'AdminProductCreate', component: () => import('../views/admin/ProductForm.vue') },
       {

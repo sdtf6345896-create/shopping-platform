@@ -13,5 +13,7 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
 
     Optional<Orders> findByIdAndMemberId(Long id, Long memberId);
 
+    long countByStatus(OrderStatus status);
+
     List<Orders> findByStatusAndPaymentDeadlineBefore(OrderStatus status, LocalDateTime deadline);
 }

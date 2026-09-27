@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { exportAdminOrders, listAdminOrders, updateOrderStatus } from '../../api/admin/order'
 import { filenameFromDisposition, saveBlob } from '../../utils/download'
@@ -12,12 +12,14 @@ import {
 } from '../../utils/orderEnums'
 
 const router = useRouter()
+const route = useRoute()
 const orders = ref([])
 const total = ref(0)
 const loading = ref(true)
 
 const filters = reactive({
-  status: null,
+  // 從總覽頁點「待出貨」等卡片進來時會帶 ?status=
+  status: route.query.status || null,
   keyword: '',
   dateRange: null, // ['YYYY-MM-DD', 'YYYY-MM-DD']
   page: 0,

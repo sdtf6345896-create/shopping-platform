@@ -16,6 +16,8 @@ public interface ProductSkuRepository extends JpaRepository<ProductSku, Long> {
 
     Optional<ProductSku> findBySkuCode(String skuCode);
 
+    long countByProductStatusAndStockLessThanEqual(ProductStatus status, int threshold);
+
     /** 指定狀態商品中,庫存小於等於門檻的規格,庫存最少的排前面 */
     @Query("""
             SELECT s FROM ProductSku s JOIN FETCH s.product p

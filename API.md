@@ -586,6 +586,15 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 
 三支皆接受 Query:`startDate`、`endDate`(格式 `yyyy-MM-dd`,不帶則預設近 30 天,含今天)。統計只計入 `PAID`/`SHIPPING`/`COMPLETED` 三種狀態的訂單(排除待付款與已取消),金額皆以套用優惠券後的實付金額(`total_amount`)計算。
 
+### `GET /api/admin/reports/dashboard`
+後台首頁總覽。
+```json
+{ "todayOrders": 4, "todayRevenue": 2500.00, "todayNewMembers": 2,
+  "pendingPaymentOrders": 1, "ordersToShip": 5, "pendingReturns": 1,
+  "unansweredQuestions": 3, "lowStockSkus": 6, "lowStockThreshold": 10 }
+```
+`ordersToShip` 為已付款待出貨(`PAID`)的訂單數;`lowStockSkus` 為上架商品中庫存 ≤ `lowStockThreshold` 的規格數。
+
 ### `GET /api/admin/reports/summary`
 ```json
 {
@@ -659,6 +668,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/orders/export` | 管理員 |
 | GET | `/api/admin/orders/{id}` | 管理員 |
 | PATCH | `/api/admin/orders/{id}/status` | 管理員 |
+| GET | `/api/admin/reports/dashboard` | 管理員 |
 | GET | `/api/admin/reports/summary` | 管理員 |
 | GET | `/api/admin/reports/top-products` | 管理員 |
 | GET | `/api/admin/reports/daily` | 管理員 |

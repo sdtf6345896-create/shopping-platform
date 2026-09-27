@@ -13,6 +13,8 @@ public interface ProductQuestionRepository extends JpaRepository<ProductQuestion
 
     Page<ProductQuestion> findByAnsweredAtIsNull(Pageable pageable);
 
+    long countByAnsweredAtIsNull();
+
     Page<ProductQuestion> findByAnsweredAtIsNotNull(Pageable pageable);
 
     /** 防洗版:會員在某時間之後對同一商品提問的次數 */
