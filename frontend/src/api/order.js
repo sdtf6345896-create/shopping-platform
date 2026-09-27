@@ -16,6 +16,10 @@ export function payOrder(id) {
   return request.post(`/orders/${id}/pay`)
 }
 
+export function reorder(id) {
+  return request.post(`/orders/${id}/reorder`)
+}
+
 export function cancelOrder(id) {
   return request.post(`/orders/${id}/cancel`)
 }

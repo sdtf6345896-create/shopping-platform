@@ -16,6 +16,7 @@ import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.request.OrderStatusRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
+import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.mail.OrderMailSender;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.List;
@@ -183,6 +185,46 @@ public class OrderServiceImpl implements OrderService {
         cancelOrder(order, OrderActor.MEMBER, "會員取消訂單");
         orderMailSender.notifyStatusChanged(order);
         return OrderResponse.from(order);
+    }
+
+    @Override
+    public ReorderResponse reorder(Long memberId, Long orderId) {
+        Orders order = findOwnedOrThrow(memberId, orderId);
+        int added = 0;
+        List<String> notices = new ArrayList<>();
+
+        for (OrderItem item : order.getItems()) {
+            ProductSku sku = item.getProductSku();
+            String label = item.getProductName() + " " + item.getSpecName();
+
+            if (sku.getProduct().getStatus() != ProductStatus.ON_SALE) {
+                notices.add("「" + label + "」已下架");
+                continue;
+            }
+
+            CartItem cartItem = cartItemRepository.findByMemberIdAndProductSkuId(memberId, sku.getId())
+                    .orElseGet(() -> {
+                        CartItem newItem = new CartItem();
+                        newItem.setMember(memberRepository.getReferenceById(memberId));
+                        newItem.setProductSku(sku);
+                        newItem.setQuantity(0);
+                        return newItem;
+                    });
+
+            int addable = Math.min(item.getQuantity(), sku.getStock() - cartItem.getQuantity());
+            if (addable <= 0) {
+                notices.add("「" + label + "」庫存不足");
+                continue;
+            }
+            if (addable < item.getQuantity()) {
+                notices.add("「" + label + "」庫存不足,僅加入 " + addable + " 件");
+            }
+            cartItem.setQuantity(cartItem.getQuantity() + addable);
+            cartItemRepository.save(cartItem);
+            added++;
+        }
+
+        return new ReorderResponse(added, notices);
     }
 
     @Override

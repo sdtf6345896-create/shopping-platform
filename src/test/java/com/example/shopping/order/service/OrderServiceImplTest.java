@@ -19,6 +19,7 @@ import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.request.OrderStatusRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
+import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.mail.OrderMailSender;
@@ -424,5 +425,55 @@ class OrderServiceImplTest {
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         assertThat(sku.getStock()).isEqualTo(5);
         assertThat(product.getSalesCount()).isEqualTo(0);
+    }
+
+    @Test
+    void reorder_addsItemsToCart_andMergesWithExistingCartQuantity() {
+        Orders order = pendingOrderWithItem(2);
+        order.getItems().get(0).setProductName("經典圓領T恤");
+        order.getItems().get(0).setSpecName("黑色/M");
+        CartItem existing = new CartItem();
+        existing.setProductSku(sku);
+        existing.setQuantity(1);
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+        when(cartItemRepository.findByMemberIdAndProductSkuId(1L, 1L)).thenReturn(Optional.of(existing));
+
+        ReorderResponse response = orderService.reorder(1L, 1L);
+
+        assertThat(response.getAddedCount()).isEqualTo(1);
+        assertThat(response.getNotices()).isEmpty();
+        assertThat(existing.getQuantity()).isEqualTo(3);
+        verify(cartItemRepository).save(existing);
+    }
+
+    @Test
+    void reorder_addsOnlyAvailableQuantity_whenStockLow() {
+        sku.setStock(1);
+        Orders order = pendingOrderWithItem(2);
+        order.getItems().get(0).setProductName("經典圓領T恤");
+        order.getItems().get(0).setSpecName("黑色/M");
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+        when(cartItemRepository.findByMemberIdAndProductSkuId(1L, 1L)).thenReturn(Optional.empty());
+        when(cartItemRepository.save(any(CartItem.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ReorderResponse response = orderService.reorder(1L, 1L);
+
+        assertThat(response.getAddedCount()).isEqualTo(1);
+        assertThat(response.getNotices()).singleElement().asString().contains("僅加入 1 件");
+    }
+
+    @Test
+    void reorder_skipsOffShelfAndSoldOutItems() {
+        product.setStatus(ProductStatus.OFF_SHELF);
+        Orders order = pendingOrderWithItem(1);
+        order.getItems().get(0).setProductName("經典圓領T恤");
+        order.getItems().get(0).setSpecName("黑色/M");
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        ReorderResponse response = orderService.reorder(1L, 1L);
+
+        assertThat(response.getAddedCount()).isZero();
+        assertThat(response.getNotices()).singleElement().asString().contains("已下架");
+        verify(cartItemRepository, never()).save(any());
     }
 }

@@ -1,8 +1,9 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { getOrderDetail, payOrder, cancelOrder } from '../../api/order'
+import { getOrderDetail, payOrder, cancelOrder, reorder } from '../../api/order'
+import { useCartStore } from '../../stores/cart'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_TAG_TYPES, PAYMENT_METHOD_LABELS } from '../../utils/orderEnums'
 import { formatCountdown, remainingMs } from '../../utils/countdown'
 import OrderTimeline from '../../components/OrderTimeline.vue'
@@ -45,6 +46,36 @@ async function handleCancel() {
     await load()
   } finally {
     acting.value = false
+  }
+}
+
+const cartStore = useCartStore()
+
+async function handleReorder() {
+  acting.value = true
+  let result
+  try {
+    result = await reorder(props.id)
+    await cartStore.fetchCart()
+  } finally {
+    acting.value = false
+  }
+
+  const message = (headline) =>
+    h('div', [h('p', headline), ...result.notices.map((n) => h('p', { class: 'reorder-notice' }, n))])
+  if (result.addedCount === 0) {
+    ElMessageBox.alert(message('沒有商品可以加入購物車'), '再買一次', { type: 'warning' })
+    return
+  }
+  try {
+    await ElMessageBox.confirm(message(`已將 ${result.addedCount} 項商品加入購物車`), '再買一次', {
+      type: result.notices.length ? 'warning' : 'success',
+      confirmButtonText: '前往購物車',
+      cancelButtonText: '繼續逛逛',
+    })
+    router.push('/cart')
+  } catch {
+    // 留在本頁
   }
 }
 
@@ -141,6 +172,7 @@ onMounted(load)
         >
           取消訂單
         </el-button>
+        <el-button :loading="acting" @click="handleReorder">再買一次</el-button>
       </div>
     </template>
   </div>
@@ -220,5 +252,14 @@ onMounted(load)
 .actions {
   display: flex;
   gap: 12px;
+}
+</style>
+
+<style>
+/* ElMessageBox 掛在 body 底下,scoped 樣式套不到 */
+.reorder-notice {
+  color: #e6a23c;
+  font-size: 13px;
+  margin-top: 4px;
 }
 </style>

@@ -422,6 +422,12 @@ CANCELLED       → (終態)
 ### `POST /api/orders/{id}/pay`
 模擬付款。只能對 `PENDING_PAYMENT` 且尚未超過 `paymentDeadline` 的訂單執行(逾期回 400),成功後狀態變 `PAID`,並累加商品 `salesCount`。
 
+### `POST /api/orders/{id}/reorder`
+再買一次:把該訂單的商品依原數量重新加入購物車(與購物車既有數量合併)。已下架的品項略過;庫存不足時只加入可購買的數量。任何狀態的訂單都可以執行。
+```json
+{ "addedCount": 1, "notices": ["「經典圓領T恤 黑色/M」庫存不足,僅加入 1 件", "「碎花洋裝 S」已下架"] }
+```
+
 ### `POST /api/orders/{id}/cancel`
 取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存;若該訂單有使用優惠券,也會歸還一次使用名額。
 
@@ -561,6 +567,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET / POST | `/api/orders` | 會員 |
 | GET | `/api/orders/{id}` | 會員 |
 | POST | `/api/orders/{id}/pay` | 會員 |
+| POST | `/api/orders/{id}/reorder` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |

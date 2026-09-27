@@ -5,6 +5,7 @@ import com.example.shopping.common.PageResponse;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
+import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.service.OrderService;
 import com.example.shopping.security.SecurityUtils;
 import jakarta.validation.Valid;
@@ -44,6 +45,11 @@ public class OrderController {
     @PostMapping("/{id}/pay")
     public ApiResponse<OrderResponse> pay(@PathVariable Long id) {
         return ApiResponse.success("付款成功", orderService.pay(SecurityUtils.getCurrentUserId(), id));
+    }
+
+    @PostMapping("/{id}/reorder")
+    public ApiResponse<ReorderResponse> reorder(@PathVariable Long id) {
+        return ApiResponse.success(orderService.reorder(SecurityUtils.getCurrentUserId(), id));
     }
 
     @PostMapping("/{id}/cancel")
