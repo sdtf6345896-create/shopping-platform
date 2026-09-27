@@ -41,4 +41,14 @@ public interface OrderService {
      * @return 取消的筆數
      */
     int cancelExpiredOrders(LocalDateTime now);
+
+    /** 會員確認收貨,出貨中的訂單改為完成 */
+    OrderResponse confirmReceipt(Long memberId, Long orderId);
+
+    /**
+     * 出貨時間早於 shippedBefore 仍未完成的訂單,由系統自動完成。
+     *
+     * @return 完成的筆數
+     */
+    int autoCompleteShipped(LocalDateTime shippedBefore);
 }

@@ -674,4 +674,51 @@ class OrderServiceImplTest {
         verify(pointService).credit(eq(1L), eq(1L), eq(20), eq(PointTransactionType.EARN),
                 argThat(description -> description.contains("金卡會員 2 倍")));
     }
+
+    @Test
+    void confirmReceipt_completesShippingOrder_asMember_andEarnsPoints() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD1");
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setTotalAmount(new BigDecimal("1000"));
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        OrderResponse response = orderService.confirmReceipt(1L, 1L);
+
+        assertThat(response.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(order.getStatusLogs()).last().satisfies(log -> assertThat(log.getActor()).isEqualTo(OrderActor.MEMBER));
+        verify(pointService).credit(eq(1L), eq(1L), eq(10), eq(PointTransactionType.EARN), any());
+        verify(orderNotifier).notifyStatusChanged(order);
+    }
+
+    @Test
+    void confirmReceipt_rejectsOrdersNotYetShipped() {
+        Orders order = pendingOrderWithItem(1);
+        order.setStatus(OrderStatus.PAID);
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        assertThatThrownBy(() -> orderService.confirmReceipt(1L, 1L))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("出貨中");
+        verify(pointService, never()).credit(any(), any(), anyInt(), any(), any());
+    }
+
+    @Test
+    void autoCompleteShipped_completesOldShipmentsAsSystem() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD1");
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setTotalAmount(new BigDecimal("500"));
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(7);
+        when(orderRepository.findByStatusAndShippedAtBefore(OrderStatus.SHIPPING, cutoff)).thenReturn(List.of(order));
+
+        int completed = orderService.autoCompleteShipped(cutoff);
+
+        assertThat(completed).isEqualTo(1);
+        assertThat(order.getStatus()).isEqualTo(OrderStatus.COMPLETED);
+        assertThat(order.getStatusLogs()).last().satisfies(log -> assertThat(log.getActor()).isEqualTo(OrderActor.SYSTEM));
+        verify(pointService).credit(eq(1L), eq(1L), eq(5), eq(PointTransactionType.EARN), any());
+    }
 }

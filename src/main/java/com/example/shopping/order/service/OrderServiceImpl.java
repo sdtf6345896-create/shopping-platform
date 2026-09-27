@@ -330,19 +330,7 @@ public class OrderServiceImpl implements OrderService {
         } else if (target == OrderStatus.SHIPPING) {
             markShipped(order, request, note);
         } else if (target == OrderStatus.COMPLETED) {
-            // 等級以「這筆完成之前」的消費計算,避免這筆訂單自己把自己推上更高倍率
-            MemberTier tier = memberTierService.tierOf(order.getMember().getId());
-            order.changeStatus(target, OrderActor.ADMIN, note);
-            // 回饋只算商品金額,運費不列入;依會員等級加倍
-            int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount().subtract(order.getShippingFee()),
-                    tier.getPointsMultiplier());
-            order.setPointsEarned(earned);
-            if (earned > 0) {
-                String tierNote = tier == MemberTier.NORMAL ? "" : "(" + tier.getLabel() + " "
-                        + tier.getPointsMultiplier().stripTrailingZeros().toPlainString() + " 倍)";
-                pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,
-                        "訂單 " + order.getOrderNo() + " 完成回饋" + tierNote);
-            }
+            completeOrder(order, OrderActor.ADMIN, note);
         } else {
             order.changeStatus(target, OrderActor.ADMIN, note);
         }
@@ -359,6 +347,44 @@ public class OrderServiceImpl implements OrderService {
             orderNotifier.notifyStatusChanged(order);
         }
         return expired.size();
+    }
+
+    @Override
+    public OrderResponse confirmReceipt(Long memberId, Long orderId) {
+        Orders order = findOwnedOrThrow(memberId, orderId);
+        if (order.getStatus() != OrderStatus.SHIPPING) {
+            throw new BusinessException("只有出貨中的訂單可以確認收貨");
+        }
+        completeOrder(order, OrderActor.MEMBER, "會員確認收貨");
+        orderNotifier.notifyStatusChanged(order);
+        return OrderResponse.from(order);
+    }
+
+    @Override
+    public int autoCompleteShipped(LocalDateTime shippedBefore) {
+        List<Orders> orders = orderRepository.findByStatusAndShippedAtBefore(OrderStatus.SHIPPING, shippedBefore);
+        for (Orders order : orders) {
+            completeOrder(order, OrderActor.SYSTEM, "出貨後未確認收貨,系統自動完成");
+            orderNotifier.notifyStatusChanged(order);
+        }
+        return orders.size();
+    }
+
+    /** 訂單完成:改狀態並依會員等級回饋購物金(管理員、會員確認收貨、系統自動完成共用) */
+    private void completeOrder(Orders order, OrderActor actor, String note) {
+        // 等級以「這筆完成之前」的消費計算,避免這筆訂單自己把自己推上更高倍率
+        MemberTier tier = memberTierService.tierOf(order.getMember().getId());
+        order.changeStatus(OrderStatus.COMPLETED, actor, note);
+        // 回饋只算商品金額,運費不列入;依會員等級加倍
+        int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount().subtract(order.getShippingFee()),
+                tier.getPointsMultiplier());
+        order.setPointsEarned(earned);
+        if (earned > 0) {
+            String tierNote = tier == MemberTier.NORMAL ? "" : "(" + tier.getLabel() + " "
+                    + tier.getPointsMultiplier().stripTrailingZeros().toPlainString() + " 倍)";
+            pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,
+                    "訂單 " + order.getOrderNo() + " 完成回饋" + tierNote);
+        }
     }
 
     private void markPaid(Orders order, OrderActor actor, String note) {

@@ -69,3 +69,4 @@ app:
   order:
     payment-timeout-minutes: ${ORDER_PAYMENT_TIMEOUT_MINUTES:30}   # 線上付款期限,逾期自動取消(貨到付款不受限)
     expire-check-interval-ms: 60000                               # 逾期訂單掃描間隔
+    auto-complete-days: 7                                         # 出貨幾天後未確認收貨自動完成

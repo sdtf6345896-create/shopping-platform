@@ -75,7 +75,7 @@
 ```
 PENDING_PAYMENT → PAID, CANCELLED
 PAID            → SHIPPING, CANCELLED
-SHIPPING        → COMPLETED
+SHIPPING        → COMPLETED(管理員、會員確認收貨,或出貨 7 天後系統自動完成)
 COMPLETED       → (終態;僅能透過退貨核准變成 REFUNDED)
 CANCELLED       → (終態)
 REFUNDED        → (終態)
@@ -489,6 +489,9 @@ REFUNDED        → (終態)
 ### `POST /api/orders/{id}/pay`
 模擬付款。只能對 `PENDING_PAYMENT` 且尚未超過 `paymentDeadline` 的訂單執行(逾期回 400),成功後狀態變 `PAID`,並累加商品 `salesCount`。
 
+### `POST /api/orders/{id}/complete`
+會員確認收貨:只能對 `SHIPPING` 的訂單執行,改為 `COMPLETED` 並依會員等級回饋購物金(訂單歷程記為 `MEMBER`)。出貨後 7 天(`app.order.auto-complete-days`)仍未確認的訂單,會由背景排程自動完成(記為 `SYSTEM`)。
+
 ### `POST /api/orders/{id}/reorder`
 再買一次:把該訂單的商品依原數量重新加入購物車(與購物車既有數量合併)。已下架的品項略過;庫存不足時只加入可購買的數量。任何狀態的訂單都可以執行。
 ```json
@@ -820,6 +823,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET / POST | `/api/orders` | 會員 |
 | GET | `/api/orders/{id}` | 會員 |
 | POST | `/api/orders/{id}/pay` | 會員 |
+| POST | `/api/orders/{id}/complete` | 會員 |
 | POST | `/api/orders/{id}/reorder` | 會員 |
 | POST | `/api/orders/{orderId}/return` | 會員 |
 | GET | `/api/admin/returns` | 管理員 |

@@ -29,5 +29,7 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
     BigDecimal sumMerchandiseAmount(@Param("memberId") Long memberId, @Param("status") OrderStatus status,
                                     @Param("since") LocalDateTime since);
 
+    List<Orders> findByStatusAndShippedAtBefore(OrderStatus status, LocalDateTime shippedBefore);
+
     List<Orders> findByStatusAndPaymentDeadlineBefore(OrderStatus status, LocalDateTime deadline);
 }

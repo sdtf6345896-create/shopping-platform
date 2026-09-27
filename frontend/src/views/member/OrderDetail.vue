@@ -2,7 +2,7 @@
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { applyReturn, getOrderDetail, payOrder, cancelOrder, reorder } from '../../api/order'
+import { applyReturn, confirmReceipt, getOrderDetail, payOrder, cancelOrder, reorder } from '../../api/order'
 import { useCartStore } from '../../stores/cart'
 import {
   ORDER_STATUS_LABELS,
@@ -101,6 +101,21 @@ const canApplyReturn = computed(
     remainingMs(order.value.returnDeadline, now.value) > 0,
 )
 
+async function handleConfirmReceipt() {
+  try {
+    await ElMessageBox.confirm('確認已收到商品?確認後訂單完成並回饋購物金。', '確認收貨', { type: 'info' })
+  } catch {
+    return
+  }
+  acting.value = true
+  try {
+    order.value = await confirmReceipt(props.id)
+    ElMessage.success('已確認收貨,感謝您的購買!')
+  } finally {
+    acting.value = false
+  }
+}
+
 async function handleApplyReturn() {
   let reason
   try {
@@ -155,6 +170,7 @@ onMounted(load)
         <p class="meta">物流業者:{{ order.shippingCarrier }}</p>
         <p class="meta">物流單號:<span class="tracking-no">{{ order.trackingNumber }}</span></p>
         <p class="meta">出貨時間:{{ order.shippedAt?.slice(0, 19).replace('T', ' ') }}</p>
+        <p v-if="order.status === 'SHIPPING'" class="meta auto-hint">收到商品後請按「確認收貨」;出貨 7 天後未確認將自動完成</p>
       </div>
 
       <div class="block">
@@ -233,6 +249,9 @@ onMounted(load)
           取消訂單
         </el-button>
         <el-button v-if="canApplyReturn" :loading="acting" @click="handleApplyReturn">申請退貨</el-button>
+        <el-button v-if="order.status === 'SHIPPING'" type="primary" :loading="acting" @click="handleConfirmReceipt">
+          確認收貨
+        </el-button>
         <el-button :loading="acting" @click="handleReorder">再買一次</el-button>
         <el-button v-if="!['PENDING_PAYMENT', 'CANCELLED'].includes(order.status)" @click="router.push({ name: 'OrderReceipt', params: { id: order.id } })">
           列印收據
@@ -298,6 +317,10 @@ onMounted(load)
 
 .discount-row {
   color: #e4393c;
+}
+
+.auto-hint {
+  color: #e6a23c;
 }
 
 .tracking-no {

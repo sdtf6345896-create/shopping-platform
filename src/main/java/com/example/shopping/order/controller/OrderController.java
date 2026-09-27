@@ -52,6 +52,11 @@ public class OrderController {
         return ApiResponse.success(orderService.reorder(SecurityUtils.getCurrentUserId(), id));
     }
 
+    @PostMapping("/{id}/complete")
+    public ApiResponse<OrderResponse> confirmReceipt(@PathVariable Long id) {
+        return ApiResponse.success("已確認收貨", orderService.confirmReceipt(SecurityUtils.getCurrentUserId(), id));
+    }
+
     @PostMapping("/{id}/cancel")
     public ApiResponse<OrderResponse> cancel(@PathVariable Long id) {
         return ApiResponse.success("訂單已取消", orderService.cancelByMember(SecurityUtils.getCurrentUserId(), id));
