@@ -26,6 +26,7 @@ import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
 import com.example.shopping.security.JwtTokenProvider;
+import com.example.shopping.security.LoginAttemptService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +50,8 @@ public class MemberServiceImpl implements MemberService {
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
     private static final int EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 
+    private static final String LOGIN_SCOPE = "member";
+
     private final MemberRepository memberRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -57,6 +60,7 @@ public class MemberServiceImpl implements MemberService {
     private final JwtTokenProvider jwtTokenProvider;
     private final PasswordResetMailSender passwordResetMailSender;
     private final EmailVerificationMailSender emailVerificationMailSender;
+    private final LoginAttemptService loginAttemptService;
     private final String frontendOrigin;
     private final long refreshExpirationMs;
 
@@ -68,6 +72,7 @@ public class MemberServiceImpl implements MemberService {
                               JwtTokenProvider jwtTokenProvider,
                               PasswordResetMailSender passwordResetMailSender,
                               EmailVerificationMailSender emailVerificationMailSender,
+                              LoginAttemptService loginAttemptService,
                               @Value("${app.cors.allowed-origins}") String frontendOrigin,
                               @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         this.memberRepository = memberRepository;
@@ -78,6 +83,7 @@ public class MemberServiceImpl implements MemberService {
         this.jwtTokenProvider = jwtTokenProvider;
         this.passwordResetMailSender = passwordResetMailSender;
         this.emailVerificationMailSender = emailVerificationMailSender;
+        this.loginAttemptService = loginAttemptService;
         this.frontendOrigin = frontendOrigin;
         this.refreshExpirationMs = refreshExpirationMs;
     }
@@ -102,12 +108,15 @@ public class MemberServiceImpl implements MemberService {
     @Override
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        Member member = memberRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessException("帳號或密碼錯誤"));
+        loginAttemptService.checkNotLocked(LOGIN_SCOPE, request.getEmail());
 
-        if (!passwordEncoder.matches(request.getPassword(), member.getPassword())) {
+        Member member = memberRepository.findByEmail(request.getEmail()).orElse(null);
+        if (member == null || !passwordEncoder.matches(request.getPassword(), member.getPassword())) {
+            loginAttemptService.recordFailure(LOGIN_SCOPE, request.getEmail());
             throw new BusinessException("帳號或密碼錯誤");
         }
+        loginAttemptService.recordSuccess(LOGIN_SCOPE, request.getEmail());
+
         if (member.getStatus() != AccountStatus.ACTIVE) {
             throw new BusinessException("帳號已被停用,請聯繫客服");
         }

@@ -8,12 +8,14 @@ import com.example.shopping.common.enums.AccountStatus;
 import com.example.shopping.common.enums.Role;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.security.JwtTokenProvider;
+import com.example.shopping.security.LoginAttemptService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
@@ -21,6 +23,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +37,9 @@ class AdminAuthServiceImplTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+
+    @Mock
+    private LoginAttemptService loginAttemptService;
 
     @InjectMocks
     private AdminAuthServiceImpl adminAuthService;
@@ -92,6 +98,22 @@ class AdminAuthServiceImplTest {
         assertThatThrownBy(() -> adminAuthService.login(request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("帳號或密碼錯誤");
+        verify(loginAttemptService).recordFailure("admin", "admin");
+    }
+
+    @Test
+    void login_rejectsBeforeCheckingPassword_whenAccountLocked() {
+        AdminLoginRequest request = new AdminLoginRequest();
+        request.setUsername("admin");
+        request.setPassword("admin123");
+
+        doThrow(new BusinessException("登入失敗次數過多", HttpStatus.TOO_MANY_REQUESTS))
+                .when(loginAttemptService).checkNotLocked("admin", "admin");
+
+        assertThatThrownBy(() -> adminAuthService.login(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("登入失敗次數過多");
+        verify(adminRepository, never()).findByUsername(any());
     }
 
     @Test

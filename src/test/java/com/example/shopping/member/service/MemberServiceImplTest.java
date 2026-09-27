@@ -26,8 +26,10 @@ import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
 import com.example.shopping.security.JwtTokenProvider;
+import com.example.shopping.security.LoginAttemptService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -75,7 +77,7 @@ class MemberServiceImplTest {
         memberService = new MemberServiceImpl(memberRepository, passwordResetTokenRepository,
                 refreshTokenRepository, emailVerificationTokenRepository, passwordEncoder, jwtTokenProvider,
                 passwordResetMailSender, emailVerificationMailSender,
-                "http://localhost:5173", 1209600000L);
+                new LoginAttemptService(3, 15), "http://localhost:5173", 1209600000L);
 
         activeMember = new Member();
         activeMember.setId(1L);
@@ -151,6 +153,44 @@ class MemberServiceImplTest {
         assertThatThrownBy(() -> memberService.login(request))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("帳號或密碼錯誤");
+    }
+
+    @Test
+    void login_locksAccount_afterRepeatedFailures_evenWithCorrectPassword() {
+        LoginRequest wrong = new LoginRequest();
+        wrong.setEmail("test@example.com");
+        wrong.setPassword("wrong");
+        when(memberRepository.findByEmail("test@example.com")).thenReturn(Optional.of(activeMember));
+        when(passwordEncoder.matches("wrong", "encoded-password")).thenReturn(false);
+
+        // setUp 設定 3 次失敗就鎖定
+        for (int i = 0; i < 3; i++) {
+            assertThatThrownBy(() -> memberService.login(wrong)).hasMessageContaining("帳號或密碼錯誤");
+        }
+
+        LoginRequest correct = new LoginRequest();
+        correct.setEmail("TEST@example.com");
+        correct.setPassword("password123");
+        assertThatThrownBy(() -> memberService.login(correct))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("暫時鎖定")
+                .extracting(ex -> ((BusinessException) ex).getStatus())
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        verify(passwordEncoder, never()).matches(eq("password123"), any());
+    }
+
+    @Test
+    void login_countsFailures_forUnknownEmail() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("nobody@example.com");
+        request.setPassword("whatever");
+        when(memberRepository.findByEmail("nobody@example.com")).thenReturn(Optional.empty());
+
+        for (int i = 0; i < 3; i++) {
+            assertThatThrownBy(() -> memberService.login(request)).hasMessageContaining("帳號或密碼錯誤");
+        }
+
+        assertThatThrownBy(() -> memberService.login(request)).hasMessageContaining("暫時鎖定");
     }
 
     @Test

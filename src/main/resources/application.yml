@@ -46,6 +46,10 @@ jwt:
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:1209600000}   # 14 天
 
 app:
+  security:
+    login:
+      max-attempts: 5    # 連續登入失敗幾次後鎖定
+      lock-minutes: 15   # 鎖定時間
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
   upload:
