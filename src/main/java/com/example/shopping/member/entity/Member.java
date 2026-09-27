@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -39,6 +40,14 @@ public class Member {
 
     @Column(name = "email_verified", nullable = false)
     private boolean emailVerified = false;
+
+    /**
+     * 購物金餘額。唯讀對應:增減一律透過 MemberRepository 的條件式 UPDATE,
+     * 避免其他交易拿舊的 Member 存檔時把餘額蓋回去(lost update)。
+     */
+    @Column(nullable = false, insertable = false, updatable = false)
+    @ColumnDefault("0")
+    private int points;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

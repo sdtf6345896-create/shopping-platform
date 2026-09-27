@@ -131,6 +131,10 @@ onMounted(load)
           <span>優惠折抵{{ order.couponCode ? `(${order.couponCode})` : '' }}</span>
           <span>- NT$ {{ order.discountAmount }}</span>
         </div>
+        <div v-if="order.pointsUsed > 0" class="item-row discount-row">
+          <span>購物金折抵</span>
+          <span>- NT$ {{ order.pointsUsed }}</span>
+        </div>
         <div class="total-row">
           <span>總金額</span>
           <span class="total-amount">NT$ {{ order.totalAmount }}</span>

@@ -5,6 +5,7 @@ import com.example.shopping.admin.repository.AdminRepository;
 import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.common.enums.PointTransactionType;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.repository.AddressRepository;
@@ -12,6 +13,7 @@ import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.review.entity.ProductReview;
@@ -46,6 +48,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ProductSkuRepository productSkuRepository;
     private final OrderRepository orderRepository;
     private final ProductReviewRepository productReviewRepository;
+    private final PointService pointService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
 
@@ -55,6 +58,7 @@ public class DataInitializer implements CommandLineRunner {
                             ProductSkuRepository productSkuRepository,
                             OrderRepository orderRepository,
                             ProductReviewRepository productReviewRepository,
+                            PointService pointService,
                             PasswordEncoder passwordEncoder,
                             JdbcTemplate jdbcTemplate) {
         this.adminRepository = adminRepository;
@@ -63,6 +67,7 @@ public class DataInitializer implements CommandLineRunner {
         this.productSkuRepository = productSkuRepository;
         this.orderRepository = orderRepository;
         this.productReviewRepository = productReviewRepository;
+        this.pointService = pointService;
         this.passwordEncoder = passwordEncoder;
         this.jdbcTemplate = jdbcTemplate;
     }
@@ -96,6 +101,7 @@ public class DataInitializer implements CommandLineRunner {
         member.setPhone("0922333444");
         member.setEmailVerified(true);
         memberRepository.save(member);
+        pointService.credit(member.getId(), null, 300, PointTransactionType.ADJUST, "新會員見面禮(示範資料)");
 
         Address address = new Address();
         address.setMember(member);

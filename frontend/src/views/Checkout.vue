@@ -1,10 +1,12 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { listAddresses, createAddress } from '../api/address'
 import { checkout } from '../api/order'
 import { applyCoupon } from '../api/coupon'
+import { getPointBalance } from '../api/points'
+import { maxRedeemable } from '../utils/points'
 import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
@@ -45,7 +47,36 @@ const couponCode = ref('')
 const appliedCoupon = ref(null)
 const applyingCoupon = ref(false)
 const discountAmount = computed(() => appliedCoupon.value?.discountAmount || 0)
-const totalAmount = computed(() => subtotalAmount.value - discountAmount.value)
+
+// 購物金:套用優惠券後的應付金額才是折抵上限的計算基準
+const pointInfo = ref(null)
+const usePoints = ref(false)
+const pointsToUse = ref(0)
+const payableBeforePoints = computed(() => subtotalAmount.value - discountAmount.value)
+const pointLimit = computed(() =>
+  pointInfo.value
+    ? maxRedeemable(pointInfo.value.balance, payableBeforePoints.value, pointInfo.value.maxRedeemRatio)
+    : 0,
+)
+const appliedPoints = computed(() => (usePoints.value ? Math.min(pointsToUse.value || 0, pointLimit.value) : 0))
+const totalAmount = computed(() => payableBeforePoints.value - appliedPoints.value)
+
+function handleTogglePoints(enabled) {
+  pointsToUse.value = enabled ? pointLimit.value : 0
+}
+
+// 換優惠券後上限可能變小,超過就自動調回上限
+watch(pointLimit, (limit) => {
+  if (pointsToUse.value > limit) pointsToUse.value = limit
+})
+
+async function loadPoints() {
+  try {
+    pointInfo.value = await getPointBalance()
+  } catch {
+    pointInfo.value = null
+  }
+}
 
 async function handleApplyCoupon() {
   if (!couponCode.value.trim()) {
@@ -113,6 +144,7 @@ async function handleSubmit() {
       paymentMethod: paymentMethod.value,
       cartItemIds: cartStore.checkoutSelection,
       couponCode: appliedCoupon.value?.code || null,
+      pointsToUse: appliedPoints.value,
     })
     cartStore.setCheckoutSelection(null)
     await cartStore.fetchCart()
@@ -128,7 +160,7 @@ onMounted(async () => {
     router.replace('/cart')
     return
   }
-  await loadAddresses()
+  await Promise.all([loadAddresses(), loadPoints()])
 })
 </script>
 
@@ -178,6 +210,32 @@ onMounted(async () => {
       </div>
     </section>
 
+    <section v-if="pointInfo" class="block">
+      <div class="block-title">
+        <span>購物金</span>
+        <span class="point-balance">可用 {{ pointInfo.balance }} 點</span>
+      </div>
+      <div class="points-row">
+        <el-switch
+          v-model="usePoints"
+          :disabled="pointLimit === 0"
+          active-text="使用購物金折抵"
+          @change="handleTogglePoints"
+        />
+        <el-input-number
+          v-if="usePoints"
+          v-model="pointsToUse"
+          :min="0"
+          :max="pointLimit"
+          :step="10"
+          size="small"
+        />
+      </div>
+      <p class="mock-hint">
+        本筆最多可折抵 {{ pointLimit }} 點(應付金額的 {{ Math.round(pointInfo.maxRedeemRatio * 100) }}%),1 點 = NT$1
+      </p>
+    </section>
+
     <section class="block">
       <div class="block-title">訂單確認</div>
       <div v-for="item in checkoutItems" :key="item.id" class="confirm-row">
@@ -191,6 +249,10 @@ onMounted(async () => {
       <div v-if="appliedCoupon" class="confirm-row discount-row">
         <span>優惠折抵</span>
         <span>- NT$ {{ discountAmount }}</span>
+      </div>
+      <div v-if="appliedPoints > 0" class="confirm-row discount-row">
+        <span>購物金折抵</span>
+        <span>- NT$ {{ appliedPoints }}</span>
       </div>
       <div class="confirm-total">
         <span>總金額</span>
@@ -277,6 +339,18 @@ onMounted(async () => {
   margin-top: 12px;
   font-size: 12px;
   color: #999;
+}
+
+.point-balance {
+  font-weight: normal;
+  font-size: 13px;
+  color: #e4393c;
+}
+
+.points-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .confirm-row {

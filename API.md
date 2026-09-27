@@ -66,6 +66,7 @@
 | `PaymentMethod` | `CREDIT_CARD`, `ATM`, `COD` |
 | `CouponStatus` | `ACTIVE`, `DISABLED` |
 | `DiscountType` | `FIXED_AMOUNT`(固定金額折抵), `PERCENTAGE`(百分比折扣) |
+| `PointTransactionType` | `EARN`(訂單完成回饋), `REDEEM`(結帳折抵), `REFUND`(取消退還), `ADJUST`(活動贈送/調整) |
 | `OrderActor` | `MEMBER`, `ADMIN`, `SYSTEM`(訂單歷程中觸發狀態變更的角色) |
 
 訂單狀態合法轉換(後台變更狀態、會員取消訂單都受此限制):
@@ -389,7 +390,7 @@ CANCELLED       → (終態)
 ```json
 {
   "id": 1, "orderNo": "ORD202609142029305718", "status": "PAID", "paymentMethod": "CREDIT_CARD",
-  "subtotalAmount": 1870.00, "discountAmount": 100.00, "totalAmount": 1770.00, "couponCode": "SAVE100",
+  "subtotalAmount": 1870.00, "discountAmount": 100.00, "totalAmount": 1770.00, "couponCode": "SAVE100", "pointsUsed": 0,
   "receiverName": "王小明", "receiverPhone": "0912345678",
   "receiverAddress": "台北市大安區復興南路一段1號",
   "shippingCarrier": null, "trackingNumber": null, "shippedAt": null,
@@ -407,7 +408,7 @@ CANCELLED       → (終態)
 > `shippingCarrier`/`trackingNumber`/`shippedAt` 在管理員出貨後才有值。
 > `paymentDeadline` 為付款期限:線上付款(`CREDIT_CARD`/`ATM`)為下單後 30 分鐘(`app.order.payment-timeout-minutes` 可調),貨到付款(`COD`)為 `null`。逾期仍未付款的訂單會被背景排程(每分鐘掃描一次)自動取消,歸還庫存與優惠券名額,訂單歷程記為 `SYSTEM`。
 > `receiverName`/`receiverPhone`/`receiverAddress` 與商品名稱/規格/單價皆為**下單當下的快照**,之後會員改地址或商家改商品都不影響歷史訂單。
-> `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
+> `subtotalAmount` 為套用優惠券前的商品原價小計,`totalAmount`(= `subtotalAmount` − `discountAmount` − `pointsUsed`)才是實付金額;未使用優惠券時 `discountAmount` 為 0、`couponCode` 為 `null`。
 
 ### `GET /api/orders/{id}`
 自己的訂單詳情,非本人訂單回 404。
@@ -415,8 +416,9 @@ CANCELLED       → (終態)
 ### `POST /api/orders`
 結帳。請求:
 ```json
-{ "addressId": 2, "paymentMethod": "CREDIT_CARD", "cartItemIds": [1, 2], "couponCode": "SAVE100" }
+{ "addressId": 2, "paymentMethod": "CREDIT_CARD", "cartItemIds": [1, 2], "couponCode": "SAVE100", "pointsToUse": 100 }
 ```
+`pointsToUse` 選填,使用購物金折抵(1 點 = NT$1),最多為「套用優惠券後應付金額的 50%」且不超過餘額,超過回 400。
 `cartItemIds` 選填,不帶則結帳購物車全部項目。`couponCode` 選填,不帶則不使用優惠券;若代碼無效、已停用/過期/兌換完畢,或未達最低消費門檻,回 400 且不會建立訂單。下單當下就會扣庫存與優惠券使用名額(非等付款);若購物車內有商品已下架或庫存不足,整筆交易失敗回 400,購物車項目不受影響。
 
 ### `POST /api/orders/{id}/pay`
@@ -432,6 +434,27 @@ CANCELLED       → (終態)
 取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存;若該訂單有使用優惠券,也會歸還一次使用名額。
 
 > 訂單成立、付款成功、出貨、完成、取消時,都會寄一封通知信給下單會員(標題依狀態而異,例如「商品出貨通知」)。實際寄送方式與忘記密碼信共用同一套 SMTP 設定(見 README),未設定時以 log 模擬,寄送失敗也不會讓 API request 失敗。
+
+---
+
+## 購物金(Points)— 需會員登入
+
+### `GET /api/points`
+目前餘額與規則。
+```json
+{ "balance": 300, "earnRate": 0.01, "maxRedeemRatio": 0.5 }
+```
+- 訂單被管理員標記為 `COMPLETED` 時,回饋實付金額 × `earnRate` 點(無條件捨去)。
+- 結帳時可用 `pointsToUse` 折抵,上限為套用優惠券後應付金額 × `maxRedeemRatio`(無條件捨去)。
+- 訂單取消(會員取消、管理員取消、逾期自動取消)時,已使用的購物金會全數退回。
+- 規則可用 `app.points.earn-rate`、`app.points.max-redeem-ratio` 調整。
+
+### `GET /api/points/transactions`
+購物金異動明細(新到舊)。Query:`page`、`size` → `PageResponse`
+```json
+{ "id": 3, "orderId": 12, "amount": -100, "type": "REDEEM", "description": "訂單 ORD2026... 折抵",
+  "balanceAfter": 200, "createdAt": "2026-09-27T18:00:00" }
+```
 
 ---
 
@@ -600,6 +623,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/orders/{id}` | 會員 |
 | POST | `/api/orders/{id}/pay` | 會員 |
 | POST | `/api/orders/{id}/reorder` | 會員 |
+| GET | `/api/points` | 會員 |
+| GET | `/api/points/transactions` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |

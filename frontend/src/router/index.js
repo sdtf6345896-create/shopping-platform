@@ -30,6 +30,7 @@ const routes = [
       { path: 'addresses', name: 'MemberAddresses', component: () => import('../views/member/Addresses.vue') },
       { path: 'orders', name: 'MemberOrders', component: () => import('../views/member/OrderList.vue') },
       { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue') },
+      { path: 'points', name: 'MemberPoints', component: () => import('../views/member/Points.vue') },
       {
         path: 'browsing-history',
         name: 'MemberBrowsingHistory',

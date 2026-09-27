@@ -1,6 +1,7 @@
 package com.example.shopping.order.dto.request;
 
 import com.example.shopping.common.enums.PaymentMethod;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.Setter;
@@ -26,4 +27,10 @@ public class CheckoutRequest {
      * 欲套用的優惠券代碼;不填則不使用優惠券。
      */
     private String couponCode;
+
+    /**
+     * 欲折抵的購物金點數;不填或 0 則不使用。
+     */
+    @Min(value = 0, message = "購物金點數不可為負數")
+    private Integer pointsToUse;
 }

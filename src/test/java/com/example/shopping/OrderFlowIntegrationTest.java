@@ -141,17 +141,36 @@ class OrderFlowIntegrationTest {
         assertThat(shipped.at("/statusLogs").findValuesAsText("actor"))
                 .containsExactly("MEMBER", "MEMBER", "ADMIN");
 
+        // ---- 完成訂單 → 回饋 1% 購物金 → 下一筆訂單折抵 ----
+        call(patch("/api/admin/orders/" + orderId + "/status"), adminToken, Map.of("status", "COMPLETED"), 200);
+        JsonNode points = call(get("/api/points"), memberToken, null, 200).at("/data");
+        assertThat(points.at("/balance").asInt()).isEqualTo(10);
+
+        call(post("/api/cart/items"), memberToken, Map.of("skuId", skuId, "quantity", 1), 200);
+        JsonNode secondOrder = call(post("/api/orders"), memberToken,
+                Map.of("addressId", addressId, "paymentMethod", "ATM", "pointsToUse", 10), 200).at("/data");
+        assertThat(secondOrder.at("/pointsUsed").asInt()).isEqualTo(10);
+        assertThat(secondOrder.at("/totalAmount").decimalValue()).isEqualByComparingTo("490");
+        assertThat(call(get("/api/points"), memberToken, null, 200).at("/data/balance").asInt()).isZero();
+
+        // 取消第二筆訂單,購物金退回
+        call(post("/api/orders/" + secondOrder.at("/id").asLong() + "/cancel"), memberToken, null, 200);
+        JsonNode history = call(get("/api/points/transactions"), memberToken, null, 200).at("/data/content");
+        assertThat(history.findValuesAsText("type")).containsExactly("REFUND", "REDEEM", "EARN");
+        assertThat(history.at("/0/balanceAfter").asInt()).isEqualTo(10);
+
         // ---- 後台:關鍵字搜尋與 CSV 匯出 ----
         JsonNode found = call(get("/api/admin/orders?keyword=" + suffix), adminToken, null, 200).at("/data");
-        assertThat(found.at("/totalElements").asLong()).isEqualTo(1);
-        assertThat(found.at("/content/0/id").asLong()).isEqualTo(orderId);
+        // 會員有兩筆訂單(第二筆已取消),Email 含 suffix 所以都搜得到
+        assertThat(found.at("/totalElements").asLong()).isEqualTo(2);
+        assertThat(found.at("/content").findValuesAsText("id")).contains(String.valueOf(orderId));
 
         var export = mockMvc.perform(get("/api/admin/orders/export?keyword=" + suffix)
                 .header("Authorization", "Bearer " + adminToken)).andReturn().getResponse();
         assertThat(export.getStatus()).isEqualTo(200);
         assertThat(export.getHeader("Content-Disposition")).contains("attachment").contains(".csv");
         String csv = new String(export.getContentAsByteArray(), StandardCharsets.UTF_8);
-        assertThat(csv.lines()).hasSize(2);
+        assertThat(csv.lines()).hasSize(3);
         assertThat(csv).contains(shipped.at("/orderNo").asText()).contains("TRK-" + suffix);
 
         // ---- 商品問答:會員提問 → 後台回覆 → 前台公開可見 ----

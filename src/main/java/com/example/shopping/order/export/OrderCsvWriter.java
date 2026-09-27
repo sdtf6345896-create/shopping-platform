@@ -35,7 +35,7 @@ public final class OrderCsvWriter {
 
     private static final List<String> HEADERS = List.of(
             "訂單編號", "建立時間", "狀態", "付款方式", "會員 Email", "收件人", "收件電話", "收件地址",
-            "商品明細", "商品小計", "折抵金額", "優惠券", "實付金額", "物流業者", "物流單號");
+            "商品明細", "商品小計", "折抵金額", "優惠券", "購物金折抵", "實付金額", "物流業者", "物流單號");
 
     private OrderCsvWriter() {
     }
@@ -57,6 +57,7 @@ public final class OrderCsvWriter {
                     String.valueOf(order.getSubtotalAmount()),
                     String.valueOf(order.getDiscountAmount()),
                     nullToEmpty(order.getCouponCode()),
+                    String.valueOf(order.getPointsUsed()),
                     String.valueOf(order.getTotalAmount()),
                     nullToEmpty(order.getShippingCarrier()),
                     nullToEmpty(order.getTrackingNumber())));

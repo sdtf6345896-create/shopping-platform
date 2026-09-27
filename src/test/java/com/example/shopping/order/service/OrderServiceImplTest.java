@@ -2,11 +2,12 @@ package com.example.shopping.order.service;
 
 import com.example.shopping.cart.entity.CartItem;
 import com.example.shopping.cart.repository.CartItemRepository;
+import com.example.shopping.common.enums.DiscountType;
 import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.common.enums.PointTransactionType;
 import com.example.shopping.common.enums.ProductStatus;
-import com.example.shopping.common.enums.DiscountType;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.coupon.dto.response.CouponApplyResponse;
 import com.example.shopping.coupon.entity.Coupon;
@@ -24,6 +25,9 @@ import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.mail.OrderMailSender;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.points.dto.PointBalanceResponse;
+import com.example.shopping.points.service.PointPolicy;
+import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,6 +35,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
@@ -41,6 +46,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -65,6 +71,10 @@ class OrderServiceImplTest {
     private OrderMailSender orderMailSender;
     @Mock
     private OrderPaymentPolicy paymentPolicy;
+    @Mock
+    private PointService pointService;
+    @Spy
+    private PointPolicy pointPolicy = new PointPolicy(new BigDecimal("0.01"), new BigDecimal("0.5"));
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -475,5 +485,104 @@ class OrderServiceImplTest {
         assertThat(response.getAddedCount()).isZero();
         assertThat(response.getNotices()).singleElement().asString().contains("已下架");
         verify(cartItemRepository, never()).save(any());
+    }
+
+    private void stubCheckout() {
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+    }
+
+    private void stubBalance(int balance) {
+        when(pointService.getBalance(1L)).thenReturn(
+                new PointBalanceResponse(balance, new BigDecimal("0.01"), new BigDecimal("0.5")));
+    }
+
+    @Test
+    void checkout_deductsPointsFromTotal() {
+        stubCheckout();
+        stubBalance(500);
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> {
+            Orders o = inv.getArgument(0);
+            o.setId(99L);
+            return o;
+        });
+        CheckoutRequest request = checkoutRequest();
+        request.setPointsToUse(200);
+
+        OrderResponse response = orderService.checkout(1L, request);
+
+        assertThat(response.getPointsUsed()).isEqualTo(200);
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("980.00");
+        verify(pointService).deduct(eq(1L), eq(99L), eq(200), eq(PointTransactionType.REDEEM), any());
+    }
+
+    @Test
+    void checkout_rejectsPointsAboveHalfOfPayable() {
+        stubCheckout();
+        stubBalance(5000);
+        CheckoutRequest request = checkoutRequest();
+        request.setPointsToUse(591); // 應付 1180,上限 590
+
+        assertThatThrownBy(() -> orderService.checkout(1L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("最多可折抵 590 點");
+        verify(orderRepository, never()).save(any());
+        verify(pointService, never()).deduct(any(), any(), anyInt(), any(), any());
+    }
+
+    @Test
+    void checkout_rejectsPointsAboveBalance() {
+        stubCheckout();
+        stubBalance(100);
+        CheckoutRequest request = checkoutRequest();
+        request.setPointsToUse(101);
+
+        assertThatThrownBy(() -> orderService.checkout(1L, request))
+                .hasMessageContaining("最多可折抵 100 點");
+    }
+
+    @Test
+    void cancel_refundsUsedPoints() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD1");
+        order.setPointsUsed(150);
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        orderService.cancelByMember(1L, 1L);
+
+        verify(pointService).credit(eq(1L), eq(1L), eq(150), eq(PointTransactionType.REFUND), any());
+    }
+
+    @Test
+    void complete_earnsOnePercentOfPaidAmount() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD1");
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setTotalAmount(new BigDecimal("1080.00"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderStatusRequest request = new OrderStatusRequest();
+        request.setStatus(OrderStatus.COMPLETED);
+
+        orderService.updateStatus(1L, request);
+
+        verify(pointService).credit(eq(1L), eq(1L), eq(10), eq(PointTransactionType.EARN), any());
+    }
+
+    @Test
+    void complete_earnsNothing_forTinyOrders() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setTotalAmount(new BigDecimal("99.00"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderStatusRequest request = new OrderStatusRequest();
+        request.setStatus(OrderStatus.COMPLETED);
+
+        orderService.updateStatus(1L, request);
+
+        verify(pointService, never()).credit(any(), any(), anyInt(), any(), any());
     }
 }

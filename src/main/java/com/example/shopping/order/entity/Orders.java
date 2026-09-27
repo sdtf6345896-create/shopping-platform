@@ -48,7 +48,7 @@ public class Orders {
     @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
-    /** 實付金額(= subtotalAmount - discountAmount) */
+    /** 實付金額(= subtotalAmount - discountAmount - pointsUsed) */
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
@@ -58,6 +58,10 @@ public class Orders {
 
     @Column(name = "coupon_code", length = 30)
     private String couponCode;
+
+    /** 使用的購物金點數(1 點 = NT$1),已從 totalAmount 扣除 */
+    @Column(name = "points_used", nullable = false)
+    private int pointsUsed;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false, length = 20)

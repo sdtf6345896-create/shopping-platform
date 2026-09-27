@@ -4,6 +4,7 @@ import com.example.shopping.cart.entity.CartItem;
 import com.example.shopping.cart.repository.CartItemRepository;
 import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
+import com.example.shopping.common.enums.PointTransactionType;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
@@ -23,6 +24,8 @@ import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.export.OrderCsvWriter;
 import com.example.shopping.order.mail.OrderMailSender;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.points.service.PointPolicy;
+import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import org.springframework.data.domain.Page;
@@ -73,6 +76,8 @@ public class OrderServiceImpl implements OrderService {
     private final CouponRepository couponRepository;
     private final OrderMailSender orderMailSender;
     private final OrderPaymentPolicy paymentPolicy;
+    private final PointService pointService;
+    private final PointPolicy pointPolicy;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -81,7 +86,9 @@ public class OrderServiceImpl implements OrderService {
                              CouponService couponService,
                              CouponRepository couponRepository,
                              OrderMailSender orderMailSender,
-                             OrderPaymentPolicy paymentPolicy) {
+                             OrderPaymentPolicy paymentPolicy,
+                             PointService pointService,
+                             PointPolicy pointPolicy) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -90,6 +97,8 @@ public class OrderServiceImpl implements OrderService {
         this.couponRepository = couponRepository;
         this.orderMailSender = orderMailSender;
         this.paymentPolicy = paymentPolicy;
+        this.pointService = pointService;
+        this.pointPolicy = pointPolicy;
     }
 
     @Override
@@ -161,11 +170,25 @@ public class OrderServiceImpl implements OrderService {
             order.setCoupon(couponRepository.getReferenceById(applied.getCouponId()));
             order.setCouponCode(applied.getCode());
         }
+        BigDecimal payable = totalAmount.subtract(discountAmount);
+        int pointsToUse = request.getPointsToUse() == null ? 0 : request.getPointsToUse();
+        if (pointsToUse > 0) {
+            int balance = pointService.getBalance(memberId).getBalance();
+            int limit = pointPolicy.maxRedeemable(balance, payable);
+            if (pointsToUse > limit) {
+                throw new BusinessException("本筆訂單最多可折抵 " + limit + " 點購物金");
+            }
+        }
         order.setSubtotalAmount(totalAmount);
         order.setDiscountAmount(discountAmount);
-        order.setTotalAmount(totalAmount.subtract(discountAmount));
+        order.setPointsUsed(pointsToUse);
+        order.setTotalAmount(payable.subtract(BigDecimal.valueOf(pointsToUse)));
 
         Orders saved = orderRepository.save(order);
+        if (pointsToUse > 0) {
+            pointService.deduct(memberId, saved.getId(), pointsToUse, PointTransactionType.REDEEM,
+                    "訂單 " + saved.getOrderNo() + " 折抵");
+        }
         cartItemRepository.deleteAll(cartItems);
         orderMailSender.notifyStatusChanged(saved);
 
@@ -280,6 +303,13 @@ public class OrderServiceImpl implements OrderService {
             cancelOrder(order, OrderActor.ADMIN, note);
         } else if (target == OrderStatus.SHIPPING) {
             markShipped(order, request, note);
+        } else if (target == OrderStatus.COMPLETED) {
+            order.changeStatus(target, OrderActor.ADMIN, note);
+            int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount());
+            if (earned > 0) {
+                pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,
+                        "訂單 " + order.getOrderNo() + " 完成回饋");
+            }
         } else {
             order.changeStatus(target, OrderActor.ADMIN, note);
         }
@@ -334,6 +364,10 @@ public class OrderServiceImpl implements OrderService {
         }
         if (order.getCoupon() != null) {
             couponService.release(order.getCoupon().getId());
+        }
+        if (order.getPointsUsed() > 0) {
+            pointService.credit(order.getMember().getId(), order.getId(), order.getPointsUsed(),
+                    PointTransactionType.REFUND, "訂單 " + order.getOrderNo() + " 取消退還");
         }
         order.changeStatus(OrderStatus.CANCELLED, actor, note);
     }
