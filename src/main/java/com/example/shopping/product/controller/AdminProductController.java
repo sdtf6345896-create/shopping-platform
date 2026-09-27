@@ -6,6 +6,7 @@ import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
+import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
@@ -14,6 +15,8 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/products")
@@ -34,6 +37,14 @@ public class AdminProductController {
 
         return ApiResponse.success(PageResponse.from(
                 productService.listAdmin(categoryId, status, keyword, pageable)));
+    }
+
+    @GetMapping("/low-stock")
+    public ApiResponse<List<LowStockSkuResponse>> lowStock(
+            @RequestParam(defaultValue = "10") int threshold,
+            @RequestParam(defaultValue = "50") int limit) {
+
+        return ApiResponse.success(productService.listLowStock(threshold, limit));
     }
 
     @GetMapping("/{id}")

@@ -9,6 +9,7 @@ import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.SkuRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
+import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
@@ -17,6 +18,7 @@ import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -118,6 +120,19 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("規格不存在"));
         sku.setStock(request.getStock());
         return SkuResponse.from(sku);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LowStockSkuResponse> listLowStock(int threshold, int limit) {
+        if (threshold < 0) {
+            throw new BusinessException("庫存門檻不可為負數");
+        }
+        int size = Math.min(Math.max(limit, 1), 200);
+        return productSkuRepository.findLowStock(ProductStatus.ON_SALE, threshold, PageRequest.of(0, size))
+                .stream()
+                .map(LowStockSkuResponse::from)
+                .toList();
     }
 
     private void applyRequest(Product product, ProductRequest request) {

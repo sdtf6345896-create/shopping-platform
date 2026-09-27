@@ -290,6 +290,14 @@ CANCELLED       → (終態)
 ### `GET /api/admin/products`
 需管理員登入。所有狀態商品皆可查。Query:`categoryId`、`status`、`keyword`、`page`、`size`、`sort`。回傳格式同 `GET /api/products`(輕量版,不含分類名稱與 SKU)。
 
+### `GET /api/admin/products/low-stock`
+需管理員登入。庫存警示:列出**上架中**商品裡庫存小於等於門檻的規格,庫存最少的排前面。Query:`threshold`(預設 10)、`limit`(預設 50,最多 200)。
+```json
+[ { "productId": 1, "productName": "經典圓領T恤", "mainImage": "https://...", "skuId": 2,
+    "skuCode": "TSHIRT-BLK-M", "specName": "黑色/M", "stock": 0 } ]
+```
+後台「銷售報表」頁的庫存警示區塊可直接修改庫存(呼叫下方的 `PATCH .../stock`)。
+
 ### `GET /api/admin/products/{id}`
 需管理員登入。回傳格式同 `GET /api/products/{id}`,不限狀態。
 
@@ -550,6 +558,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/orders/{id}` | 會員 |
 | POST | `/api/orders/{id}/pay` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
+| GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |
 | GET | `/api/admin/orders/{id}` | 管理員 |
 | PATCH | `/api/admin/orders/{id}/status` | 管理員 |

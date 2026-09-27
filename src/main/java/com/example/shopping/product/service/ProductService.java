@@ -4,6 +4,7 @@ import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
+import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface ProductService {
 
@@ -32,4 +34,7 @@ public interface ProductService {
     ProductDetailResponse updateStatus(Long id, ProductStatusRequest request);
 
     SkuResponse updateStock(Long productId, Long skuId, StockUpdateRequest request);
+
+    /** 上架中商品裡庫存小於等於 threshold 的規格(最多 limit 筆) */
+    List<LowStockSkuResponse> listLowStock(int threshold, int limit);
 }

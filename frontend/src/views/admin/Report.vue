@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { getSalesSummary, getTopProducts, getDailySales } from '../../api/admin/report'
 import BarChart from '../../components/BarChart.vue'
+import LowStockPanel from '../../components/admin/LowStockPanel.vue'
 
 const loading = ref(true)
 const dateRange = ref(null) // [startDate, endDate] as 'YYYY-MM-DD' strings
@@ -96,6 +97,8 @@ onMounted(loadAll)
           {{ row.label }}:{{ row.count }}
         </el-tag>
       </div>
+
+      <LowStockPanel />
 
       <div class="block">
         <div class="block-title">每日營收趨勢</div>

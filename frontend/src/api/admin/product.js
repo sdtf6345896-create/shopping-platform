@@ -24,6 +24,11 @@ export function updateSkuStock(productId, skuId, stock) {
   return request.patch(`/admin/products/${productId}/skus/${skuId}/stock`, { stock })
 }
 
+// params: { threshold?, limit? }
+export function listLowStock(params) {
+  return request.get('/admin/products/low-stock', { params })
+}
+
 export function deleteProduct(id) {
   return request.delete(`/admin/products/${id}`)
 }

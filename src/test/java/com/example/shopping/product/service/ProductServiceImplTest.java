@@ -9,6 +9,7 @@ import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.SkuRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
+import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
 import com.example.shopping.product.entity.Product;
@@ -21,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -210,5 +212,42 @@ class ProductServiceImplTest {
         sku.setPrice(BigDecimal.TEN);
         sku.setStock(10);
         return sku;
+    }
+
+    @Test
+    void listLowStock_mapsSkusFromRepository() {
+        Product product = new Product();
+        product.setId(10L);
+        product.setName("經典圓領T恤");
+        ProductSku sku = new ProductSku();
+        sku.setId(3L);
+        sku.setProduct(product);
+        sku.setSkuCode("TSHIRT-BLK-M");
+        sku.setSpecName("黑色/M");
+        sku.setStock(2);
+        when(productSkuRepository.findLowStock(ProductStatus.ON_SALE, 5, PageRequest.of(0, 20)))
+                .thenReturn(List.of(sku));
+
+        List<LowStockSkuResponse> result = productService.listLowStock(5, 20);
+
+        assertThat(result).singleElement().satisfies(r -> {
+            assertThat(r.getProductId()).isEqualTo(10L);
+            assertThat(r.getSkuCode()).isEqualTo("TSHIRT-BLK-M");
+            assertThat(r.getStock()).isEqualTo(2);
+        });
+    }
+
+    @Test
+    void listLowStock_capsLimit() {
+        when(productSkuRepository.findLowStock(ProductStatus.ON_SALE, 10, PageRequest.of(0, 200)))
+                .thenReturn(List.of());
+
+        assertThat(productService.listLowStock(10, 10_000)).isEmpty();
+    }
+
+    @Test
+    void listLowStock_rejectsNegativeThreshold() {
+        assertThatThrownBy(() -> productService.listLowStock(-1, 20))
+                .isInstanceOf(BusinessException.class);
     }
 }
