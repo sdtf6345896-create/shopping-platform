@@ -880,6 +880,13 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/notifications/{id}/read` | 會員 |
 | POST | `/api/notifications/read-all` | 會員 |
 | GET | `/api/points/transactions` | 會員 |
+| POST | `/api/coupons/apply` | 會員 |
+| GET | `/api/coupons/center` | 會員 |
+| POST | `/api/coupons/{id}/claim` | 會員 |
+| GET | `/api/coupons/mine` | 會員 |
+| GET / POST | `/api/admin/coupons` | 管理員 |
+| GET / PUT / DELETE | `/api/admin/coupons/{id}` | 管理員 |
+| PATCH | `/api/admin/coupons/{id}/status` | 管理員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | PATCH | `/api/admin/products/status` | 管理員 |
 | POST | `/api/admin/products/stock-import` | 管理員 |
