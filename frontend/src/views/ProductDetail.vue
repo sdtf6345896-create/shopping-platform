@@ -5,6 +5,8 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductDetail, listRelatedProducts } from '../api/product'
 import ProductCard from '../components/ProductCard.vue'
+import ReviewPhotos from '../components/ReviewPhotos.vue'
+import { uploadMemberImage } from '../api/upload'
 import { formatCountdown, remainingMs } from '../utils/countdown'
 import ProductQuestions from '../components/ProductQuestions.vue'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
@@ -170,7 +172,45 @@ const reviewsLoading = ref(true)
 const myReview = ref(null)
 const showReviewForm = ref(false)
 const savingReview = ref(false)
-const reviewForm = reactive({ rating: 5, content: '' })
+const reviewForm = reactive({ rating: 5, content: '', images: [] })
+const MAX_REVIEW_PHOTOS = 5
+const uploadingPhoto = ref(false)
+const photosOnly = ref(false)
+
+function beforePhotoUpload(file) {
+  if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+    ElMessage.error('僅支援 JPG / PNG / WEBP 格式的圖片')
+    return false
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    ElMessage.error('圖片大小請控制在 5MB 以內')
+    return false
+  }
+  if (reviewForm.images.length >= MAX_REVIEW_PHOTOS) {
+    ElMessage.warning(`最多 ${MAX_REVIEW_PHOTOS} 張照片`)
+    return false
+  }
+  return true
+}
+
+async function handlePhotoUpload({ file }) {
+  uploadingPhoto.value = true
+  try {
+    const data = await uploadMemberImage(file)
+    reviewForm.images.push(data.url)
+  } finally {
+    uploadingPhoto.value = false
+  }
+}
+
+function removePhoto(index) {
+  reviewForm.images.splice(index, 1)
+}
+
+function handlePhotosOnlyChange() {
+  reviewsPage.value = 0
+  loadReviews()
+}
 
 async function loadReviewSummary() {
   reviewSummary.value = await getReviewSummary(props.id)
@@ -179,7 +219,11 @@ async function loadReviewSummary() {
 async function loadReviews() {
   reviewsLoading.value = true
   try {
-    const data = await listReviews(props.id, { page: reviewsPage.value, size: 5 })
+    const data = await listReviews(props.id, {
+      page: reviewsPage.value,
+      size: 5,
+      withImages: photosOnly.value || undefined,
+    })
     reviews.value = data.content
     reviewsTotal.value = data.totalElements
   } finally {
@@ -208,13 +252,18 @@ function openReviewForm() {
   }
   reviewForm.rating = myReview.value?.rating ?? 5
   reviewForm.content = myReview.value?.content ?? ''
+  reviewForm.images = [...(myReview.value?.images ?? [])]
   showReviewForm.value = true
 }
 
 async function handleSubmitReview() {
   savingReview.value = true
   try {
-    await upsertMyReview(props.id, { rating: reviewForm.rating, content: reviewForm.content })
+    await upsertMyReview(props.id, {
+      rating: reviewForm.rating,
+      content: reviewForm.content,
+      images: reviewForm.images,
+    })
     ElMessage.success('評論送出成功')
     showReviewForm.value = false
     await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview()])
@@ -390,6 +439,7 @@ watch(
                 <span class="review-author">你的評論</span>
               </div>
               <p class="review-content">{{ myReview.content || '(未留言)' }}</p>
+              <ReviewPhotos :images="myReview.images" />
               <div class="review-actions">
                 <el-button link size="small" @click="openReviewForm">編輯</el-button>
                 <el-button link size="small" type="danger" @click="handleDeleteReview">刪除</el-button>
@@ -408,6 +458,23 @@ watch(
               show-word-limit
               placeholder="分享你的使用心得(選填)"
             />
+            <div v-loading="uploadingPhoto" class="review-photo-editor">
+              <div v-for="(url, index) in reviewForm.images" :key="url" class="review-photo-item">
+                <img :src="url" alt="評論照片" />
+                <button type="button" class="remove-photo" @click="removePhoto(index)">×</button>
+              </div>
+              <el-upload
+                v-if="reviewForm.images.length < MAX_REVIEW_PHOTOS"
+                class="review-photo-uploader"
+                multiple
+                :show-file-list="false"
+                :before-upload="beforePhotoUpload"
+                :http-request="handlePhotoUpload"
+                accept="image/jpeg,image/png,image/webp"
+              >
+                <div class="review-photo-add">+ 照片</div>
+              </el-upload>
+            </div>
             <div class="review-form-actions">
               <el-button size="small" @click="showReviewForm = false">取消</el-button>
               <el-button size="small" type="primary" :loading="savingReview" @click="handleSubmitReview">
@@ -416,6 +483,10 @@ watch(
             </div>
           </div>
         </div>
+
+        <el-checkbox v-model="photosOnly" class="photos-only" @change="handlePhotosOnlyChange">
+          只看有照片的評論
+        </el-checkbox>
 
         <div v-loading="reviewsLoading" class="review-list">
           <el-empty v-if="!reviewsLoading && reviews.length === 0" description="還沒有人評論,搶頭香吧" :image-size="60" />
@@ -426,6 +497,7 @@ watch(
               <span class="review-date">{{ review.createdAt?.slice(0, 10) }}</span>
             </div>
             <p class="review-content">{{ review.content || '(未留言)' }}</p>
+            <ReviewPhotos :images="review.images" />
           </div>
         </div>
 
@@ -727,6 +799,57 @@ watch(
 .review-date {
   font-size: 12px;
   color: #999;
+}
+
+.photos-only {
+  margin: 8px 0;
+}
+
+.review-photo-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.review-photo-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+}
+
+.review-photo-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.remove-photo {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  line-height: 18px;
+  cursor: pointer;
+}
+
+.review-photo-add {
+  width: 64px;
+  height: 64px;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 12px;
 }
 
 .review-content {

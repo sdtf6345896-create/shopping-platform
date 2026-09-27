@@ -17,6 +17,8 @@ spring:
 app:
   scheduling:
     enabled: false   # 測試中不跑背景排程
+  upload:
+    dir: target/test-uploads   # 測試上傳的檔案不要寫進專案的 uploads/
 
 logging:
   level:

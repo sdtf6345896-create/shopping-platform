@@ -26,9 +26,10 @@ public class ReviewController {
     @GetMapping
     public ApiResponse<PageResponse<ReviewResponse>> list(
             @PathVariable Long productId,
+            @RequestParam(defaultValue = "false") boolean withImages,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
-        return ApiResponse.success(PageResponse.from(reviewService.listByProduct(productId, pageable)));
+        return ApiResponse.success(PageResponse.from(reviewService.listByProduct(productId, withImages, pageable)));
     }
 
     @GetMapping("/summary")

@@ -22,6 +22,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -86,12 +87,14 @@ class ReviewServiceImplTest {
         ReviewRequest request = new ReviewRequest();
         request.setRating(5);
         request.setContent("很好用");
+        request.setImages(List.of("/uploads/a.jpg", "/uploads/b.png"));
 
         ReviewResponse response = reviewService.upsert(1L, 10L, request);
 
         assertThat(response.getRating()).isEqualTo(5);
         assertThat(response.getContent()).isEqualTo("很好用");
         assertThat(response.getMemberName()).isEqualTo("陳**");
+        assertThat(response.getImages()).containsExactly("/uploads/a.jpg", "/uploads/b.png");
         // 商品上的評價摘要同步更新,供列表顯示與排序
         assertThat(product.getRatingAverage()).isEqualByComparingTo("4.7");
         assertThat(product.getReviewCount()).isEqualTo(3);

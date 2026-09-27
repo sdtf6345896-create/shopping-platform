@@ -47,9 +47,11 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReviewResponse> listByProduct(Long productId, Pageable pageable) {
-        return productReviewRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable)
-                .map(ReviewResponse::from);
+    public Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, Pageable pageable) {
+        Page<ProductReview> page = withImagesOnly
+                ? productReviewRepository.findWithImagesByProductId(productId, pageable)
+                : productReviewRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable);
+        return page.map(ReviewResponse::from);
     }
 
     @Override
@@ -74,6 +76,7 @@ public class ReviewServiceImpl implements ReviewService {
 
         review.setRating(request.getRating());
         review.setContent(request.getContent());
+        review.replaceImages(request.getImages());
         ReviewResponse response = ReviewResponse.from(productReviewRepository.save(review));
         refreshProductRating(productId);
         return response;

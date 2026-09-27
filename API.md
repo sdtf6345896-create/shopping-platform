@@ -383,6 +383,11 @@ REFUNDED        → (終態)
 
 > 本機磁碟儲存僅適合本專案規模的展示用途,多數雲端平台的檔案系統是暫時性的(重新部署會遺失),正式環境需改用 S3 相容的物件儲存。
 
+### `POST /api/uploads/image` — 需會員登入
+會員上傳圖片(評論照片用),參數同上。每位會員 10 分鐘內最多 20 張(`app.upload.member-*` 可調),超過回 429。
+
+> 兩個上傳 API 除了檢查 `Content-Type`,還會檢查檔頭(magic bytes)是否真的是 JPG / PNG / WEBP,偽裝成圖片的檔案回 400;檔名一律改為隨機 UUID。
+
 ---
 
 ## 購物車(Cart）— 需會員登入
@@ -577,6 +582,33 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 
 ---
 
+## 商品評論(Reviews)
+
+### `GET /api/products/{productId}/reviews`
+公開。評論列表(新到舊)。Query:`withImages`(`true` 只看有照片的評論)、`page`、`size`。
+```json
+{ "id": 1, "memberName": "陳**", "rating": 5, "content": "布料厚度剛好", "images": ["/uploads/xxx.jpg"],
+  "createdAt": "2026-09-27T18:00:00", "updatedAt": "2026-09-27T18:00:00" }
+```
+
+### `GET /api/products/{productId}/reviews/summary`
+公開。`{ "averageRating": 4.5, "reviewCount": 12 }`
+
+### `GET /api/products/{productId}/reviews/me` — 需會員登入
+自己對此商品的評論,沒有則 `data` 為 `null`。
+
+### `PUT /api/products/{productId}/reviews/me` — 需會員登入
+新增或修改自己的評論(每人每商品一則)。需購買過此商品且訂單為已付款 / 出貨中 / 已完成才能評論。
+```json
+{ "rating": 5, "content": "布料厚度剛好", "images": ["/uploads/xxx.jpg"] }
+```
+`images` 選填,最多 5 張,只接受 `POST /api/uploads/image` 回傳的 `/uploads/...` 路徑,外部網址會回 400。
+
+### `DELETE /api/products/{productId}/reviews/me` — 需會員登入
+刪除自己的評論。評論新增 / 修改 / 刪除後,商品的 `ratingAverage` / `reviewCount` 會即時更新。
+
+---
+
 ## 商品問答(Q&A)
 
 ### `GET /api/products/{productId}/questions`
@@ -739,6 +771,9 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/shipping/policy` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
 | GET | `/api/recommendations` | 會員 |
+| GET | `/api/products/{productId}/reviews` | 公開 |
+| GET | `/api/products/{productId}/reviews/summary` | 公開 |
+| GET / PUT / DELETE | `/api/products/{productId}/reviews/me` | 會員 |
 | GET | `/api/products/{productId}/questions` | 公開 |
 | POST | `/api/products/{productId}/questions` | 會員 |
 | GET | `/api/admin/questions` | 管理員 |
@@ -749,6 +784,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/products/{id}/status` | 管理員 |
 | PATCH | `/api/admin/products/{productId}/skus/{skuId}/stock` | 管理員 |
 | POST | `/api/admin/uploads/image` | 管理員 |
+| POST | `/api/uploads/image` | 會員 |
 | GET / DELETE | `/api/cart` | 會員 |
 | POST | `/api/cart/items` | 會員 |
 | PUT / DELETE | `/api/cart/items/{itemId}` | 會員 |

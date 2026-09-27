@@ -16,6 +16,12 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, Lo
 
     Optional<ProductReview> findByProductIdAndMemberId(Long productId, Long memberId);
 
+    @Query(value = "select r from ProductReview r where r.product.id = :productId and r.images is not empty "
+            + "order by r.createdAt desc",
+            countQuery = "select count(r) from ProductReview r where r.product.id = :productId "
+                    + "and r.images is not empty")
+    Page<ProductReview> findWithImagesByProductId(@Param("productId") Long productId, Pageable pageable);
+
     @Query("select avg(r.rating) as averageRating, count(r) as reviewCount " +
             "from ProductReview r where r.product.id = :productId")
     ReviewSummaryProjection summarizeByProductId(@Param("productId") Long productId);

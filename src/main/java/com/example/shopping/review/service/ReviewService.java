@@ -10,7 +10,8 @@ import java.util.Optional;
 
 public interface ReviewService {
 
-    Page<ReviewResponse> listByProduct(Long productId, Pageable pageable);
+    /** @param withImagesOnly true 時只回傳附照片的評論 */
+    Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, Pageable pageable);
 
     ReviewSummaryResponse getSummary(Long productId);
 

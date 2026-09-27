@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,6 +48,11 @@ public class FileStorageService {
             throw new BusinessException("僅支援 JPG / PNG / WEBP 格式的圖片");
         }
 
+        // Content-Type 是客戶端宣告的,可以偽造;再檢查檔頭確認真的是宣告的圖片格式
+        if (!hasImageSignature(file, contentType)) {
+            throw new BusinessException("檔案內容不是有效的圖片");
+        }
+
         String filename = UUID.randomUUID() + EXTENSION_BY_CONTENT_TYPE.get(contentType);
         Path target = uploadDir.resolve(filename);
 
@@ -57,5 +63,25 @@ public class FileStorageService {
         }
 
         return "/uploads/" + filename;
+    }
+
+    /** 依檔頭(magic bytes)判斷是否為宣告的圖片格式 */
+    static boolean hasImageSignature(MultipartFile file, String contentType) {
+        byte[] head = new byte[12];
+        int read;
+        try (InputStream in = file.getInputStream()) {
+            read = in.readNBytes(head, 0, head.length);
+        } catch (IOException e) {
+            return false;
+        }
+        return switch (contentType) {
+            case "image/jpeg" -> read >= 3 && (head[0] & 0xFF) == 0xFF && (head[1] & 0xFF) == 0xD8
+                    && (head[2] & 0xFF) == 0xFF;
+            case "image/png" -> read >= 8 && (head[0] & 0xFF) == 0x89 && head[1] == 'P' && head[2] == 'N'
+                    && head[3] == 'G' && head[4] == 0x0D && head[5] == 0x0A && head[6] == 0x1A && head[7] == 0x0A;
+            case "image/webp" -> read >= 12 && head[0] == 'R' && head[1] == 'I' && head[2] == 'F' && head[3] == 'F'
+                    && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P';
+            default -> false;
+        };
     }
 }

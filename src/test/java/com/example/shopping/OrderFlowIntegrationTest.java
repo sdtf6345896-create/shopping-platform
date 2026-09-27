@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -27,6 +28,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -291,6 +293,21 @@ class OrderFlowIntegrationTest {
         JsonNode tier = call(get("/api/members/me/tier"), memberToken, null, 200).at("/data");
         assertThat(tier.at("/tier").asText()).isEqualTo("NORMAL");
         assertThat(tier.at("/nextTier").asText()).isEqualTo("SILVER");
+
+        // ---- 會員上傳圖片:真的圖片可以,偽裝成圖片的檔案會被擋 ----
+        byte[] png = {(byte) 0x89, 'P', 'N', 'G', 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D};
+        var uploaded = mockMvc.perform(multipart("/api/uploads/image")
+                        .file(new MockMultipartFile("file", "photo.png", "image/png", png))
+                        .header("Authorization", "Bearer " + memberToken))
+                .andReturn().getResponse();
+        assertThat(uploaded.getStatus()).isEqualTo(200);
+        assertThat(objectMapper.readTree(uploaded.getContentAsString(StandardCharsets.UTF_8)).at("/data/url").asText())
+                .startsWith("/uploads/").endsWith(".png");
+        var disguised = mockMvc.perform(multipart("/api/uploads/image")
+                        .file(new MockMultipartFile("file", "photo.png", "image/png", "<html>".getBytes()))
+                        .header("Authorization", "Bearer " + memberToken))
+                .andReturn().getResponse();
+        assertThat(disguised.getStatus()).isEqualTo(400);
 
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
