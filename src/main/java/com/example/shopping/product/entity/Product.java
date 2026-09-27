@@ -45,7 +45,8 @@ public class Product {
     @Column(nullable = false, length = 20)
     private ProductStatus status = ProductStatus.OFF_SHELF;
 
-    @Column(name = "sales_count", nullable = false)
+    /** 銷量。只透過 ProductRepository 的相對增減更新,避免併發付款遺失計數或後台編輯商品時被舊值覆蓋 */
+    @Column(name = "sales_count", nullable = false, updatable = false)
     private int salesCount;
 
     /** 平均星等(四捨五入到小數一位),評論新增 / 修改 / 刪除時更新 */

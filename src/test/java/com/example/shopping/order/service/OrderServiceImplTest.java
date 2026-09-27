@@ -30,6 +30,7 @@ import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -76,6 +77,8 @@ class OrderServiceImplTest {
     private OrderPaymentPolicy paymentPolicy;
     @Mock
     private ProductSkuRepository productSkuRepository;
+    @Mock
+    private ProductRepository productRepository;
     @Mock
     private PointService pointService;
     @Spy
@@ -253,7 +256,7 @@ class OrderServiceImplTest {
         OrderResponse response = orderService.pay(1L, 1L);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.PAID);
-        assertThat(product.getSalesCount()).isEqualTo(2);
+        verify(productRepository).addSalesCount(10L, 2);
         verify(orderNotifier).notifyStatusChanged(order);
     }
 
@@ -456,7 +459,7 @@ class OrderServiceImplTest {
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         verify(productSkuRepository).incrementStock(1L, 2);
-        assertThat(product.getSalesCount()).isEqualTo(0);
+        verify(productRepository, never()).addSalesCount(any(), anyInt());
     }
 
     @Test

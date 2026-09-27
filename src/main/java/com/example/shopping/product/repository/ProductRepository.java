@@ -5,6 +5,9 @@ import com.example.shopping.product.entity.Product;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -12,6 +15,12 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     boolean existsByCategoryId(Long categoryId);
+
+    /** 以相對值增減銷量(delta 可為負),不會小於 0 */
+    @Modifying(flushAutomatically = true)
+    @Query("update Product p set p.salesCount = case when p.salesCount + :delta < 0 then 0 "
+            + "else p.salesCount + :delta end where p.id = :productId")
+    int addSalesCount(@Param("productId") Long productId, @Param("delta") int delta);
 
     /** 同分類的其他商品,依銷量排序(相關商品推薦用) */
     List<Product> findByCategoryIdAndStatusAndIdNotOrderBySalesCountDescIdDesc(

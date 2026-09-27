@@ -28,6 +28,7 @@ import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -82,6 +83,7 @@ public class OrderServiceImpl implements OrderService {
     private final PointService pointService;
     private final PointPolicy pointPolicy;
     private final ProductSkuRepository productSkuRepository;
+    private final ProductRepository productRepository;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -93,7 +95,8 @@ public class OrderServiceImpl implements OrderService {
                              OrderPaymentPolicy paymentPolicy,
                              PointService pointService,
                              PointPolicy pointPolicy,
-                             ProductSkuRepository productSkuRepository) {
+                             ProductSkuRepository productSkuRepository,
+                             ProductRepository productRepository) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -105,6 +108,7 @@ public class OrderServiceImpl implements OrderService {
         this.pointService = pointService;
         this.pointPolicy = pointPolicy;
         this.productSkuRepository = productSkuRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -341,8 +345,7 @@ public class OrderServiceImpl implements OrderService {
     private void markPaid(Orders order, OrderActor actor, String note) {
         order.changeStatus(OrderStatus.PAID, actor, note);
         for (OrderItem item : order.getItems()) {
-            Product product = item.getProductSku().getProduct();
-            product.setSalesCount(product.getSalesCount() + item.getQuantity());
+            productRepository.addSalesCount(item.getProductSku().getProduct().getId(), item.getQuantity());
         }
     }
 

@@ -14,6 +14,7 @@ import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.returns.dto.request.ReturnApplyRequest;
 import com.example.shopping.returns.dto.request.ReturnDecisionRequest;
@@ -36,17 +37,20 @@ public class ReturnServiceImpl implements ReturnService {
     private final PointService pointService;
     private final OrderNotifier orderNotifier;
     private final ProductSkuRepository productSkuRepository;
+    private final ProductRepository productRepository;
 
     public ReturnServiceImpl(ReturnRequestRepository returnRequestRepository,
                              OrderRepository orderRepository,
                              PointService pointService,
                              OrderNotifier orderNotifier,
-                             ProductSkuRepository productSkuRepository) {
+                             ProductSkuRepository productSkuRepository,
+                             ProductRepository productRepository) {
         this.returnRequestRepository = returnRequestRepository;
         this.orderRepository = orderRepository;
         this.pointService = pointService;
         this.orderNotifier = orderNotifier;
         this.productSkuRepository = productSkuRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -90,8 +94,7 @@ public class ReturnServiceImpl implements ReturnService {
         for (OrderItem item : order.getItems()) {
             ProductSku sku = item.getProductSku();
             productSkuRepository.incrementStock(sku.getId(), item.getQuantity());
-            Product product = sku.getProduct();
-            product.setSalesCount(Math.max(0, product.getSalesCount() - item.getQuantity()));
+            productRepository.addSalesCount(sku.getProduct().getId(), -item.getQuantity());
         }
         if (order.getPointsUsed() > 0) {
             pointService.credit(memberId, order.getId(), order.getPointsUsed(), PointTransactionType.REFUND,
