@@ -40,7 +40,15 @@ const isSoldOut = computed(() => product.value?.status !== 'ON_SALE' || product.
 async function load() {
   loading.value = true
   try {
-    product.value = await getProductDetail(props.id)
+    try {
+      product.value = await getProductDetail(props.id)
+    } catch (error) {
+      // 商品不存在或已下架:導向 404 頁,保留原網址方便使用者確認
+      if (error.response?.status === 404) {
+        router.replace({ name: 'NotFound', params: { pathMatch: router.currentRoute.value.path.slice(1).split('/') } })
+      }
+      throw error
+    }
     activeImage.value = null
     const availableSku = product.value.skus.find((s) => s.stock > 0) || product.value.skus[0]
     selectedSkuId.value = availableSku?.id ?? null

@@ -76,6 +76,8 @@ const routes = [
       { path: 'audit-logs', name: 'AdminAuditLogList', component: () => import('../views/admin/AuditLogList.vue') },
     ],
   },
+  // 其他未定義的網址一律顯示 404(需放在最後)
+  { path: '/:pathMatch(.*)*', name: 'NotFound', component: () => import('../views/NotFound.vue') },
 ]
 
 const router = createRouter({
