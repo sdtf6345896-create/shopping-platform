@@ -6,6 +6,7 @@ import { Star, StarFilled } from '@element-plus/icons-vue'
 import { getProductDetail } from '../api/product'
 import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
 import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
+import { recordView } from '../api/browsingHistory'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
@@ -165,6 +166,12 @@ async function handleDeleteReview() {
 onMounted(async () => {
   await load()
   await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState()])
+
+  if (authStore.isLoggedIn) {
+    recordView(props.id).catch(() => {
+      // 記錄瀏覽紀錄失敗不影響商品頁瀏覽
+    })
+  }
 })
 </script>
 

@@ -170,6 +170,27 @@ CANCELLED       → (終態)
 
 ---
 
+## 商品瀏覽紀錄(Browsing History)— 需會員登入
+
+同一會員瀏覽同一商品只會保留一筆紀錄,再次瀏覽會更新時間並排到最前面。
+
+### `GET /api/browsing-history`
+分頁列出瀏覽紀錄,依 `viewedAt` 由新到舊排序 → 分頁格式,`content` 為 `BrowsingHistoryItemResponse[]`
+```json
+{ "id": 1, "productId": 10, "productName": "...", "mainImage": "...", "price": 990, "productStatus": "ON_SALE", "viewedAt": "2026-09-27T20:00:00" }
+```
+
+### `POST /api/browsing-history/{productId}`
+記錄一次瀏覽(前端在商品詳情頁載入時呼叫)。商品不存在回 404。
+
+### `DELETE /api/browsing-history/{productId}`
+刪除單筆瀏覽紀錄。找不到也視為成功(冪等)。
+
+### `DELETE /api/browsing-history`
+清空自己所有的瀏覽紀錄。
+
+---
+
 ## 管理員登入(Admin Auth)
 
 ### `POST /api/admin/auth/login`

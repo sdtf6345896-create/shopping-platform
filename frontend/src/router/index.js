@@ -29,6 +29,11 @@ const routes = [
       { path: 'addresses', name: 'MemberAddresses', component: () => import('../views/member/Addresses.vue') },
       { path: 'orders', name: 'MemberOrders', component: () => import('../views/member/OrderList.vue') },
       { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue') },
+      {
+        path: 'browsing-history',
+        name: 'MemberBrowsingHistory',
+        component: () => import('../views/member/BrowsingHistory.vue'),
+      },
     ],
   },
   { path: '/admin/login', name: 'AdminLogin', component: () => import('../views/admin/AdminLogin.vue') },
