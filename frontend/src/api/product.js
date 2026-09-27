@@ -24,3 +24,7 @@ export function suggestProducts(keyword, limit = 8) {
 export function listBoughtTogether(id, params) {
   return request.get(`/products/${id}/bought-together`, { params })
 }
+
+export function getHotSearches(limit = 8) {
+  return request.get('/products/hot-searches', { params: { limit } })
+}

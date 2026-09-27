@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { Bell, Search, ShoppingCart, User } from '@element-plus/icons-vue'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
-import { suggestProducts } from '../api/product'
+import { getHotSearches, suggestProducts } from '../api/product'
 import { useNotificationStore } from '../stores/notification'
 
 const route = useRoute()
@@ -24,8 +24,14 @@ watch(
 
 // 搜尋建議:輸入時列出相符的熱銷商品,點選直接進商品頁;按 Enter 仍是一般搜尋
 async function fetchSuggestions(query, callback) {
+  // 還沒輸入時顯示熱門搜尋
   if (!query?.trim()) {
-    callback([])
+    try {
+      const hot = await getHotSearches(8)
+      callback(hot.map((keyword) => ({ name: keyword, hot: true })))
+    } catch {
+      callback([])
+    }
     return
   }
   try {
@@ -35,8 +41,13 @@ async function fetchSuggestions(query, callback) {
   }
 }
 
-function handleSelectSuggestion(product) {
-  router.push(`/products/${product.id}`)
+function handleSelectSuggestion(item) {
+  if (item.hot) {
+    searchKeyword.value = item.name
+    handleSearch()
+    return
+  }
+  router.push(`/products/${item.id}`)
 }
 
 function handleSearch() {
@@ -104,13 +115,17 @@ function handleLogout() {
         clearable
         value-key="name"
         :fetch-suggestions="fetchSuggestions"
-        :trigger-on-focus="false"
+        :trigger-on-focus="true"
         :debounce="250"
         @select="handleSelectSuggestion"
         @keyup.enter="handleSearch"
       >
         <template #default="{ item }">
-          <div class="suggestion">
+          <div v-if="item.hot" class="suggestion">
+            <span class="suggestion-name">🔥 {{ item.name }}</span>
+            <span class="hot-label">熱門搜尋</span>
+          </div>
+          <div v-else class="suggestion">
             <span class="suggestion-name">{{ item.name }}</span>
             <span class="suggestion-price">NT$ {{ item.salePrice ?? item.price }}</span>
           </div>
@@ -167,6 +182,11 @@ function handleLogout() {
 .suggestion-name {
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.hot-label {
+  color: #999;
+  font-size: 12px;
 }
 
 .suggestion-price {

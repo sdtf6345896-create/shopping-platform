@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -358,6 +359,15 @@ class OrderFlowIntegrationTest {
                 .isEqualTo(8);
         assertThat(call(get("/api/admin/audit-logs?targetType=PRODUCT"), adminToken, null, 200)
                 .at("/data/content").findValuesAsText("detail")).anyMatch(d -> d.contains("stock.csv → 已更新 1 筆"));
+
+        // ---- 熱門搜尋:有結果的搜尋才計入,正規化後合併計數 ----
+        call(get("/api/products?keyword=整合測試商品"), null, null, 200);
+        call(get("/api/products?keyword=%20整合測試商品%20"), null, null, 200);
+        call(get("/api/products?keyword=查無此字" + suffix), null, null, 200);
+        JsonNode hot = call(get("/api/products/hot-searches?limit=20"), null, null, 200).at("/data");
+        List<String> hotWords = new ArrayList<>();
+        hot.forEach(n -> hotWords.add(n.asText()));
+        assertThat(hotWords).contains("整合測試商品").doesNotContain("查無此字" + suffix);
 
         // ---- 搜尋建議:公開、不分大小寫、% 不會被當萬用字元 ----
         JsonNode suggestions = call(get("/api/products/suggestions?keyword=整合測試"), null, null, 200).at("/data");

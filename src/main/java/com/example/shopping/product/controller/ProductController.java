@@ -5,6 +5,8 @@ import com.example.shopping.common.PageResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.service.ProductService;
+import com.example.shopping.search.service.SearchKeywordService;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,9 +23,11 @@ import java.util.List;
 public class ProductController {
 
     private final ProductService productService;
+    private final SearchKeywordService searchKeywordService;
 
-    public ProductController(ProductService productService) {
+    public ProductController(ProductService productService, SearchKeywordService searchKeywordService) {
         this.productService = productService;
+        this.searchKeywordService = searchKeywordService;
     }
 
     @GetMapping
@@ -35,14 +39,24 @@ public class ProductController {
             @RequestParam(defaultValue = "false") boolean inStock,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
-        return ApiResponse.success(PageResponse.from(
-                productService.listPublic(categoryId, minPrice, maxPrice, keyword, inStock, pageable)));
+        Page<ProductListResponse> page = productService.listPublic(categoryId, minPrice, maxPrice, keyword, inStock,
+                pageable);
+        // 只在第一頁、且有搜尋結果時計入熱門搜尋(翻頁不重複計算,打錯字的關鍵字不會上榜)
+        if (keyword != null && pageable.getPageNumber() == 0 && page.getTotalElements() > 0) {
+            searchKeywordService.record(keyword);
+        }
+        return ApiResponse.success(PageResponse.from(page));
     }
 
     @GetMapping("/suggestions")
     public ApiResponse<List<ProductListResponse>> suggestions(@RequestParam(required = false) String keyword,
                                                               @RequestParam(defaultValue = "8") int limit) {
         return ApiResponse.success(productService.suggest(keyword, limit));
+    }
+
+    @GetMapping("/hot-searches")
+    public ApiResponse<List<String>> hotSearches(@RequestParam(defaultValue = "8") int limit) {
+        return ApiResponse.success(searchKeywordService.hot(limit));
     }
 
     @GetMapping("/flash-sale")

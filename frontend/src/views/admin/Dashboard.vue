@@ -2,10 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getDashboard } from '../../api/admin/report'
+import { getHotSearches } from '../../api/product'
 
 const router = useRouter()
 const loading = ref(true)
 const data = ref(null)
+const hotSearches = ref([])
 
 // 待處理事項:數字 > 0 才醒目標示,點擊直接帶到對應的篩選頁面
 const todos = computed(() => {
@@ -27,7 +29,9 @@ const todos = computed(() => {
 
 onMounted(async () => {
   try {
-    data.value = await getDashboard()
+    const [dashboard, hot] = await Promise.all([getDashboard(), getHotSearches(10).catch(() => [])])
+    data.value = dashboard
+    hotSearches.value = hot
   } finally {
     loading.value = false
   }
@@ -66,6 +70,14 @@ onMounted(async () => {
           <span class="todo-value">{{ todo.value }}</span>
           <span class="todo-label">{{ todo.label }}</span>
         </div>
+      </div>
+
+      <h4 class="section-title hot-title">熱門搜尋(近 30 天)</h4>
+      <div class="hot-searches">
+        <el-tag v-for="(keyword, index) in hotSearches" :key="keyword" effect="plain" round>
+          {{ index + 1 }}. {{ keyword }}
+        </el-tag>
+        <span v-if="hotSearches.length === 0" class="empty">尚無搜尋紀錄</span>
       </div>
     </template>
   </div>
@@ -120,6 +132,21 @@ onMounted(async () => {
 
 .todo-card.active .todo-value {
   color: #e4393c;
+}
+
+.hot-title {
+  margin-top: 24px;
+}
+
+.hot-searches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.empty {
+  color: #999;
+  font-size: 13px;
 }
 
 .todo-label {
