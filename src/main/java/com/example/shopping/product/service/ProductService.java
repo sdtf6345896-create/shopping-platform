@@ -28,6 +28,9 @@ public interface ProductService {
     /** 相關商品:同分類熱銷優先,不足時以全站熱銷補齊 */
     List<ProductListResponse> listRelated(Long productId, int limit);
 
+    /** 目前限時特價中的上架商品,最快結束的排前面 */
+    List<ProductListResponse> listFlashSale(int limit);
+
     ProductDetailResponse create(ProductRequest request);
 
     ProductDetailResponse update(Long id, ProductRequest request);

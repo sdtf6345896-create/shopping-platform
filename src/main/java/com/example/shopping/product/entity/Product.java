@@ -10,9 +10,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "product")
@@ -56,6 +59,16 @@ public class Product {
     @Column(name = "review_count", nullable = false)
     private int reviewCount;
 
+    /** 限時特價折扣(例如 20 代表打 8 折),未設定為 null */
+    @Column(name = "sale_discount_percent")
+    private Integer saleDiscountPercent;
+
+    @Column(name = "sale_start_at")
+    private LocalDateTime saleStartAt;
+
+    @Column(name = "sale_end_at")
+    private LocalDateTime saleEndAt;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductSku> skus = new ArrayList<>();
 
@@ -72,6 +85,23 @@ public class Product {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
+    /** 現在是否在限時特價期間內(含開始、不含結束時間) */
+    public boolean isOnSale() {
+        LocalDateTime now = LocalDateTime.now();
+        return saleDiscountPercent != null && saleStartAt != null && saleEndAt != null
+                && !now.isBefore(saleStartAt) && now.isBefore(saleEndAt);
+    }
+
+    /** 套用限時特價後的價格,四捨五入到整數元;不在特價期間則回傳原價 */
+    public BigDecimal applySale(BigDecimal price) {
+        if (!isOnSale()) {
+            return price;
+        }
+        return price.multiply(BigDecimal.valueOf(100 - saleDiscountPercent))
+                .divide(BigDecimal.valueOf(100), 0, RoundingMode.HALF_UP)
+                .setScale(2, RoundingMode.UNNECESSARY);
+    }
+
     /** 以網址清單整批取代圖庫,清單順序即顯示順序 */
     public void replaceImages(List<String> urls) {
         images.clear();
@@ -86,6 +116,36 @@ public class Product {
             image.setSortOrder(order++);
             images.add(image);
         }
+    }
+
+    /**
+     * 依 SKU 編號合併規格:同編號的就地更新(保留 id,訂單與購物車的引用不受影響)、新編號新增、
+     * 不在清單中的移除。
+     *
+     * @return 被移除的規格(呼叫端需確認它們可以刪除)
+     */
+    public List<ProductSku> mergeSkus(List<ProductSku> incoming) {
+        Map<String, ProductSku> existingByCode = new HashMap<>();
+        for (ProductSku sku : skus) {
+            existingByCode.put(sku.getSkuCode(), sku);
+        }
+        List<ProductSku> merged = new ArrayList<>();
+        for (ProductSku next : incoming) {
+            ProductSku current = existingByCode.remove(next.getSkuCode());
+            if (current == null) {
+                next.setProduct(this);
+                merged.add(next);
+            } else {
+                current.setSpecName(next.getSpecName());
+                current.setPrice(next.getPrice());
+                current.setStock(next.getStock());
+                merged.add(current);
+            }
+        }
+        List<ProductSku> removed = new ArrayList<>(existingByCode.values());
+        skus.clear();
+        skus.addAll(merged);
+        return removed;
     }
 
     public void replaceSkus(List<ProductSku> newSkus) {

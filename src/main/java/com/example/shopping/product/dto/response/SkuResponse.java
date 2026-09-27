@@ -14,9 +14,13 @@ public class SkuResponse {
     private String skuCode;
     private String specName;
     private BigDecimal price;
+    /** 限時特價價格,不在特價期間為 null */
+    private BigDecimal salePrice;
     private int stock;
 
     public static SkuResponse from(ProductSku sku) {
-        return new SkuResponse(sku.getId(), sku.getSkuCode(), sku.getSpecName(), sku.getPrice(), sku.getStock());
+        BigDecimal salePrice = sku.getProduct() != null && sku.getProduct().isOnSale() ? sku.getEffectivePrice() : null;
+        return new SkuResponse(sku.getId(), sku.getSkuCode(), sku.getSpecName(), sku.getPrice(), salePrice,
+                sku.getStock());
     }
 }

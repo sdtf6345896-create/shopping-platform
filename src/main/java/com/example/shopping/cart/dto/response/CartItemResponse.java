@@ -19,7 +19,10 @@ public class CartItemResponse {
     private String productName;
     private String specName;
     private String mainImage;
+    /** 實際售價(特價期間為特價) */
     private BigDecimal price;
+    /** 原價,與 price 不同時代表正在特價 */
+    private BigDecimal originalPrice;
     private int quantity;
     private BigDecimal subtotal;
     private int stock;
@@ -28,7 +31,8 @@ public class CartItemResponse {
     public static CartItemResponse from(CartItem cartItem) {
         ProductSku sku = cartItem.getProductSku();
         Product product = sku.getProduct();
-        BigDecimal subtotal = sku.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+        BigDecimal price = sku.getEffectivePrice();
+        BigDecimal subtotal = price.multiply(BigDecimal.valueOf(cartItem.getQuantity()));
 
         return new CartItemResponse(
                 cartItem.getId(),
@@ -37,6 +41,7 @@ public class CartItemResponse {
                 product.getName(),
                 sku.getSpecName(),
                 product.getMainImage(),
+                price,
                 sku.getPrice(),
                 cartItem.getQuantity(),
                 subtotal,

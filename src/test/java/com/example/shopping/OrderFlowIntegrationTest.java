@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -233,6 +234,38 @@ class OrderFlowIntegrationTest {
         JsonNode recommended = call(get("/api/recommendations"), memberToken, null, 200).at("/data");
         assertThat(recommended.at("/personalized").asBoolean()).isTrue();
         assertThat(recommended.at("/products").findValuesAsText("id")).doesNotContain(String.valueOf(productId));
+
+        // ---- 限時特價:後台設定 8 折 → 特價專區出現、購物車以特價計算 ----
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        call(put("/api/admin/products/" + productId), adminToken, Map.of(
+                "categoryId", categoryId,
+                "name", "整合測試商品",
+                "price", 500,
+                "saleDiscountPercent", 20,
+                "saleStartAt", now.minusHours(1).withNano(0).toString(),
+                "saleEndAt", now.plusHours(1).withNano(0).toString(),
+                "skus", List.of(Map.of("skuCode", "IT-" + suffix, "specName", "標準", "price", 500, "stock", 3))),
+                200);
+        JsonNode flashSale = call(get("/api/products/flash-sale?limit=20"), null, null, 200).at("/data");
+        assertThat(flashSale.findValuesAsText("name")).contains("整合測試商品");
+        long newSkuId = call(get("/api/products/" + productId), null, null, 200).at("/data/skus/0/id").asLong();
+        call(post("/api/cart/items"), memberToken, Map.of("skuId", newSkuId, "quantity", 1), 200);
+        JsonNode cartLine = call(get("/api/cart"), memberToken, null, 200).at("/data/items/0");
+        assertThat(cartLine.at("/price").decimalValue()).isEqualByComparingTo("400");
+        assertThat(cartLine.at("/originalPrice").decimalValue()).isEqualByComparingTo("500");
+
+        // ---- 已有訂單的商品 / 規格不能刪除,給出明確原因(而不是資料庫錯誤) ----
+        JsonNode deleteRejected = call(delete("/api/admin/products/" + productId), adminToken, null, 400);
+        assertThat(deleteRejected.at("/message").asText()).contains("已有訂單").contains("下架");
+        JsonNode skuRemovalRejected = call(put("/api/admin/products/" + productId), adminToken, Map.of(
+                "categoryId", categoryId,
+                "name", "整合測試商品",
+                "price", 500,
+                "skus", List.of(Map.of("skuCode", "IT-NEW-" + suffix, "specName", "新規格", "price", 500, "stock", 1))),
+                400);
+        assertThat(skuRemovalRejected.at("/message").asText()).contains("規格已有訂單");
+        assertThat(call(get("/api/products/" + productId), null, null, 200).at("/data/skus/0/skuCode").asText())
+                .isEqualTo("IT-" + suffix);
 
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);

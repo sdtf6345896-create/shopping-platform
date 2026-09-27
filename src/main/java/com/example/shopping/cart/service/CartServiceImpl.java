@@ -95,7 +95,8 @@ public class CartServiceImpl implements CartService {
             throw new BusinessException("購物車是空的");
         }
         return items.stream()
-                .map(item -> item.getProductSku().getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
+                .map(item -> item.getProductSku().getEffectivePrice()
+                        .multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 

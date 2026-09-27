@@ -37,6 +37,11 @@ public class ProductSku {
     @Column(nullable = false)
     private int stock;
 
+    /** 實際售價:限時特價期間為特價,否則為原價。購物車、結帳一律用這個價格 */
+    public BigDecimal getEffectivePrice() {
+        return product.applySale(price);
+    }
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

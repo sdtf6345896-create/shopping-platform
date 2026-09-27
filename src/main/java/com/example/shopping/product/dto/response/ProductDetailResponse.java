@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Getter
@@ -19,6 +20,12 @@ public class ProductDetailResponse {
     private String name;
     private String description;
     private BigDecimal price;
+    /** 限時特價價格,不在特價期間為 null */
+    private BigDecimal salePrice;
+    /** 限時特價設定(後台編輯用,前台可用 salePrice 是否為 null 判斷是否特價中) */
+    private Integer saleDiscountPercent;
+    private LocalDateTime saleStartAt;
+    private LocalDateTime saleEndAt;
     private String mainImage;
     /** 主圖以外的商品圖片網址 */
     private List<String> images;
@@ -34,6 +41,10 @@ public class ProductDetailResponse {
                 product.getName(),
                 product.getDescription(),
                 product.getPrice(),
+                product.isOnSale() ? product.applySale(product.getPrice()) : null,
+                product.getSaleDiscountPercent(),
+                product.getSaleStartAt(),
+                product.getSaleEndAt(),
                 product.getMainImage(),
                 product.getImages().stream().map(ProductImage::getUrl).toList(),
                 product.getStatus(),

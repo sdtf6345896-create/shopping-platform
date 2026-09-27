@@ -9,12 +9,18 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
 public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     boolean existsByCategoryId(Long categoryId);
+
+    @Query("select p from Product p where p.status = :status and p.saleDiscountPercent is not null "
+            + "and p.saleStartAt <= :now and p.saleEndAt > :now order by p.saleEndAt asc, p.id asc")
+    List<Product> findOnSale(@Param("status") ProductStatus status, @Param("now") LocalDateTime now,
+                             Pageable pageable);
 
     /** 以相對值增減銷量(delta 可為負),不會小於 0 */
     @Modifying(flushAutomatically = true)

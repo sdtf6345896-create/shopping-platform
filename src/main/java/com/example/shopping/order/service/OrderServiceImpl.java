@@ -157,14 +157,16 @@ public class OrderServiceImpl implements OrderService {
                 throw new BusinessException("「" + product.getName() + " " + sku.getSpecName() + "」庫存不足");
             }
 
-            BigDecimal subtotal = sku.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+            // 下單當下的實際售價(含限時特價)寫進訂單明細當快照,活動結束後歷史訂單金額不變
+            BigDecimal unitPrice = sku.getEffectivePrice();
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity()));
             totalAmount = totalAmount.add(subtotal);
 
             OrderItem orderItem = new OrderItem();
             orderItem.setProductSku(sku);
             orderItem.setProductName(product.getName());
             orderItem.setSpecName(sku.getSpecName());
-            orderItem.setUnitPrice(sku.getPrice());
+            orderItem.setUnitPrice(unitPrice);
             orderItem.setQuantity(cartItem.getQuantity());
             orderItem.setSubtotal(subtotal);
             order.addItem(orderItem);

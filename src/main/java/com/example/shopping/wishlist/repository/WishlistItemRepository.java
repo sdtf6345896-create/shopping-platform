@@ -4,6 +4,7 @@ import com.example.shopping.wishlist.entity.WishlistItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,4 +19,8 @@ public interface WishlistItemRepository extends JpaRepository<WishlistItem, Long
     Optional<WishlistItem> findByMemberIdAndProductId(Long memberId, Long productId);
 
     boolean existsByMemberIdAndProductId(Long memberId, Long productId);
+
+    @Modifying
+    @Query("delete from WishlistItem x where x.product.id = :productId")
+    int deleteAllByProductId(@Param("productId") Long productId);
 }

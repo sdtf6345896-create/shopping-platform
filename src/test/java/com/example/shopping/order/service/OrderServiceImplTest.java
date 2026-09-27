@@ -610,4 +610,21 @@ class OrderServiceImplTest {
 
         verify(pointService, never()).credit(any(), any(), anyInt(), any(), any());
     }
+
+    @Test
+    void checkout_chargesFlashSalePrice_andSnapshotsIt() {
+        product.setSaleDiscountPercent(20);
+        product.setSaleStartAt(LocalDateTime.now().minusHours(1));
+        product.setSaleEndAt(LocalDateTime.now().plusHours(1));
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        OrderResponse response = orderService.checkout(1L, checkoutRequest());
+
+        // 590 × 80% = 472,兩件 944
+        assertThat(response.getItems().get(0).getUnitPrice()).isEqualByComparingTo("472.00");
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("944.00");
+    }
 }

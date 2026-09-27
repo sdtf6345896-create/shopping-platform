@@ -4,6 +4,7 @@ import com.example.shopping.browsinghistory.entity.BrowsingHistoryItem;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -18,4 +19,8 @@ public interface BrowsingHistoryItemRepository extends JpaRepository<BrowsingHis
     Optional<BrowsingHistoryItem> findByMemberIdAndProductId(Long memberId, Long productId);
 
     void deleteByMemberId(Long memberId);
+
+    @Modifying
+    @Query("delete from BrowsingHistoryItem x where x.product.id = :productId")
+    int deleteAllByProductId(@Param("productId") Long productId);
 }

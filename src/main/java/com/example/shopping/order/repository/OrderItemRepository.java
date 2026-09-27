@@ -10,6 +10,10 @@ import java.util.Collection;
 
 public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
 
+    boolean existsByProductSkuIdIn(Collection<Long> skuIds);
+
+    boolean existsByProductSkuProductId(Long productId);
+
     @Query("select case when count(oi) > 0 then true else false end " +
             "from OrderItem oi " +
             "where oi.order.member.id = :memberId " +

@@ -15,17 +15,22 @@ import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.event.ProductDeletingEvent;
+import com.example.shopping.product.event.SkusRemovingEvent;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -46,6 +51,8 @@ class ProductServiceImplTest {
     private ProductSkuRepository productSkuRepository;
     @Mock
     private CategoryRepository categoryRepository;
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private ProductServiceImpl productService;
@@ -197,6 +204,7 @@ class ProductServiceImplTest {
         productService.delete(1L);
 
         verify(productRepository).delete(existingProduct);
+        verify(eventPublisher).publishEvent(any(ProductDeletingEvent.class));
     }
 
     @Test
@@ -331,5 +339,115 @@ class ProductServiceImplTest {
 
         assertThat(productService.listRelated(1L, 1)).hasSize(1);
         verify(productRepository, never()).findByStatusAndIdNotInOrderBySalesCountDescIdDesc(any(), any(), any());
+    }
+
+    private ProductRequest saleRequest(Integer percent, LocalDateTime start, LocalDateTime end) {
+        ProductRequest request = new ProductRequest();
+        request.setCategoryId(5L);
+        request.setName("經典圓領T恤");
+        request.setPrice(BigDecimal.valueOf(590));
+        request.setSkus(List.of(skuRequest()));
+        request.setSaleDiscountPercent(percent);
+        request.setSaleStartAt(start);
+        request.setSaleEndAt(end);
+        return request;
+    }
+
+    private void stubUpdate() {
+        Category category = new Category();
+        category.setId(5L);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+    }
+
+    @Test
+    void update_setsFlashSale_andReportsSalePriceWhileActive() {
+        stubUpdate();
+        LocalDateTime now = LocalDateTime.now();
+
+        ProductDetailResponse response = productService.update(1L,
+                saleRequest(20, now.minusHours(1), now.plusHours(1)));
+
+        assertThat(response.getSaleDiscountPercent()).isEqualTo(20);
+        assertThat(response.getSalePrice()).isEqualByComparingTo("472.00");
+        assertThat(response.getSkus().get(0).getSalePrice()).isNotNull();
+    }
+
+    @Test
+    void update_rejectsSaleWithoutPeriodOrWithReversedPeriod() {
+        stubUpdate();
+        LocalDateTime now = LocalDateTime.now();
+
+        assertThatThrownBy(() -> productService.update(1L, saleRequest(20, null, now)))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("開始與結束時間");
+        assertThatThrownBy(() -> productService.update(1L, saleRequest(20, now, now.minusMinutes(1))))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("晚於開始時間");
+    }
+
+    @Test
+    void update_clearsSale_whenPercentOmitted() {
+        existingProduct.setSaleDiscountPercent(30);
+        existingProduct.setSaleStartAt(LocalDateTime.now().minusDays(1));
+        existingProduct.setSaleEndAt(LocalDateTime.now().plusDays(1));
+        stubUpdate();
+
+        ProductDetailResponse response = productService.update(1L, saleRequest(null, null, null));
+
+        assertThat(response.getSalePrice()).isNull();
+        assertThat(existingProduct.getSaleEndAt()).isNull();
+    }
+
+    @Test
+    void update_keepsExistingSkuIds_andOnlyReportsRemovedSkus() {
+        ProductSku kept = new ProductSku();
+        kept.setId(10L);
+        kept.setSkuCode("SKU-001");
+        kept.setSpecName("舊名稱");
+        ProductSku dropped = new ProductSku();
+        dropped.setId(11L);
+        dropped.setSkuCode("OLD-002");
+        dropped.setSpecName("停產款");
+        existingProduct.replaceSkus(List.of(kept, dropped));
+        Category category = new Category();
+        category.setId(5L);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+
+        ProductRequest request = new ProductRequest();
+        request.setCategoryId(5L);
+        request.setName("經典圓領T恤");
+        request.setPrice(BigDecimal.valueOf(590));
+        request.setSkus(List.of(skuRequest()));
+
+        productService.update(1L, request);
+
+        // 同編號的規格就地更新,id 不變(訂單明細仍指向它)
+        assertThat(existingProduct.getSkus()).singleElement().satisfies(sku -> {
+            assertThat(sku.getId()).isEqualTo(10L);
+            assertThat(sku.getStock()).isEqualTo(10);
+        });
+        ArgumentCaptor<SkusRemovingEvent> event = ArgumentCaptor.forClass(SkusRemovingEvent.class);
+        verify(eventPublisher).publishEvent(event.capture());
+        assertThat(event.getValue().skuIds()).containsExactly(11L);
+    }
+
+    @Test
+    void update_rejectsDuplicateSkuCodes() {
+        Category category = new Category();
+        category.setId(5L);
+        when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
+        when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+
+        ProductRequest request = new ProductRequest();
+        request.setCategoryId(5L);
+        request.setName("經典圓領T恤");
+        request.setPrice(BigDecimal.valueOf(590));
+        request.setSkus(List.of(skuRequest(), skuRequest()));
+
+        assertThatThrownBy(() -> productService.update(1L, request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("SKU 編號重複");
     }
 }

@@ -38,6 +38,11 @@ public class ProductController {
                 productService.listPublic(categoryId, minPrice, maxPrice, keyword, pageable)));
     }
 
+    @GetMapping("/flash-sale")
+    public ApiResponse<List<ProductListResponse>> flashSale(@RequestParam(defaultValue = "8") int limit) {
+        return ApiResponse.success(productService.listFlashSale(limit));
+    }
+
     @GetMapping("/{id}")
     public ApiResponse<ProductDetailResponse> detail(@PathVariable Long id) {
         return ApiResponse.success(productService.getPublicDetail(id));
