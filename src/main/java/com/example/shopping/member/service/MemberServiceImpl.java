@@ -20,6 +20,7 @@ import com.example.shopping.member.entity.EmailVerificationToken;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
 import com.example.shopping.member.entity.RefreshToken;
+import com.example.shopping.member.mail.EmailSendLimiter;
 import com.example.shopping.member.mail.EmailVerificationMailSender;
 import com.example.shopping.member.mail.PasswordResetMailSender;
 import com.example.shopping.member.repository.EmailVerificationTokenRepository;
@@ -28,6 +29,8 @@ import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
 import com.example.shopping.security.JwtTokenProvider;
 import com.example.shopping.security.LoginAttemptService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +54,7 @@ public class MemberServiceImpl implements MemberService {
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
     private static final int EMAIL_VERIFICATION_EXPIRY_HOURS = 24;
 
+    private static final Logger log = LoggerFactory.getLogger(MemberServiceImpl.class);
     private static final String LOGIN_SCOPE = "member";
 
     private final MemberRepository memberRepository;
@@ -62,6 +66,7 @@ public class MemberServiceImpl implements MemberService {
     private final PasswordResetMailSender passwordResetMailSender;
     private final EmailVerificationMailSender emailVerificationMailSender;
     private final LoginAttemptService loginAttemptService;
+    private final EmailSendLimiter emailSendLimiter;
     private final String frontendOrigin;
     private final long refreshExpirationMs;
 
@@ -74,6 +79,7 @@ public class MemberServiceImpl implements MemberService {
                               PasswordResetMailSender passwordResetMailSender,
                               EmailVerificationMailSender emailVerificationMailSender,
                               LoginAttemptService loginAttemptService,
+                              EmailSendLimiter emailSendLimiter,
                               @Value("${app.cors.allowed-origins}") String frontendOrigin,
                               @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         this.memberRepository = memberRepository;
@@ -85,6 +91,7 @@ public class MemberServiceImpl implements MemberService {
         this.passwordResetMailSender = passwordResetMailSender;
         this.emailVerificationMailSender = emailVerificationMailSender;
         this.loginAttemptService = loginAttemptService;
+        this.emailSendLimiter = emailSendLimiter;
         this.frontendOrigin = frontendOrigin;
         this.refreshExpirationMs = refreshExpirationMs;
     }
@@ -173,7 +180,12 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public void resendVerification(ResendVerificationRequest request) {
-        // 不論 email 是否存在、是否已驗證都視為成功,避免被用來探測已註冊帳號
+        // 不論 email 是否存在、是否已驗證都視為成功,避免被用來探測已註冊帳號;
+        // 超過寄送頻率時同樣回成功但不寄信,不給攻擊者任何回饋
+        if (!emailSendLimiter.tryAcquire("verification", request.getEmail())) {
+            log.warn("重寄驗證信過於頻繁,已略過:{}", request.getEmail());
+            return;
+        }
         memberRepository.findByEmail(request.getEmail())
                 .filter(member -> !member.isEmailVerified())
                 .ifPresent(this::sendVerificationEmail);
@@ -200,7 +212,12 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     public void forgotPassword(ForgotPasswordRequest request) {
-        // 不論 email 是否存在都視為成功,避免被用來探測已註冊帳號
+        // 不論 email 是否存在都視為成功,避免被用來探測已註冊帳號;
+        // 超過寄送頻率時同樣回成功但不寄信
+        if (!emailSendLimiter.tryAcquire("password-reset", request.getEmail())) {
+            log.warn("忘記密碼信件過於頻繁,已略過:{}", request.getEmail());
+            return;
+        }
         memberRepository.findByEmail(request.getEmail()).ifPresent(member -> {
             PasswordResetToken resetToken = new PasswordResetToken();
             resetToken.setMemberId(member.getId());

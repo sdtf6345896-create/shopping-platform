@@ -58,6 +58,8 @@ app:
     dir: ${UPLOAD_DIR:uploads}
     member-max-per-window: 20   # 會員每 10 分鐘最多上傳幾張圖
     member-window-minutes: 10
+  mail:
+    max-per-email-per-hour: 3   # 忘記密碼 / 重寄驗證信,同一信箱每小時上限
   shipping:
     fee: 60                  # 未達免運門檻的運費
     free-threshold: 999      # 商品金額(套用優惠券後)滿此金額免運

@@ -20,6 +20,7 @@ import com.example.shopping.member.entity.EmailVerificationToken;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
 import com.example.shopping.member.entity.RefreshToken;
+import com.example.shopping.member.mail.EmailSendLimiter;
 import com.example.shopping.member.mail.EmailVerificationMailSender;
 import com.example.shopping.member.mail.PasswordResetMailSender;
 import com.example.shopping.member.repository.EmailVerificationTokenRepository;
@@ -36,6 +37,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -45,6 +48,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -78,7 +82,9 @@ class MemberServiceImplTest {
         memberService = new MemberServiceImpl(memberRepository, passwordResetTokenRepository,
                 refreshTokenRepository, emailVerificationTokenRepository, passwordEncoder, jwtTokenProvider,
                 passwordResetMailSender, emailVerificationMailSender,
-                new LoginAttemptService(3, 15), "http://localhost:5173", 1209600000L);
+                new LoginAttemptService(3, 15),
+                new EmailSendLimiter(3, Duration.ofHours(1), Clock.systemUTC()),
+                "http://localhost:5173", 1209600000L);
 
         activeMember = new Member();
         activeMember.setId(1L);
@@ -607,5 +613,51 @@ class MemberServiceImplTest {
         assertThatThrownBy(() -> memberService.changePassword(1L, changePasswordRequest("password123", "password123")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("不可與目前密碼相同");
+    }
+
+    @Test
+    void forgotPassword_stopsSendingAfterThreeRequestsPerHour_forSameEmail() {
+        when(memberRepository.findByEmail("test@example.com")).thenReturn(Optional.of(activeMember));
+        ForgotPasswordRequest request = new ForgotPasswordRequest();
+        request.setEmail("test@example.com");
+
+        for (int i = 0; i < 5; i++) {
+            memberService.forgotPassword(request);
+        }
+
+        verify(passwordResetMailSender, times(3)).sendResetLink(eq("test@example.com"), any());
+    }
+
+    @Test
+    void forgotPassword_limitsAreCountedPerEmail_andCaseInsensitive() {
+        ForgotPasswordRequest victim = new ForgotPasswordRequest();
+        victim.setEmail("Test@Example.com");
+        for (int i = 0; i < 3; i++) {
+            memberService.forgotPassword(victim);
+        }
+        victim.setEmail("test@example.com");
+        memberService.forgotPassword(victim);
+        // 大小寫視為同一個信箱,第 4 次被略過,連查詢都不會發生
+        verify(memberRepository, times(3)).findByEmail(any());
+
+        ForgotPasswordRequest other = new ForgotPasswordRequest();
+        other.setEmail("other@example.com");
+        memberService.forgotPassword(other);
+        verify(memberRepository).findByEmail("other@example.com");
+    }
+
+    @Test
+    void resendVerification_isRateLimitedSeparatelyFromPasswordReset() {
+        ResendVerificationRequest resend = new ResendVerificationRequest();
+        resend.setEmail("new@example.com");
+        for (int i = 0; i < 4; i++) {
+            memberService.resendVerification(resend);
+        }
+        verify(memberRepository, times(3)).findByEmail("new@example.com");
+
+        ForgotPasswordRequest forgot = new ForgotPasswordRequest();
+        forgot.setEmail("new@example.com");
+        memberService.forgotPassword(forgot);
+        verify(memberRepository, times(4)).findByEmail("new@example.com");
     }
 }

@@ -110,6 +110,7 @@ REFUNDED        → (終態)
 
 請求:`{ "email": "..." }`
 
+> 與忘記密碼分開計算,同一個 email 每小時最多寄 3 封,超過時仍回成功但不寄信。
 ### `POST /api/auth/login`
 公開。會員登入。帳號被停用(`DISABLED`)時回 400「帳號已被停用,請聯繫客服」;Email 尚未驗證時回 400「請先完成 Email 驗證,請查看您的收件匣」。
 
@@ -143,6 +144,7 @@ REFUNDED        → (終態)
 
 若 Email 存在,會產生一組 30 分鐘內有效的一次性 token,並寄出重設連結信件(格式:`{前端網址}/reset-password?token=...`)。實際寄信方式視 SMTP 設定而定(見 README「忘記密碼信」一節),未設定 `MAIL_HOST` 或寄送失敗時會退回以 log 模擬寄信,不影響 API 回應。
 
+> 同一個 email 每小時最多觸發 3 封重設密碼信(`app.mail.max-per-email-per-hour`),超過時仍回成功但不寄信,避免被用來轟炸信箱,也不洩漏帳號是否存在。
 ### `POST /api/auth/reset-password`
 公開。使用 token 重設密碼。
 
