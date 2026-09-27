@@ -16,12 +16,11 @@ import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
 import com.example.shopping.member.entity.RefreshToken;
+import com.example.shopping.member.mail.PasswordResetMailSender;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
 import com.example.shopping.security.JwtTokenProvider;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -42,7 +41,6 @@ import static com.example.shopping.member.repository.MemberSpecifications.keywor
 @Transactional
 public class MemberServiceImpl implements MemberService {
 
-    private static final Logger log = LoggerFactory.getLogger(MemberServiceImpl.class);
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
 
     private final MemberRepository memberRepository;
@@ -50,6 +48,7 @@ public class MemberServiceImpl implements MemberService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final PasswordResetMailSender passwordResetMailSender;
     private final String frontendOrigin;
     private final long refreshExpirationMs;
 
@@ -58,6 +57,7 @@ public class MemberServiceImpl implements MemberService {
                               RefreshTokenRepository refreshTokenRepository,
                               PasswordEncoder passwordEncoder,
                               JwtTokenProvider jwtTokenProvider,
+                              PasswordResetMailSender passwordResetMailSender,
                               @Value("${app.cors.allowed-origins}") String frontendOrigin,
                               @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         this.memberRepository = memberRepository;
@@ -65,6 +65,7 @@ public class MemberServiceImpl implements MemberService {
         this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
+        this.passwordResetMailSender = passwordResetMailSender;
         this.frontendOrigin = frontendOrigin;
         this.refreshExpirationMs = refreshExpirationMs;
     }
@@ -147,9 +148,8 @@ public class MemberServiceImpl implements MemberService {
             resetToken.setExpiresAt(LocalDateTime.now().plusMinutes(RESET_TOKEN_EXPIRY_MINUTES));
             passwordResetTokenRepository.save(resetToken);
 
-            // 未串接真實 SMTP,以 log 模擬寄出重設密碼信(比照付款流程的模擬方式)
-            log.info("[模擬寄信] 寄送密碼重設連結給 {}:{}/reset-password?token={}",
-                    member.getEmail(), frontendOrigin, resetToken.getToken());
+            String resetLink = frontendOrigin + "/reset-password?token=" + resetToken.getToken();
+            passwordResetMailSender.sendResetLink(member.getEmail(), resetLink);
         });
     }
 

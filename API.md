@@ -123,7 +123,7 @@ CANCELLED       → (終態)
 
 請求:`{ "email": "..." }`
 
-若 Email 存在,會產生一組 30 分鐘內有效的一次性 token。專案未串接真實 SMTP,重設連結以 log 輸出模擬寄信(格式:`{前端網址}/reset-password?token=...`)。
+若 Email 存在,會產生一組 30 分鐘內有效的一次性 token,並寄出重設連結信件(格式:`{前端網址}/reset-password?token=...`)。實際寄信方式視 SMTP 設定而定(見 README「忘記密碼信」一節),未設定 `MAIL_HOST` 或寄送失敗時會退回以 log 模擬寄信,不影響 API 回應。
 
 ### `POST /api/auth/reset-password`
 公開。使用 token 重設密碼。

@@ -16,6 +16,7 @@ import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
 import com.example.shopping.member.entity.RefreshToken;
+import com.example.shopping.member.mail.PasswordResetMailSender;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -51,6 +53,8 @@ class MemberServiceImplTest {
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtTokenProvider jwtTokenProvider;
+    @Mock
+    private PasswordResetMailSender passwordResetMailSender;
 
     private MemberServiceImpl memberService;
 
@@ -60,7 +64,7 @@ class MemberServiceImplTest {
     void setUp() {
         // 建構子帶有 String/long 這類非 mock 參數,Mockito 的 @InjectMocks 無法可靠處理,改手動 new
         memberService = new MemberServiceImpl(memberRepository, passwordResetTokenRepository,
-                refreshTokenRepository, passwordEncoder, jwtTokenProvider,
+                refreshTokenRepository, passwordEncoder, jwtTokenProvider, passwordResetMailSender,
                 "http://localhost:5173", 1209600000L);
 
         activeMember = new Member();
@@ -278,6 +282,8 @@ class MemberServiceImplTest {
         memberService.forgotPassword(request);
 
         verify(passwordResetTokenRepository).save(argThat(t -> t.getMemberId().equals(1L) && t.getToken() != null));
+        verify(passwordResetMailSender).sendResetLink(
+                eq("test@example.com"), argThat(link -> link.startsWith("http://localhost:5173/reset-password?token=")));
     }
 
     @Test
@@ -290,6 +296,7 @@ class MemberServiceImplTest {
         memberService.forgotPassword(request);
 
         verify(passwordResetTokenRepository, never()).save(any());
+        verify(passwordResetMailSender, never()).sendResetLink(any(), any());
     }
 
     @Test

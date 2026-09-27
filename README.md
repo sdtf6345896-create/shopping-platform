@@ -61,6 +61,16 @@ npm run dev
 
 開發伺服器預設在 `http://localhost:5173`,已設定 Vite proxy 轉發 `/api` 到後端。
 
+### 忘記密碼信(選用,真實 SMTP)
+
+預設不設定 `MAIL_HOST` 時,忘記密碼連結只會輸出到後端 log(模擬寄信)。要改成真的寄出 email,啟動時加上:
+
+```bash
+MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=you@gmail.com MAIL_PASSWORD=<app-password> mvn spring-boot:run
+```
+
+（Gmail 需要用「應用程式密碼」而非登入密碼;也可以換成 Mailtrap、SendGrid 等其他 SMTP 服務。）若寄信失敗(帳密錯誤、連不上等),會自動退回 log 模擬,不影響忘記密碼流程本身。
+
 ## 測試
 
 ```bash
