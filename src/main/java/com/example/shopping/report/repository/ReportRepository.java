@@ -27,6 +27,14 @@ public interface ReportRepository extends Repository<Orders, Long> {
                                                 @Param("end") LocalDateTime end,
                                                 Pageable pageable);
 
+    @Query("select p.category.id as categoryId, sum(oi.quantity) as soldQuantity, sum(oi.subtotal) as revenue " +
+            "from OrderItem oi join oi.productSku s join s.product p join oi.order o " +
+            "where o.status in :statuses and o.createdAt between :start and :end " +
+            "group by p.category.id")
+    List<CategorySalesProjection> findCategorySales(@Param("statuses") List<OrderStatus> statuses,
+                                                    @Param("start") LocalDateTime start,
+                                                    @Param("end") LocalDateTime end);
+
     @Query(value = "select DATE(o.created_at) as day, count(*) as orderCount, sum(o.total_amount) as revenue " +
             "from orders o where o.status in (:statuses) and o.created_at between :start and :end " +
             "group by DATE(o.created_at) order by day", nativeQuery = true)

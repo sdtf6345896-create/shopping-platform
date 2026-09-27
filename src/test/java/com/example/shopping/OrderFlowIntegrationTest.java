@@ -309,6 +309,10 @@ class OrderFlowIntegrationTest {
                 .andReturn().getResponse();
         assertThat(disguised.getStatus()).isEqualTo(400);
 
+        // ---- 分類銷售報表:查詢在真實資料庫上可以執行 ----
+        JsonNode categorySales = call(get("/api/admin/reports/categories"), adminToken, null, 200).at("/data");
+        assertThat(categorySales.isArray()).isTrue();
+
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
     }

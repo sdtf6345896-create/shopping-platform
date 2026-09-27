@@ -1,5 +1,6 @@
 package com.example.shopping.report.service;
 
+import com.example.shopping.report.dto.CategorySalesResponse;
 import com.example.shopping.report.dto.DailySalesResponse;
 import com.example.shopping.report.dto.SalesSummaryResponse;
 import com.example.shopping.report.dto.TopProductResponse;
@@ -14,4 +15,7 @@ public interface ReportService {
     List<TopProductResponse> getTopProducts(LocalDate startDate, LocalDate endDate, int limit);
 
     List<DailySalesResponse> getDailySales(LocalDate startDate, LocalDate endDate);
+
+    /** 各頂層分類的銷量、營收與營收佔比,營收高的排前面 */
+    List<CategorySalesResponse> getCategorySales(LocalDate startDate, LocalDate endDate);
 }

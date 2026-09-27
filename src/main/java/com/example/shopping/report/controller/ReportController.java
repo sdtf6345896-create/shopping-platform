@@ -1,6 +1,7 @@
 package com.example.shopping.report.controller;
 
 import com.example.shopping.common.ApiResponse;
+import com.example.shopping.report.dto.CategorySalesResponse;
 import com.example.shopping.report.dto.DailySalesResponse;
 import com.example.shopping.report.dto.DashboardResponse;
 import com.example.shopping.report.dto.SalesSummaryResponse;
@@ -48,6 +49,14 @@ public class ReportController {
             @RequestParam(defaultValue = "10") int limit) {
 
         return ApiResponse.success(reportService.getTopProducts(startDate, endDate, limit));
+    }
+
+    @GetMapping("/categories")
+    public ApiResponse<List<CategorySalesResponse>> categories(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        return ApiResponse.success(reportService.getCategorySales(startDate, endDate));
     }
 
     @GetMapping("/daily")

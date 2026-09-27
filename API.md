@@ -738,6 +738,13 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 [ { "productId": 1, "productName": "經典圓領T恤", "mainImage": "https://...", "soldQuantity": 4, "revenue": 2360.00 } ]
 ```
 
+### `GET /api/admin/reports/categories`
+各**頂層分類**的銷售彙總(子分類的銷售併入其頂層分類),營收高的排前面。Query:`startDate`、`endDate`(同其他報表,預設近 30 天)。只計算已付款 / 出貨中 / 已完成的訂單。
+```json
+[ { "categoryId": 1, "categoryName": "服飾", "soldQuantity": 12, "revenue": 8900.00, "share": 62.5 } ]
+```
+`share` 為營收佔比(百分比,小數一位)。
+
 ### `GET /api/admin/reports/daily`
 每日訂單數與營收:
 ```json
@@ -815,4 +822,5 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/audit-logs` | 管理員 |
 | GET | `/api/admin/reports/summary` | 管理員 |
 | GET | `/api/admin/reports/top-products` | 管理員 |
+| GET | `/api/admin/reports/categories` | 管理員 |
 | GET | `/api/admin/reports/daily` | 管理員 |

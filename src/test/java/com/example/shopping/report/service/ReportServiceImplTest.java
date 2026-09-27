@@ -1,10 +1,14 @@
 package com.example.shopping.report.service;
 
+import com.example.shopping.category.entity.Category;
+import com.example.shopping.category.repository.CategoryRepository;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.exception.BusinessException;
+import com.example.shopping.report.dto.CategorySalesResponse;
 import com.example.shopping.report.dto.DailySalesResponse;
 import com.example.shopping.report.dto.SalesSummaryResponse;
 import com.example.shopping.report.dto.TopProductResponse;
+import com.example.shopping.report.repository.CategorySalesProjection;
 import com.example.shopping.report.repository.DailyStatProjection;
 import com.example.shopping.report.repository.OrderStatusStatProjection;
 import com.example.shopping.report.repository.ReportRepository;
@@ -30,6 +34,8 @@ class ReportServiceImplTest {
 
     @Mock
     private ReportRepository reportRepository;
+    @Mock
+    private CategoryRepository categoryRepository;
 
     @InjectMocks
     private ReportServiceImpl reportService;
@@ -153,5 +159,58 @@ class ReportServiceImplTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getDate()).isEqualTo(LocalDate.of(2026, 9, 14));
         assertThat(result.get(0).getOrderCount()).isEqualTo(2L);
+    }
+
+    private static Category category(long id, String name, Category parent) {
+        Category category = new Category();
+        category.setId(id);
+        category.setName(name);
+        category.setParent(parent);
+        return category;
+    }
+
+    private static CategorySalesProjection sales(long categoryId, long quantity, String revenue) {
+        return new CategorySalesProjection() {
+            @Override
+            public Long getCategoryId() {
+                return categoryId;
+            }
+
+            @Override
+            public Long getSoldQuantity() {
+                return quantity;
+            }
+
+            @Override
+            public BigDecimal getRevenue() {
+                return new BigDecimal(revenue);
+            }
+        };
+    }
+
+    @Test
+    void getCategorySales_rollsSubcategoriesUpToTopLevel_andComputesShare() {
+        Category apparel = category(1L, "服飾", null);
+        Category tops = category(2L, "上衣", apparel);
+        Category dresses = category(3L, "洋裝", apparel);
+        Category electronics = category(4L, "3C", null);
+        when(categoryRepository.findAll()).thenReturn(List.of(apparel, tops, dresses, electronics));
+        when(reportRepository.findCategorySales(any(), any(), any())).thenReturn(List.of(
+                sales(2L, 2, "1000"), sales(3L, 1, "500"), sales(4L, 1, "2500")));
+
+        List<CategorySalesResponse> result = reportService.getCategorySales(null, null);
+
+        assertThat(result).extracting(CategorySalesResponse::categoryName).containsExactly("3C", "服飾");
+        assertThat(result.get(1).soldQuantity()).isEqualTo(3);
+        assertThat(result.get(1).revenue()).isEqualByComparingTo("1500");
+        assertThat(result.get(0).share()).isEqualByComparingTo("62.5");
+        assertThat(result.get(1).share()).isEqualByComparingTo("37.5");
+    }
+
+    @Test
+    void getCategorySales_isEmpty_withoutSales() {
+        when(reportRepository.findCategorySales(any(), any(), any())).thenReturn(List.of());
+
+        assertThat(reportService.getCategorySales(null, null)).isEmpty();
     }
 }

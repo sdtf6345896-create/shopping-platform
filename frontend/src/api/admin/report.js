@@ -12,6 +12,10 @@ export function getDashboard() {
   return request.get('/admin/reports/dashboard')
 }
 
+export function getCategorySales(params) {
+  return request.get('/admin/reports/categories', { params })
+}
+
 export function getDailySales(params) {
   return request.get('/admin/reports/daily', { params })
 }

@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getSalesSummary, getTopProducts, getDailySales } from '../../api/admin/report'
+import { getCategorySales, getSalesSummary, getTopProducts, getDailySales } from '../../api/admin/report'
 import BarChart from '../../components/BarChart.vue'
 import LowStockPanel from '../../components/admin/LowStockPanel.vue'
 
@@ -9,6 +9,7 @@ const dateRange = ref(null) // [startDate, endDate] as 'YYYY-MM-DD' strings
 const summary = ref(null)
 const topProducts = ref([])
 const dailySales = ref([])
+const categorySales = ref([])
 
 const dailyChartItems = computed(() =>
   dailySales.value.map((d) => ({ label: d.date.slice(5), value: d.revenue })),
@@ -37,11 +38,13 @@ async function loadAll() {
       ? { startDate: dateRange.value[0], endDate: dateRange.value[1] }
       : {}
 
-    const [summaryData, topProductsData, dailyData] = await Promise.all([
+    const [summaryData, topProductsData, dailyData, categoryData] = await Promise.all([
       getSalesSummary(params),
       getTopProducts({ ...params, limit: 10 }),
       getDailySales(params),
+      getCategorySales(params),
     ])
+    categorySales.value = categoryData
 
     summary.value = summaryData
     topProducts.value = topProductsData
@@ -104,6 +107,23 @@ onMounted(loadAll)
       <div class="block">
         <div class="block-title">每日營收趨勢</div>
         <BarChart :items="dailyChartItems" :height="220" />
+      </div>
+
+      <div class="block">
+        <div class="block-title">分類銷售佔比(依營收,子分類併入頂層分類)</div>
+        <el-table :data="categorySales" size="small">
+          <el-table-column prop="categoryName" label="分類" min-width="120" />
+          <el-table-column prop="soldQuantity" label="銷售數量" width="100" />
+          <el-table-column label="營收" width="130">
+            <template #default="{ row }">NT$ {{ Number(row.revenue).toLocaleString() }}</template>
+          </el-table-column>
+          <el-table-column label="佔比" min-width="200">
+            <template #default="{ row }">
+              <el-progress :percentage="Number(row.share)" :stroke-width="10" :format="(p) => `${p}%`" />
+            </template>
+          </el-table-column>
+        </el-table>
+        <el-empty v-if="categorySales.length === 0" description="此區間無銷售資料" :image-size="60" />
       </div>
 
       <div class="block">
