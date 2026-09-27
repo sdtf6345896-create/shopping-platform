@@ -16,3 +16,11 @@ export function adjustMemberPoints(id, amount, reason) {
 export function updateMemberStatus(id, status) {
   return request.patch(`/admin/members/${id}/status`, { status })
 }
+
+export function getAdminMemberTier(id) {
+  return request.get(`/admin/members/${id}/tier`)
+}
+
+export function listAdminMemberPoints(id, params) {
+  return request.get(`/admin/members/${id}/points/transactions`, { params })
+}

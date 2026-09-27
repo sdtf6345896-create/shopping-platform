@@ -599,6 +599,9 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 ### `POST /api/admin/members/{id}/points` — 需管理員登入
 手動調整會員購物金。請求:`{ "amount": 100, "reason": "客服補償" }`(`amount` 正數發放、負數扣除,單次上限 ±100000,不可為 0;扣除超過餘額回 400)。以 `ADJUST` 類型記入異動明細、寄送站內通知給會員,並記錄在管理員操作紀錄。回傳調整後的 `{ balance, earnRate, maxRedeemRatio }`。
 
+### `GET /api/admin/members/{id}/tier` — 需管理員登入
+指定會員的等級資訊,格式同 `GET /api/members/me/tier`。
+
 ### `GET /api/admin/members/{id}/points/transactions` — 需管理員登入
 指定會員的購物金異動明細,格式同 `GET /api/points/transactions`。
 
@@ -715,7 +718,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ## 訂單管理(Admin）— 需管理員登入
 
 ### `GET /api/admin/orders`
-所有會員的訂單。Query(皆選填):`status`、`keyword`(比對訂單編號、收件人、收件電話、會員 Email)、`startDate` / `endDate`(`YYYY-MM-DD`,依建立日期,含頭尾)、`page`、`size` → `PageResponse<OrderResponse>`
+所有會員的訂單。Query(皆選填):`status`、`memberId`(只看某會員)、`keyword`(比對訂單編號、收件人、收件電話、會員 Email)、`startDate` / `endDate`(`YYYY-MM-DD`,依建立日期,含頭尾)、`page`、`size` → `PageResponse<OrderResponse>`
 
 ### `GET /api/admin/orders/export`
 依與列表相同的查詢條件匯出 CSV(新到舊,最多 10,000 筆),回應為檔案下載(`Content-Disposition: attachment; filename="orders-YYYYMMDD.csv"`),不是 JSON。檔案為 UTF-8 含 BOM,Excel 可直接開啟;以 `=`、`+`、`-`、`@` 開頭的文字欄位會加上 `'` 前綴,避免被 Excel 當成公式執行(CSV injection)。
@@ -791,6 +794,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/members` | 管理員 |
 | GET | `/api/admin/members/{id}` | 管理員 |
 | PATCH | `/api/admin/members/{id}/status` | 管理員 |
+| GET | `/api/admin/members/{id}/tier` | 管理員 |
 | POST | `/api/admin/members/{id}/points` | 管理員 |
 | GET | `/api/admin/members/{id}/points/transactions` | 管理員 |
 | GET | `/api/categories` | 公開 |

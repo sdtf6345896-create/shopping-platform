@@ -304,6 +304,7 @@ public class OrderServiceImpl implements OrderService {
 
     private static Specification<Orders> adminSpec(AdminOrderQuery query) {
         return Specification.where(hasStatus(query.getStatus()))
+                .and(hasMemberId(query.getMemberId()))
                 .and(keywordMatches(query.getKeyword()))
                 .and(createdBetween(query.getStartDate(), query.getEndDate()));
     }

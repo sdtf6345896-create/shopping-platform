@@ -16,7 +16,7 @@ const menu = [
   { name: 'AdminCouponList', label: '優惠券管理' },
   { name: 'AdminQuestionList', label: '商品問答' },
   { name: 'AdminReport', label: '銷售報表' },
-  { name: 'AdminMemberList', label: '會員管理' },
+  { name: 'AdminMemberList', label: '會員管理', matchNames: ['AdminMemberList', 'AdminMemberDetail'] },
   { name: 'AdminAuditLogList', label: '操作紀錄' },
 ]
 

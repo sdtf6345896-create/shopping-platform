@@ -1,8 +1,10 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { adjustMemberPoints, listAdminMembers, updateMemberStatus } from '../../api/admin/member'
 
+const router = useRouter()
 const members = ref([])
 const total = ref(0)
 const loading = ref(true)
@@ -108,7 +110,13 @@ onMounted(load)
 
     <el-table v-loading="loading" :data="members" class="table">
       <el-table-column prop="email" label="Email" min-width="200" />
-      <el-table-column prop="name" label="姓名" width="120" />
+      <el-table-column label="姓名" width="120">
+        <template #default="{ row }">
+          <el-link type="primary" :underline="false" @click="router.push({ name: 'AdminMemberDetail', params: { id: row.id } })">
+            {{ row.name }}
+          </el-link>
+        </template>
+      </el-table-column>
       <el-table-column prop="phone" label="手機" width="130" />
       <el-table-column label="狀態" width="100">
         <template #default="{ row }">

@@ -14,6 +14,9 @@ public class AdminOrderQuery {
 
     private OrderStatus status;
 
+    /** 只看某位會員的訂單(會員詳情頁用) */
+    private Long memberId;
+
     /** 比對訂單編號、收件人、收件電話、會員 Email */
     private String keyword;
 

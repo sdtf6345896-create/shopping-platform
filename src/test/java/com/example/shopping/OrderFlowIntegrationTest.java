@@ -325,6 +325,15 @@ class OrderFlowIntegrationTest {
         assertThat(call(get("/api/admin/audit-logs?targetType=PRODUCT"), adminToken, null, 200)
                 .at("/data/content").findValuesAsText("action")).contains("批次上下架");
 
+        // ---- 後台會員詳情:依會員篩訂單、查等級 ----
+        JsonNode memberOrders = call(get("/api/admin/orders?memberId=" + member.getId()), adminToken, null, 200)
+                .at("/data");
+        assertThat(memberOrders.at("/totalElements").asLong()).isGreaterThanOrEqualTo(2);
+        assertThat(memberOrders.at("/content").findValuesAsText("id")).contains(String.valueOf(orderId));
+        assertThat(call(get("/api/admin/members/" + member.getId() + "/tier"), adminToken, null, 200)
+                .at("/data/tier").asText()).isEqualTo("NORMAL");
+        call(get("/api/admin/members/" + member.getId() + "/tier"), memberToken, null, 403);
+
         // ---- 搜尋建議:公開、不分大小寫、% 不會被當萬用字元 ----
         JsonNode suggestions = call(get("/api/products/suggestions?keyword=整合測試"), null, null, 200).at("/data");
         assertThat(suggestions.findValuesAsText("name")).contains("整合測試商品");
