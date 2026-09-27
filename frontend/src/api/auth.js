@@ -8,6 +8,14 @@ export function login(data) {
   return request.post('/auth/login', data)
 }
 
+export function forgotPassword(data) {
+  return request.post('/auth/forgot-password', data)
+}
+
+export function resetPassword(data) {
+  return request.post('/auth/reset-password', data)
+}
+
 export function getProfile() {
   return request.get('/members/me')
 }

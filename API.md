@@ -103,6 +103,20 @@ CANCELLED       → (終態)
 { "token": "...", "tokenType": "Bearer", "memberId": 1, "name": "王小明", "email": "you@example.com" }
 ```
 
+### `POST /api/auth/forgot-password`
+公開。申請重設密碼信。不論 Email 是否存在都回傳相同成功訊息(避免帳號列舉)。
+
+請求:`{ "email": "..." }`
+
+若 Email 存在,會產生一組 30 分鐘內有效的一次性 token。專案未串接真實 SMTP,重設連結以 log 輸出模擬寄信(格式:`{前端網址}/reset-password?token=...`)。
+
+### `POST /api/auth/reset-password`
+公開。使用 token 重設密碼。
+
+請求:`{ "token": "...", "newPassword": "..." }`
+- `newPassword` 至少 8 碼
+- token 不存在、已過期或已使用過都會回 400「重設密碼連結無效或已過期」
+
 ---
 
 ## 會員個人資料(Member)— 需會員登入

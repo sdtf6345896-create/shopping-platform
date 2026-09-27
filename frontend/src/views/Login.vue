@@ -44,6 +44,9 @@ async function handleSubmit() {
         <el-form-item label="密碼" prop="password">
           <el-input v-model="form.password" type="password" show-password @keyup.enter="handleSubmit" />
         </el-form-item>
+        <p class="forgot-link">
+          <router-link to="/forgot-password">忘記密碼?</router-link>
+        </p>
         <el-button type="primary" class="submit-btn" :loading="loading" @click="handleSubmit">登入</el-button>
       </el-form>
       <p class="switch-link">
@@ -72,6 +75,16 @@ async function handleSubmit() {
 
 .submit-btn {
   width: 100%;
+}
+
+.forgot-link {
+  text-align: right;
+  margin: -12px 0 16px;
+  font-size: 13px;
+}
+
+.forgot-link a {
+  color: #666;
 }
 
 .switch-link {

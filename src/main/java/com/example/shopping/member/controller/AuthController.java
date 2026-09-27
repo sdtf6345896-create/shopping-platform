@@ -1,8 +1,10 @@
 package com.example.shopping.member.controller;
 
 import com.example.shopping.common.ApiResponse;
+import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
+import com.example.shopping.member.dto.request.ResetPasswordRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.service.MemberService;
@@ -27,5 +29,17 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success("登入成功", memberService.login(request));
+    }
+
+    @PostMapping("/forgot-password")
+    public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        memberService.forgotPassword(request);
+        return ApiResponse.success("若該 Email 已註冊,重設密碼信將寄出", null);
+    }
+
+    @PostMapping("/reset-password")
+    public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        memberService.resetPassword(request);
+        return ApiResponse.success("密碼重設成功,請重新登入", null);
     }
 }
