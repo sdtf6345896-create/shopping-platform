@@ -4,9 +4,12 @@ import com.example.shopping.cart.entity.CartItem;
 import com.example.shopping.cart.repository.CartItemRepository;
 import com.example.shopping.category.entity.Category;
 import com.example.shopping.category.repository.CategoryRepository;
+import com.example.shopping.common.enums.DiscountType;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
+import com.example.shopping.coupon.entity.Coupon;
+import com.example.shopping.coupon.repository.CouponRepository;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.repository.AddressRepository;
@@ -29,6 +32,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -36,7 +40,7 @@ import java.util.concurrent.Future;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * 最後一件商品被多人同時結帳時,只能有一人成功,庫存不可變成負數或被超賣。
+ * 多人同時結帳搶最後一件商品 / 最後一張限量優惠券時,只能有一人成功,不可超賣或超發。
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -60,6 +64,8 @@ class ConcurrentCheckoutTest {
     private ProductRepository productRepository;
     @Autowired
     private ProductSkuRepository productSkuRepository;
+    @Autowired
+    private CouponRepository couponRepository;
 
     @Test
     void lastUnit_canOnlyBeSoldOnce() throws Exception {
@@ -71,7 +77,40 @@ class ConcurrentCheckoutTest {
             checkouts.add(buyerCheckingOut(suffix + "-" + i, sku));
         }
 
-        ExecutorService pool = Executors.newFixedThreadPool(BUYERS);
+        int succeeded = runConcurrently(checkouts, "庫存不足");
+
+        assertThat(succeeded).as("只能有一位買家成功").isEqualTo(1);
+        assertThat(productSkuRepository.findById(sku.getId()).orElseThrow().getStock()).isZero();
+    }
+
+    @Test
+    void lastCouponUse_canOnlyBeClaimedOnce() throws Exception {
+        String suffix = UUID.randomUUID().toString().substring(0, 8);
+        Coupon coupon = new Coupon();
+        coupon.setCode("LAST" + suffix.toUpperCase());
+        coupon.setName("限量一張");
+        coupon.setDiscountType(DiscountType.FIXED_AMOUNT);
+        coupon.setDiscountValue(new BigDecimal("10"));
+        coupon.setMinSpendAmount(BigDecimal.ZERO);
+        coupon.setTotalQuantity(1);
+        couponRepository.save(coupon);
+
+        List<Callable<Long>> checkouts = new ArrayList<>();
+        for (int i = 0; i < BUYERS; i++) {
+            // 每人買不同商品:共用同一個 SKU 時,扣庫存的列鎖會讓交易排隊,測不出優惠券本身的競爭
+            ProductSku sku = createSkuWithStock(suffix + "-c" + i, 100);
+            checkouts.add(buyerCheckingOut(suffix + "-c" + i, sku, coupon.getCode()));
+        }
+
+        int succeeded = runConcurrently(checkouts, "兌換完畢");
+
+        assertThat(succeeded).as("限量一張的優惠券只能被用一次").isEqualTo(1);
+        assertThat(couponRepository.findById(coupon.getId()).orElseThrow().getUsedQuantity()).isEqualTo(1);
+    }
+
+    /** 同時執行所有結帳,回傳成功筆數;失敗的必須是預期的業務錯誤 */
+    private int runConcurrently(List<Callable<Long>> checkouts, String expectedError) throws Exception {
+        ExecutorService pool = Executors.newFixedThreadPool(checkouts.size());
         CountDownLatch start = new CountDownLatch(1);
         List<Future<Long>> results = new ArrayList<>();
         for (Callable<Long> checkout : checkouts) {
@@ -83,21 +122,16 @@ class ConcurrentCheckoutTest {
         start.countDown();
 
         int succeeded = 0;
-        int soldOut = 0;
         for (Future<Long> result : results) {
             try {
                 result.get();
                 succeeded++;
-            } catch (java.util.concurrent.ExecutionException ex) {
-                assertThat(ex.getCause()).isInstanceOf(BusinessException.class).hasMessageContaining("庫存不足");
-                soldOut++;
+            } catch (ExecutionException ex) {
+                assertThat(ex.getCause()).isInstanceOf(BusinessException.class).hasMessageContaining(expectedError);
             }
         }
         pool.shutdown();
-
-        assertThat(succeeded).as("只能有一位買家成功").isEqualTo(1);
-        assertThat(soldOut).isEqualTo(BUYERS - 1);
-        assertThat(productSkuRepository.findById(sku.getId()).orElseThrow().getStock()).isZero();
+        return succeeded;
     }
 
     private ProductSku createSkuWithStock(String suffix, int stock) {
@@ -122,6 +156,10 @@ class ConcurrentCheckoutTest {
 
     /** 建立一位購物車裡有該商品的會員,回傳「結帳」這個動作 */
     private Callable<Long> buyerCheckingOut(String name, ProductSku sku) {
+        return buyerCheckingOut(name, sku, null);
+    }
+
+    private Callable<Long> buyerCheckingOut(String name, ProductSku sku, String couponCode) {
         Member member = new Member();
         member.setEmail(name + "@example.com");
         member.setPassword("x");
@@ -147,6 +185,7 @@ class ConcurrentCheckoutTest {
         CheckoutRequest request = new CheckoutRequest();
         request.setAddressId(address.getId());
         request.setPaymentMethod(PaymentMethod.COD);
+        request.setCouponCode(couponCode);
         return () -> orderService.checkout(member.getId(), request).getId();
     }
 }

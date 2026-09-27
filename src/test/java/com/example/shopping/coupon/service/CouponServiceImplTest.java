@@ -19,6 +19,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -127,33 +128,34 @@ class CouponServiceImplTest {
     }
 
     @Test
-    void reserve_incrementsUsedQuantity() {
+    void reserve_claimsOneUseAtomically() {
         fixedCoupon.setTotalQuantity(10);
         when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
+        when(couponRepository.claimOne(1L)).thenReturn(1);
 
         couponService.reserve("SAVE100", new BigDecimal("1000"));
 
-        assertThat(fixedCoupon.getUsedQuantity()).isEqualTo(1);
+        verify(couponRepository).claimOne(1L);
     }
 
     @Test
-    void release_decrementsUsedQuantity() {
-        fixedCoupon.setUsedQuantity(3);
-        when(couponRepository.findById(1L)).thenReturn(Optional.of(fixedCoupon));
+    void reserve_throws_whenLastUseTakenConcurrently() {
+        // 讀到時還有名額,但條件式 UPDATE 沒搶到(別人同時用掉最後一張)
+        fixedCoupon.setTotalQuantity(10);
+        fixedCoupon.setUsedQuantity(9);
+        when(couponRepository.findByCodeIgnoreCase("SAVE100")).thenReturn(Optional.of(fixedCoupon));
+        when(couponRepository.claimOne(1L)).thenReturn(0);
 
-        couponService.release(1L);
-
-        assertThat(fixedCoupon.getUsedQuantity()).isEqualTo(2);
+        assertThatThrownBy(() -> couponService.reserve("SAVE100", new BigDecimal("1000")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("兌換完畢");
     }
 
     @Test
-    void release_doesNotGoBelowZero() {
-        fixedCoupon.setUsedQuantity(0);
-        when(couponRepository.findById(1L)).thenReturn(Optional.of(fixedCoupon));
-
+    void release_returnsOneUseAtomically() {
         couponService.release(1L);
 
-        assertThat(fixedCoupon.getUsedQuantity()).isZero();
+        verify(couponRepository).releaseOne(1L);
     }
 
     @Test

@@ -92,17 +92,16 @@ public class CouponServiceImpl implements CouponService {
     @Override
     public CouponApplyResponse reserve(String code, BigDecimal subtotal) {
         Coupon coupon = validateCoupon(code, subtotal);
-        coupon.setUsedQuantity(coupon.getUsedQuantity() + 1);
+        // validateCoupon 讀到的數量可能已過時;真正佔名額用條件式 UPDATE,同時結帳也不會超發
+        if (couponRepository.claimOne(coupon.getId()) == 0) {
+            throw new BusinessException("此優惠券已被兌換完畢");
+        }
         return toApplyResponse(coupon, subtotal);
     }
 
     @Override
     public void release(Long couponId) {
-        couponRepository.findById(couponId).ifPresent(coupon -> {
-            if (coupon.getUsedQuantity() > 0) {
-                coupon.setUsedQuantity(coupon.getUsedQuantity() - 1);
-            }
-        });
+        couponRepository.releaseOne(couponId);
     }
 
     private Coupon validateCoupon(String code, BigDecimal subtotal) {

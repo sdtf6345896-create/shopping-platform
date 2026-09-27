@@ -47,7 +47,11 @@ public class Coupon {
     @Column(name = "total_quantity")
     private Integer totalQuantity;
 
-    @Column(name = "used_quantity", nullable = false)
+    /**
+     * 已使用數量。不隨 entity 存檔更新(updatable = false),一律透過 CouponRepository 的條件式 UPDATE 增減,
+     * 避免同時結帳超發,或後台編輯優惠券時用舊值蓋掉。
+     */
+    @Column(name = "used_quantity", nullable = false, updatable = false)
     private int usedQuantity = 0;
 
     @Column(name = "start_at")
