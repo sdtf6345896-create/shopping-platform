@@ -17,6 +17,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     boolean existsByCategoryId(Long categoryId);
 
+    @Modifying
+    @Query("update Product p set p.status = :status where p.id in :ids")
+    int updateStatusByIds(@Param("ids") Collection<Long> ids, @Param("status") ProductStatus status);
+
     /** 搜尋建議:名稱包含關鍵字的商品,熱銷優先(Containing 會跳脫 % 與 _,不會被當成萬用字元) */
     List<Product> findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
             ProductStatus status, String keyword, Pageable pageable);

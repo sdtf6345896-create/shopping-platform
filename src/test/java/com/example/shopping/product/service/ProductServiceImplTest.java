@@ -5,6 +5,7 @@ import com.example.shopping.category.repository.CategoryRepository;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
+import com.example.shopping.product.dto.request.BatchProductStatusRequest;
 import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.SkuRequest;
@@ -469,5 +470,15 @@ class ProductServiceImplTest {
         assertThat(productService.suggest("   ", 8)).isEmpty();
         verify(productRepository, never()).findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
                 any(), any(), any());
+    }
+
+    @Test
+    void updateStatusBatch_deduplicatesIds() {
+        BatchProductStatusRequest request = new BatchProductStatusRequest();
+        request.setIds(List.of(1L, 2L, 2L));
+        request.setStatus(ProductStatus.OFF_SHELF);
+        when(productRepository.updateStatusByIds(Set.of(1L, 2L), ProductStatus.OFF_SHELF)).thenReturn(2);
+
+        assertThat(productService.updateStatusBatch(request)).isEqualTo(2);
     }
 }

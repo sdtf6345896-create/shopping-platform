@@ -341,6 +341,9 @@ REFUNDED        → (終態)
 ### `GET /api/admin/products`
 需管理員登入。所有狀態商品皆可查。Query:`categoryId`、`status`、`keyword`、`page`、`size`、`sort`。回傳格式同 `GET /api/products`(輕量版,不含分類名稱與 SKU)。
 
+### `PATCH /api/admin/products/status`
+批次上 / 下架。請求:`{ "ids": [1, 2, 3], "status": "OFF_SHELF" }`(最多 100 個,重複 id 只算一次,不存在的 id 忽略)。回傳 `{ "updated": 3 }`,並記入管理員操作紀錄。
+
 ### `GET /api/admin/products/low-stock`
 需管理員登入。庫存警示:列出**上架中**商品裡庫存小於等於門檻的規格,庫存最少的排前面。Query:`threshold`(預設 10)、`limit`(預設 50,最多 200)。
 ```json
@@ -832,6 +835,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/notifications/read-all` | 會員 |
 | GET | `/api/points/transactions` | 會員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
+| PATCH | `/api/admin/products/status` | 管理員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |
 | GET | `/api/admin/orders/export` | 管理員 |

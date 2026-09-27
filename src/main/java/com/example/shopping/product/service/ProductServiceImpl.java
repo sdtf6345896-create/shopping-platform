@@ -5,6 +5,7 @@ import com.example.shopping.category.repository.CategoryRepository;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
+import com.example.shopping.product.dto.request.BatchProductStatusRequest;
 import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.SkuRequest;
@@ -154,6 +155,11 @@ public class ProductServiceImpl implements ProductService {
         Product product = findOrThrow(id);
         product.setStatus(request.getStatus());
         return ProductDetailResponse.from(product);
+    }
+
+    @Override
+    public int updateStatusBatch(BatchProductStatusRequest request) {
+        return productRepository.updateStatusByIds(Set.copyOf(request.getIds()), request.getStatus());
     }
 
     @Override

@@ -315,6 +315,16 @@ class OrderFlowIntegrationTest {
         JsonNode categorySales = call(get("/api/admin/reports/categories"), adminToken, null, 200).at("/data");
         assertThat(categorySales.isArray()).isTrue();
 
+        // ---- 批次下架再上架,操作紀錄有記錄 ----
+        JsonNode batch = call(patch("/api/admin/products/status"), adminToken,
+                Map.of("ids", List.of(productId, productId, 999999L), "status", "OFF_SHELF"), 200).at("/data");
+        assertThat(batch.at("/updated").asInt()).isEqualTo(1);
+        call(get("/api/products/" + productId), null, null, 404);
+        call(patch("/api/admin/products/status"), adminToken,
+                Map.of("ids", List.of(productId), "status", "ON_SALE"), 200);
+        assertThat(call(get("/api/admin/audit-logs?targetType=PRODUCT"), adminToken, null, 200)
+                .at("/data/content").findValuesAsText("action")).contains("批次上下架");
+
         // ---- 搜尋建議:公開、不分大小寫、% 不會被當萬用字元 ----
         JsonNode suggestions = call(get("/api/products/suggestions?keyword=整合測試"), null, null, 200).at("/data");
         assertThat(suggestions.findValuesAsText("name")).contains("整合測試商品");

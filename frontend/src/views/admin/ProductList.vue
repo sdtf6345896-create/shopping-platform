@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listAdminProducts, updateProductStatus, deleteProduct } from '../../api/admin/product'
+import { listAdminProducts, updateProductStatus, updateProductStatusBatch, deleteProduct } from '../../api/admin/product'
 import { listAdminCategories } from '../../api/admin/category'
 import { flattenCategories } from '../../utils/categoryTree'
 
@@ -59,6 +59,26 @@ async function handleToggleStatus(row) {
   await loadProducts()
 }
 
+const selectedIds = ref([])
+
+function handleSelectionChange(rows) {
+  selectedIds.value = rows.map((row) => row.id)
+}
+
+async function handleBatchStatus(status) {
+  const label = status === 'ON_SALE' ? '上架' : '下架'
+  try {
+    await ElMessageBox.confirm(`確定要將選取的 ${selectedIds.value.length} 個商品${label}嗎?`, '批次操作', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  const result = await updateProductStatusBatch(selectedIds.value, status)
+  ElMessage.success(`已${label} ${result.updated} 個商品`)
+  await loadProducts()
+}
+
 async function handleDelete(row) {
   try {
     await ElMessageBox.confirm(`確定要刪除「${row.name}」嗎?`, '提示', { type: 'warning' })
@@ -102,7 +122,20 @@ onMounted(() => {
       <el-button @click="handleSearch">搜尋</el-button>
     </div>
 
-    <el-table v-loading="loading" :data="products" class="table">
+    <div v-if="selectedIds.length" class="batch-bar">
+      <span>已選 {{ selectedIds.length }} 個商品</span>
+      <el-button size="small" type="success" plain @click="handleBatchStatus('ON_SALE')">批次上架</el-button>
+      <el-button size="small" type="warning" plain @click="handleBatchStatus('OFF_SHELF')">批次下架</el-button>
+    </div>
+
+    <el-table
+      v-loading="loading"
+      :data="products"
+      class="table"
+      row-key="id"
+      @selection-change="handleSelectionChange"
+    >
+      <el-table-column type="selection" width="44" />
       <el-table-column label="縮圖" width="80">
         <template #default="{ row }">
           <img v-if="row.mainImage" :src="row.mainImage" class="thumb" />
@@ -148,6 +181,17 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.batch-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  background: #fdf6ec;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
 .header-row {
   display: flex;
   justify-content: space-between;

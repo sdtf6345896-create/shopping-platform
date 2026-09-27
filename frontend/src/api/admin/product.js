@@ -20,6 +20,10 @@ export function updateProductStatus(id, status) {
   return request.patch(`/admin/products/${id}/status`, { status })
 }
 
+export function updateProductStatusBatch(ids, status) {
+  return request.patch('/admin/products/status', { ids, status })
+}
+
 export function updateSkuStock(productId, skuId, stock) {
   return request.patch(`/admin/products/${productId}/skus/${skuId}/stock`, { stock })
 }

@@ -5,6 +5,7 @@ import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
 import com.example.shopping.common.enums.ProductStatus;
+import com.example.shopping.product.dto.request.BatchProductStatusRequest;
 import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
@@ -19,6 +20,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/products")
@@ -39,6 +41,13 @@ public class AdminProductController {
 
         return ApiResponse.success(PageResponse.from(
                 productService.listAdmin(categoryId, status, keyword, pageable)));
+    }
+
+    @AdminAudit(action = "批次上下架", target = AuditTarget.PRODUCT, targetId = "",
+            detail = "#request.status + ' ' + #request.ids")
+    @PatchMapping("/status")
+    public ApiResponse<Map<String, Integer>> updateStatusBatch(@Valid @RequestBody BatchProductStatusRequest request) {
+        return ApiResponse.success("批次更新完成", Map.of("updated", productService.updateStatusBatch(request)));
     }
 
     @GetMapping("/low-stock")

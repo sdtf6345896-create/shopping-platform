@@ -1,6 +1,7 @@
 package com.example.shopping.product.service;
 
 import com.example.shopping.common.enums.ProductStatus;
+import com.example.shopping.product.dto.request.BatchProductStatusRequest;
 import com.example.shopping.product.dto.request.ProductRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
@@ -41,6 +42,9 @@ public interface ProductService {
     void delete(Long id);
 
     ProductDetailResponse updateStatus(Long id, ProductStatusRequest request);
+
+    /** 批次上 / 下架,回傳實際更新的筆數(不存在的 id 會被忽略) */
+    int updateStatusBatch(BatchProductStatusRequest request);
 
     SkuResponse updateStock(Long productId, Long skuId, StockUpdateRequest request);
 
