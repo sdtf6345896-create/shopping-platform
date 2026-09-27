@@ -17,6 +17,30 @@ request.interceptors.request.use((config) => {
   return config
 })
 
+// 換發 access token 用獨立的 axios 呼叫,避免又經過這支攔截器造成無窮迴圈
+let refreshPromise = null
+
+function refreshMemberToken() {
+  if (!refreshPromise) {
+    const refreshToken = localStorage.getItem('member_refresh_token')
+    if (!refreshToken) {
+      return Promise.reject(new Error('無 refresh token'))
+    }
+    refreshPromise = axios
+      .post('/api/auth/refresh', { refreshToken })
+      .then((res) => {
+        const data = res.data.data
+        localStorage.setItem('member_token', data.token)
+        localStorage.setItem('member_refresh_token', data.refreshToken)
+        return data.token
+      })
+      .finally(() => {
+        refreshPromise = null
+      })
+  }
+  return refreshPromise
+}
+
 request.interceptors.response.use(
   (response) => {
     const body = response.data
@@ -26,13 +50,34 @@ request.interceptors.response.use(
     }
     return body.data
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status
     const message = error.response?.data?.message
+    const originalRequest = error.config
+    const isAdminApi = originalRequest?.url?.startsWith('/admin')
+    const isRefreshCall = originalRequest?.url?.startsWith('/auth/refresh')
+
+    if (status === 401 && !isAdminApi && !isRefreshCall && !originalRequest._retry) {
+      originalRequest._retry = true
+      try {
+        const newToken = await refreshMemberToken()
+        originalRequest.headers.Authorization = `Bearer ${newToken}`
+        return request(originalRequest)
+      } catch {
+        localStorage.removeItem('member_token')
+        localStorage.removeItem('member_refresh_token')
+        ElMessage.error('請先登入')
+        router.push('/login')
+        return Promise.reject(error)
+      }
+    }
 
     if (status === 401) {
-      const isAdminApi = error.config?.url?.startsWith('/admin')
-      localStorage.removeItem(isAdminApi ? 'admin_token' : 'member_token')
+      const tokenKey = isAdminApi ? 'admin_token' : 'member_token'
+      localStorage.removeItem(tokenKey)
+      if (!isAdminApi) {
+        localStorage.removeItem('member_refresh_token')
+      }
       ElMessage.error(message || '請先登入')
       router.push(isAdminApi ? '/admin/login' : '/login')
     } else if (status === 403) {

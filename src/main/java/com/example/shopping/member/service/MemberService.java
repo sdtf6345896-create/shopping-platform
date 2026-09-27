@@ -5,6 +5,7 @@ import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.MemberStatusRequest;
 import com.example.shopping.member.dto.request.MemberUpdateRequest;
+import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
@@ -17,6 +18,10 @@ public interface MemberService {
     MemberResponse register(RegisterRequest request);
 
     LoginResponse login(LoginRequest request);
+
+    LoginResponse refresh(RefreshTokenRequest request);
+
+    void logout(RefreshTokenRequest request);
 
     void forgotPassword(ForgotPasswordRequest request);
 

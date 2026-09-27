@@ -3,6 +3,7 @@ package com.example.shopping.member.controller;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
+import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
@@ -29,6 +30,17 @@ public class AuthController {
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         return ApiResponse.success("登入成功", memberService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        return ApiResponse.success("Token 更新成功", memberService.refresh(request));
+    }
+
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@Valid @RequestBody RefreshTokenRequest request) {
+        memberService.logout(request);
+        return ApiResponse.success("已登出", null);
     }
 
     @PostMapping("/forgot-password")

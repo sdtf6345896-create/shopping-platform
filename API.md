@@ -52,6 +52,7 @@
 - 除了登入/註冊與商品/分類的公開瀏覽端點,其餘皆需在 header 帶 `Authorization: Bearer <token>`
 - **會員 token 與管理員 token 是兩套獨立系統**,不可互相使用。會員 token 打 `/api/admin/**` 會拿到 403。
 - Token 由對應的登入端點簽發,預設有效期 24 小時(見 `application.yml` 的 `jwt.expiration-ms`)。
+- 會員登入額外會拿到 `refreshToken`,預設 14 天內有效(見 `jwt.refresh-expiration-ms`),過期前可用 `POST /api/auth/refresh` 換發新 token,不需要重新輸入密碼。管理員沒有 refresh token,token 過期需重新登入。
 
 ### 列舉值(Enum)
 
@@ -100,8 +101,22 @@ CANCELLED       → (終態)
 
 回應 `data`:
 ```json
-{ "token": "...", "tokenType": "Bearer", "memberId": 1, "name": "王小明", "email": "you@example.com" }
+{ "token": "...", "tokenType": "Bearer", "refreshToken": "...", "memberId": 1, "name": "王小明", "email": "you@example.com" }
 ```
+
+### `POST /api/auth/refresh`
+公開。用 refresh token 換發新的 access token(access token 過期前,前端可用這支 API 換新,不必重新登入)。
+
+請求:`{ "refreshToken": "..." }`
+
+回應 `data`:同登入回應,`token`、`refreshToken` 皆會換新(refresh token 為一次性,換發後舊的即失效)。
+
+- refresh token 不存在、已過期、已被撤銷,或對應帳號已被停用,都回 401,前端應導回登入頁
+
+### `POST /api/auth/logout`
+公開。撤銷指定的 refresh token。找不到對應 token 也視為成功(冪等)。
+
+請求:`{ "refreshToken": "..." }`
 
 ### `POST /api/auth/forgot-password`
 公開。申請重設密碼信。不論 Email 是否存在都回傳相同成功訊息(避免帳號列舉)。

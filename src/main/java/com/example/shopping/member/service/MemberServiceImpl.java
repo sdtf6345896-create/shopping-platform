@@ -8,14 +8,17 @@ import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.MemberStatusRequest;
 import com.example.shopping.member.dto.request.MemberUpdateRequest;
+import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
+import com.example.shopping.member.entity.RefreshToken;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
+import com.example.shopping.member.repository.RefreshTokenRepository;
 import com.example.shopping.security.JwtTokenProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +26,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -42,20 +47,26 @@ public class MemberServiceImpl implements MemberService {
 
     private final MemberRepository memberRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final String frontendOrigin;
+    private final long refreshExpirationMs;
 
     public MemberServiceImpl(MemberRepository memberRepository,
                               PasswordResetTokenRepository passwordResetTokenRepository,
+                              RefreshTokenRepository refreshTokenRepository,
                               PasswordEncoder passwordEncoder,
                               JwtTokenProvider jwtTokenProvider,
-                              @Value("${app.cors.allowed-origins}") String frontendOrigin) {
+                              @Value("${app.cors.allowed-origins}") String frontendOrigin,
+                              @Value("${jwt.refresh-expiration-ms}") long refreshExpirationMs) {
         this.memberRepository = memberRepository;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.refreshTokenRepository = refreshTokenRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtTokenProvider = jwtTokenProvider;
         this.frontendOrigin = frontendOrigin;
+        this.refreshExpirationMs = refreshExpirationMs;
     }
 
     @Override
@@ -87,7 +98,43 @@ public class MemberServiceImpl implements MemberService {
         }
 
         String token = jwtTokenProvider.generateToken(member.getId(), member.getEmail(), Role.MEMBER);
-        return LoginResponse.of(token, member.getId(), member.getName(), member.getEmail());
+        String refreshToken = issueRefreshToken(member.getId());
+        return LoginResponse.of(token, refreshToken, member.getId(), member.getName(), member.getEmail());
+    }
+
+    @Override
+    public LoginResponse refresh(RefreshTokenRequest request) {
+        RefreshToken storedToken = refreshTokenRepository.findByToken(request.getRefreshToken())
+                .orElseThrow(() -> new BusinessException("請重新登入", HttpStatus.UNAUTHORIZED));
+
+        if (storedToken.isRevoked() || storedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("請重新登入", HttpStatus.UNAUTHORIZED);
+        }
+
+        Member member = findMemberOrThrow(storedToken.getMemberId());
+        if (member.getStatus() != AccountStatus.ACTIVE) {
+            throw new BusinessException("帳號已被停用,請聯繫客服", HttpStatus.UNAUTHORIZED);
+        }
+
+        // 輪替:換發新 refresh token 前先讓舊的失效,降低外洩後被重複利用的風險
+        storedToken.setRevoked(true);
+        String newRefreshToken = issueRefreshToken(member.getId());
+        String newAccessToken = jwtTokenProvider.generateToken(member.getId(), member.getEmail(), Role.MEMBER);
+        return LoginResponse.of(newAccessToken, newRefreshToken, member.getId(), member.getName(), member.getEmail());
+    }
+
+    @Override
+    public void logout(RefreshTokenRequest request) {
+        refreshTokenRepository.findByToken(request.getRefreshToken())
+                .ifPresent(storedToken -> storedToken.setRevoked(true));
+    }
+
+    private String issueRefreshToken(Long memberId) {
+        RefreshToken refreshToken = new RefreshToken();
+        refreshToken.setMemberId(memberId);
+        refreshToken.setToken(UUID.randomUUID().toString());
+        refreshToken.setExpiresAt(LocalDateTime.now().plus(Duration.ofMillis(refreshExpirationMs)));
+        return refreshTokenRepository.save(refreshToken).getToken();
     }
 
     @Override

@@ -8,23 +8,24 @@ import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.MemberStatusRequest;
 import com.example.shopping.member.dto.request.MemberUpdateRequest;
+import com.example.shopping.member.dto.request.RefreshTokenRequest;
 import com.example.shopping.member.dto.request.RegisterRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.entity.PasswordResetToken;
+import com.example.shopping.member.entity.RefreshToken;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
+import com.example.shopping.member.repository.RefreshTokenRepository;
 import com.example.shopping.security.JwtTokenProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -45,25 +46,29 @@ class MemberServiceImplTest {
     @Mock
     private PasswordResetTokenRepository passwordResetTokenRepository;
     @Mock
+    private RefreshTokenRepository refreshTokenRepository;
+    @Mock
     private PasswordEncoder passwordEncoder;
     @Mock
     private JwtTokenProvider jwtTokenProvider;
 
-    @InjectMocks
     private MemberServiceImpl memberService;
 
     private Member activeMember;
 
     @BeforeEach
     void setUp() {
+        // 建構子帶有 String/long 這類非 mock 參數,Mockito 的 @InjectMocks 無法可靠處理,改手動 new
+        memberService = new MemberServiceImpl(memberRepository, passwordResetTokenRepository,
+                refreshTokenRepository, passwordEncoder, jwtTokenProvider,
+                "http://localhost:5173", 1209600000L);
+
         activeMember = new Member();
         activeMember.setId(1L);
         activeMember.setEmail("test@example.com");
         activeMember.setPassword("encoded-password");
         activeMember.setName("測試會員");
         activeMember.setStatus(AccountStatus.ACTIVE);
-
-        ReflectionTestUtils.setField(memberService, "frontendOrigin", "http://localhost:5173");
     }
 
     @Test
@@ -107,11 +112,13 @@ class MemberServiceImplTest {
         when(memberRepository.findByEmail("test@example.com")).thenReturn(Optional.of(activeMember));
         when(passwordEncoder.matches("password123", "encoded-password")).thenReturn(true);
         when(jwtTokenProvider.generateToken(1L, "test@example.com", Role.MEMBER)).thenReturn("token-abc");
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
 
         LoginResponse response = memberService.login(request);
 
         assertThat(response.getToken()).isEqualTo("token-abc");
         assertThat(response.getMemberId()).isEqualTo(1L);
+        assertThat(response.getRefreshToken()).isNotBlank();
     }
 
     @Test
@@ -143,6 +150,122 @@ class MemberServiceImplTest {
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("已被停用");
         verify(jwtTokenProvider, never()).generateToken(any(), any(), any());
+    }
+
+    @Test
+    void refresh_returnsNewTokenPair_whenValid() {
+        RefreshToken storedToken = new RefreshToken();
+        storedToken.setMemberId(1L);
+        storedToken.setToken("valid-refresh");
+        storedToken.setExpiresAt(LocalDateTime.now().plusDays(1));
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("valid-refresh");
+
+        when(refreshTokenRepository.findByToken("valid-refresh")).thenReturn(Optional.of(storedToken));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(activeMember));
+        when(jwtTokenProvider.generateToken(1L, "test@example.com", Role.MEMBER)).thenReturn("new-access-token");
+        when(refreshTokenRepository.save(any(RefreshToken.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LoginResponse response = memberService.refresh(request);
+
+        assertThat(response.getToken()).isEqualTo("new-access-token");
+        assertThat(response.getRefreshToken()).isNotBlank().isNotEqualTo("valid-refresh");
+        assertThat(storedToken.isRevoked()).isTrue();
+    }
+
+    @Test
+    void refresh_throws_whenTokenNotFound() {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("missing-refresh");
+
+        when(refreshTokenRepository.findByToken("missing-refresh")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> memberService.refresh(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("重新登入");
+    }
+
+    @Test
+    void refresh_throws_whenTokenExpired() {
+        RefreshToken storedToken = new RefreshToken();
+        storedToken.setMemberId(1L);
+        storedToken.setToken("expired-refresh");
+        storedToken.setExpiresAt(LocalDateTime.now().minusMinutes(1));
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("expired-refresh");
+
+        when(refreshTokenRepository.findByToken("expired-refresh")).thenReturn(Optional.of(storedToken));
+
+        assertThatThrownBy(() -> memberService.refresh(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("重新登入");
+        verify(memberRepository, never()).findById(any());
+    }
+
+    @Test
+    void refresh_throws_whenTokenRevoked() {
+        RefreshToken storedToken = new RefreshToken();
+        storedToken.setMemberId(1L);
+        storedToken.setToken("revoked-refresh");
+        storedToken.setExpiresAt(LocalDateTime.now().plusDays(1));
+        storedToken.setRevoked(true);
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("revoked-refresh");
+
+        when(refreshTokenRepository.findByToken("revoked-refresh")).thenReturn(Optional.of(storedToken));
+
+        assertThatThrownBy(() -> memberService.refresh(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("重新登入");
+    }
+
+    @Test
+    void refresh_throws_whenAccountDisabled() {
+        activeMember.setStatus(AccountStatus.DISABLED);
+        RefreshToken storedToken = new RefreshToken();
+        storedToken.setMemberId(1L);
+        storedToken.setToken("valid-refresh");
+        storedToken.setExpiresAt(LocalDateTime.now().plusDays(1));
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("valid-refresh");
+
+        when(refreshTokenRepository.findByToken("valid-refresh")).thenReturn(Optional.of(storedToken));
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(activeMember));
+
+        assertThatThrownBy(() -> memberService.refresh(request))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("已被停用");
+        verify(jwtTokenProvider, never()).generateToken(any(), any(), any());
+    }
+
+    @Test
+    void logout_revokesToken_whenFound() {
+        RefreshToken storedToken = new RefreshToken();
+        storedToken.setMemberId(1L);
+        storedToken.setToken("active-refresh");
+
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("active-refresh");
+
+        when(refreshTokenRepository.findByToken("active-refresh")).thenReturn(Optional.of(storedToken));
+
+        memberService.logout(request);
+
+        assertThat(storedToken.isRevoked()).isTrue();
+    }
+
+    @Test
+    void logout_doesNothing_whenTokenNotFound() {
+        RefreshTokenRequest request = new RefreshTokenRequest();
+        request.setRefreshToken("missing-refresh");
+
+        when(refreshTokenRepository.findByToken("missing-refresh")).thenReturn(Optional.empty());
+
+        memberService.logout(request);
     }
 
     @Test

@@ -31,6 +31,7 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET:this-is-a-dev-only-secret-key-please-change-in-prod-32bytes+}
   expiration-ms: ${JWT_EXPIRATION_MS:86400000}   # 24 小時
+  refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:1209600000}   # 14 天
 
 app:
   cors:

@@ -8,6 +8,14 @@ export function login(data) {
   return request.post('/auth/login', data)
 }
 
+export function refresh(refreshToken) {
+  return request.post('/auth/refresh', { refreshToken })
+}
+
+export function logout(refreshToken) {
+  return request.post('/auth/logout', { refreshToken })
+}
+
 export function forgotPassword(data) {
   return request.post('/auth/forgot-password', data)
 }
