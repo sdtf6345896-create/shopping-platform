@@ -43,6 +43,10 @@ function refreshMemberToken() {
 
 request.interceptors.response.use(
   (response) => {
+    // 檔案下載回傳完整 response,呼叫端需要讀 Content-Disposition 取檔名
+    if (response.config.responseType === 'blob') {
+      return response
+    }
     const body = response.data
     if (body && body.success === false) {
       ElMessage.error(body.message || '請求失敗')
@@ -52,7 +56,15 @@ request.interceptors.response.use(
   },
   async (error) => {
     const status = error.response?.status
-    const message = error.response?.data?.message
+    let message = error.response?.data?.message
+    // 下載檔案失敗時,錯誤內容也是 Blob,要自己解析 JSON
+    if (error.response?.data instanceof Blob) {
+      try {
+        message = JSON.parse(await error.response.data.text()).message
+      } catch {
+        // 不是 JSON 就用預設訊息
+      }
+    }
     const originalRequest = error.config
     const isAdminApi = originalRequest?.url?.startsWith('/admin')
     const isRefreshCall = originalRequest?.url?.startsWith('/auth/refresh')

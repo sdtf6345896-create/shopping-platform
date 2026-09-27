@@ -1,6 +1,7 @@
 package com.example.shopping.order.service;
 
 import com.example.shopping.common.enums.OrderStatus;
+import com.example.shopping.order.dto.request.AdminOrderQuery;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.request.OrderStatusRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
@@ -25,7 +26,10 @@ public interface OrderService {
     /** 把舊訂單的商品重新加入購物車;下架或缺貨的品項略過,庫存不足時只加入可買的數量 */
     ReorderResponse reorder(Long memberId, Long orderId);
 
-    Page<OrderResponse> listAdmin(OrderStatus status, Pageable pageable);
+    Page<OrderResponse> listAdmin(AdminOrderQuery query, Pageable pageable);
+
+    /** 依查詢條件匯出 CSV(最多 10,000 筆,新到舊) */
+    byte[] exportAdminCsv(AdminOrderQuery query);
 
     OrderResponse getAdminOrder(Long orderId);
 

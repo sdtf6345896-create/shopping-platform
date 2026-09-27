@@ -494,7 +494,10 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ## 訂單管理(Admin）— 需管理員登入
 
 ### `GET /api/admin/orders`
-所有會員的訂單。Query:`status`、`page`、`size` → `PageResponse<OrderResponse>`
+所有會員的訂單。Query(皆選填):`status`、`keyword`(比對訂單編號、收件人、收件電話、會員 Email)、`startDate` / `endDate`(`YYYY-MM-DD`,依建立日期,含頭尾)、`page`、`size` → `PageResponse<OrderResponse>`
+
+### `GET /api/admin/orders/export`
+依與列表相同的查詢條件匯出 CSV(新到舊,最多 10,000 筆),回應為檔案下載(`Content-Disposition: attachment; filename="orders-YYYYMMDD.csv"`),不是 JSON。檔案為 UTF-8 含 BOM,Excel 可直接開啟;以 `=`、`+`、`-`、`@` 開頭的文字欄位會加上 `'` 前綴,避免被 Excel 當成公式執行(CSV injection)。
 
 ### `GET /api/admin/orders/{id}`
 任意訂單詳情。
@@ -571,6 +574,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |
+| GET | `/api/admin/orders/export` | 管理員 |
 | GET | `/api/admin/orders/{id}` | 管理員 |
 | PATCH | `/api/admin/orders/{id}/status` | 管理員 |
 | GET | `/api/admin/reports/summary` | 管理員 |

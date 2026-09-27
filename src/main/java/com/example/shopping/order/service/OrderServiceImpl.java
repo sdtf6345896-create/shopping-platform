@@ -13,18 +13,22 @@ import com.example.shopping.coupon.service.CouponService;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.repository.AddressRepository;
 import com.example.shopping.member.repository.MemberRepository;
+import com.example.shopping.order.dto.request.AdminOrderQuery;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.request.OrderStatusRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
+import com.example.shopping.order.export.OrderCsvWriter;
 import com.example.shopping.order.mail.OrderMailSender;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -40,12 +44,16 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import static com.example.shopping.order.repository.OrderSpecifications.createdBetween;
 import static com.example.shopping.order.repository.OrderSpecifications.hasMemberId;
 import static com.example.shopping.order.repository.OrderSpecifications.hasStatus;
+import static com.example.shopping.order.repository.OrderSpecifications.keywordMatches;
 
 @Service
 @Transactional
 public class OrderServiceImpl implements OrderService {
+
+    static final int MAX_EXPORT_ROWS = 10_000;
 
     private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = new EnumMap<>(OrderStatus.class);
 
@@ -229,9 +237,25 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<OrderResponse> listAdmin(OrderStatus status, Pageable pageable) {
-        Specification<Orders> spec = Specification.where(hasStatus(status));
-        return orderRepository.findAll(spec, pageable).map(OrderResponse::from);
+    public Page<OrderResponse> listAdmin(AdminOrderQuery query, Pageable pageable) {
+        return orderRepository.findAll(adminSpec(query), pageable).map(OrderResponse::from);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] exportAdminCsv(AdminOrderQuery query) {
+        if (query.getStartDate() != null && query.getEndDate() != null
+                && query.getStartDate().isAfter(query.getEndDate())) {
+            throw new BusinessException("開始日期不可晚於結束日期");
+        }
+        Pageable firstRows = PageRequest.of(0, MAX_EXPORT_ROWS, Sort.by(Sort.Direction.DESC, "createdAt"));
+        return OrderCsvWriter.write(orderRepository.findAll(adminSpec(query), firstRows).getContent());
+    }
+
+    private static Specification<Orders> adminSpec(AdminOrderQuery query) {
+        return Specification.where(hasStatus(query.getStatus()))
+                .and(keywordMatches(query.getKeyword()))
+                .and(createdBetween(query.getStartDate(), query.getEndDate()));
     }
 
     @Override

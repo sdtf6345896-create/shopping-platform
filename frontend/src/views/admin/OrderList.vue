@@ -2,7 +2,8 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { listAdminOrders, updateOrderStatus } from '../../api/admin/order'
+import { exportAdminOrders, listAdminOrders, updateOrderStatus } from '../../api/admin/order'
+import { filenameFromDisposition, saveBlob } from '../../utils/download'
 import {
   ORDER_STATUS_LABELS,
   ORDER_STATUS_TAG_TYPES,
@@ -17,14 +18,38 @@ const loading = ref(true)
 
 const filters = reactive({
   status: null,
+  keyword: '',
+  dateRange: null, // ['YYYY-MM-DD', 'YYYY-MM-DD']
   page: 0,
 })
+const exporting = ref(false)
+
+// 列表與匯出共用的查詢條件
+function queryParams() {
+  return {
+    status: filters.status || undefined,
+    keyword: filters.keyword.trim() || undefined,
+    startDate: filters.dateRange?.[0],
+    endDate: filters.dateRange?.[1],
+  }
+}
+
+async function handleExport() {
+  exporting.value = true
+  try {
+    const response = await exportAdminOrders(queryParams())
+    const filename = filenameFromDisposition(response.headers['content-disposition'], 'orders.csv')
+    saveBlob(response.data, filename)
+  } finally {
+    exporting.value = false
+  }
+}
 
 async function load() {
   loading.value = true
   try {
     const data = await listAdminOrders({
-      status: filters.status || undefined,
+      ...queryParams(),
       page: filters.page,
       size: 10,
     })
@@ -70,9 +95,31 @@ onMounted(load)
   <div>
     <div class="header-row">
       <h3>訂單管理</h3>
+      <el-button :loading="exporting" @click="handleExport">匯出 CSV</el-button>
+    </div>
+
+    <div class="filter-row">
+      <el-input
+        v-model="filters.keyword"
+        placeholder="訂單編號 / 收件人 / 電話 / 會員 Email"
+        clearable
+        style="width: 280px"
+        @keyup.enter="handleFilterChange"
+        @clear="handleFilterChange"
+      />
+      <el-date-picker
+        v-model="filters.dateRange"
+        type="daterange"
+        value-format="YYYY-MM-DD"
+        start-placeholder="開始日期"
+        end-placeholder="結束日期"
+        style="width: 260px"
+        @change="handleFilterChange"
+      />
       <el-select v-model="filters.status" placeholder="全部狀態" clearable style="width: 140px" @change="handleFilterChange">
         <el-option v-for="(label, key) in ORDER_STATUS_LABELS" :key="key" :label="label" :value="key" />
       </el-select>
+      <el-button type="primary" @click="handleFilterChange">搜尋</el-button>
     </div>
 
     <el-table v-loading="loading" :data="orders" class="table">
@@ -129,6 +176,13 @@ onMounted(load)
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
+}
+
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 16px;
 }
 

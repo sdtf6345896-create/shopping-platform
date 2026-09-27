@@ -24,6 +24,8 @@ public class WebConfig implements WebMvcConfigurer {
                 .allowedOrigins(allowedOrigins.split(","))
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
+                // 讓前端跨網域時也讀得到下載檔名(訂單匯出)
+                .exposedHeaders("Content-Disposition")
                 .allowCredentials(true);
     }
 

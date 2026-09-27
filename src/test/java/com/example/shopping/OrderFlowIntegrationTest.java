@@ -140,6 +140,19 @@ class OrderFlowIntegrationTest {
         assertThat(shipped.at("/statusLogs").findValuesAsText("actor"))
                 .containsExactly("MEMBER", "MEMBER", "ADMIN");
 
+        // ---- 後台:關鍵字搜尋與 CSV 匯出 ----
+        JsonNode found = call(get("/api/admin/orders?keyword=" + suffix), adminToken, null, 200).at("/data");
+        assertThat(found.at("/totalElements").asLong()).isEqualTo(1);
+        assertThat(found.at("/content/0/id").asLong()).isEqualTo(orderId);
+
+        var export = mockMvc.perform(get("/api/admin/orders/export?keyword=" + suffix)
+                .header("Authorization", "Bearer " + adminToken)).andReturn().getResponse();
+        assertThat(export.getStatus()).isEqualTo(200);
+        assertThat(export.getHeader("Content-Disposition")).contains("attachment").contains(".csv");
+        String csv = new String(export.getContentAsByteArray(), StandardCharsets.UTF_8);
+        assertThat(csv.lines()).hasSize(2);
+        assertThat(csv).contains(shipped.at("/orderNo").asText()).contains("TRK-" + suffix);
+
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
     }
