@@ -287,6 +287,11 @@ class OrderFlowIntegrationTest {
         assertThat(call(get("/api/stock-alerts?productId=" + productId), memberToken, null, 200).at("/data").size())
                 .isZero();
 
+        // ---- 會員等級:唯一完成的訂單已退款,不列入消費,仍為一般會員 ----
+        JsonNode tier = call(get("/api/members/me/tier"), memberToken, null, 200).at("/data");
+        assertThat(tier.at("/tier").asText()).isEqualTo("NORMAL");
+        assertThat(tier.at("/nextTier").asText()).isEqualTo("SILVER");
+
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);
     }

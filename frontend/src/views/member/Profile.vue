@@ -1,4 +1,5 @@
 <script setup>
+import MemberTierCard from '../../components/MemberTierCard.vue'
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../../stores/auth'
@@ -47,6 +48,7 @@ onMounted(load)
 <template>
   <div v-loading="loading">
     <h3>個人資料</h3>
+    <MemberTierCard />
     <el-form ref="formRef" :model="form" :rules="rules" label-width="80px" class="profile-form">
       <el-form-item label="Email">
         <el-input v-model="form.email" disabled />

@@ -162,6 +162,17 @@ REFUNDED        → (終態)
 
 ---
 
+## 會員等級(Member Tier)— 需會員登入
+
+### `GET /api/members/me/tier`
+依近 12 個月**已完成**訂單的商品金額(不含運費)計算:一般會員(回饋 1 倍)、銀卡 ≥ NT$5,000(1.5 倍)、金卡 ≥ NT$20,000(2 倍)。等級即時計算,不另外儲存;訂單完成時以「這筆之前」的等級決定購物金回饋倍率。
+```json
+{ "tier": "SILVER", "label": "銀卡會員", "pointsMultiplier": 1.5, "spending": 8000.00,
+  "nextTier": "GOLD", "nextLabel": "金卡會員", "amountToNext": 12000.00 }
+```
+
+---
+
 ## 收件地址(Address)— 需會員登入
 
 ### `GET /api/members/addresses`
@@ -749,6 +760,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/returns` | 管理員 |
 | POST | `/api/admin/returns/{id}/approve` | 管理員 |
 | POST | `/api/admin/returns/{id}/reject` | 管理員 |
+| GET | `/api/members/me/tier` | 會員 |
 | GET | `/api/points` | 會員 |
 | GET | `/api/stock-alerts` | 會員 |
 | POST / DELETE | `/api/stock-alerts/{skuId}` | 會員 |

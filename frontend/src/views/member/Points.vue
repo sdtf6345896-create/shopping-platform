@@ -1,4 +1,5 @@
 <script setup>
+import MemberTierCard from '../../components/MemberTierCard.vue'
 import { onMounted, ref } from 'vue'
 import { getPointBalance, listPointTransactions } from '../../api/points'
 import { POINT_TYPE_LABELS } from '../../utils/points'
@@ -34,6 +35,7 @@ onMounted(async () => {
 <template>
   <div>
     <h3>我的購物金</h3>
+    <MemberTierCard />
 
     <div v-if="balance" class="balance-card">
       <div>

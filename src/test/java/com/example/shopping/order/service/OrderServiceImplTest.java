@@ -17,6 +17,8 @@ import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.repository.AddressRepository;
 import com.example.shopping.member.repository.MemberRepository;
+import com.example.shopping.member.tier.MemberTier;
+import com.example.shopping.member.tier.MemberTierService;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.request.OrderStatusRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
@@ -51,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -80,6 +83,8 @@ class OrderServiceImplTest {
     private ProductSkuRepository productSkuRepository;
     @Mock
     private ProductRepository productRepository;
+    @Mock
+    private MemberTierService memberTierService;
     @Spy
     private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("999"));
     @Mock
@@ -99,6 +104,7 @@ class OrderServiceImplTest {
     void setUp() {
         // 預設扣庫存成功;搶輸最後一件的情境由個別測試覆寫
         lenient().when(productSkuRepository.decrementStock(anyLong(), anyInt())).thenReturn(1);
+        lenient().when(memberTierService.tierOf(any())).thenReturn(MemberTier.NORMAL);
 
         Member member = new Member();
         member.setId(1L);
@@ -648,5 +654,24 @@ class OrderServiceImplTest {
         orderService.updateStatus(1L, request);
 
         verify(pointService).credit(eq(1L), eq(1L), eq(5), eq(PointTransactionType.EARN), any());
+    }
+
+    @Test
+    void complete_goldMemberEarnsDoublePoints() {
+        when(memberTierService.tierOf(1L)).thenReturn(MemberTier.GOLD);
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD1");
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setTotalAmount(new BigDecimal("1000"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderStatusRequest request = new OrderStatusRequest();
+        request.setStatus(OrderStatus.COMPLETED);
+
+        orderService.updateStatus(1L, request);
+
+        assertThat(order.getPointsEarned()).isEqualTo(20);
+        verify(pointService).credit(eq(1L), eq(1L), eq(20), eq(PointTransactionType.EARN),
+                argThat(description -> description.contains("金卡會員 2 倍")));
     }
 }

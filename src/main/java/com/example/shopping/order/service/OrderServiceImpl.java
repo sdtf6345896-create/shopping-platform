@@ -14,6 +14,8 @@ import com.example.shopping.coupon.service.CouponService;
 import com.example.shopping.member.entity.Address;
 import com.example.shopping.member.repository.AddressRepository;
 import com.example.shopping.member.repository.MemberRepository;
+import com.example.shopping.member.tier.MemberTier;
+import com.example.shopping.member.tier.MemberTierService;
 import com.example.shopping.order.dto.request.AdminOrderQuery;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.request.OrderStatusRequest;
@@ -86,6 +88,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductSkuRepository productSkuRepository;
     private final ProductRepository productRepository;
     private final ShippingPolicy shippingPolicy;
+    private final MemberTierService memberTierService;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -99,7 +102,8 @@ public class OrderServiceImpl implements OrderService {
                              PointPolicy pointPolicy,
                              ProductSkuRepository productSkuRepository,
                              ProductRepository productRepository,
-                             ShippingPolicy shippingPolicy) {
+                             ShippingPolicy shippingPolicy,
+                             MemberTierService memberTierService) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -113,6 +117,7 @@ public class OrderServiceImpl implements OrderService {
         this.productSkuRepository = productSkuRepository;
         this.productRepository = productRepository;
         this.shippingPolicy = shippingPolicy;
+        this.memberTierService = memberTierService;
     }
 
     @Override
@@ -325,13 +330,18 @@ public class OrderServiceImpl implements OrderService {
         } else if (target == OrderStatus.SHIPPING) {
             markShipped(order, request, note);
         } else if (target == OrderStatus.COMPLETED) {
+            // 等級以「這筆完成之前」的消費計算,避免這筆訂單自己把自己推上更高倍率
+            MemberTier tier = memberTierService.tierOf(order.getMember().getId());
             order.changeStatus(target, OrderActor.ADMIN, note);
-            // 回饋只算商品金額,運費不列入
-            int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount().subtract(order.getShippingFee()));
+            // 回饋只算商品金額,運費不列入;依會員等級加倍
+            int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount().subtract(order.getShippingFee()),
+                    tier.getPointsMultiplier());
             order.setPointsEarned(earned);
             if (earned > 0) {
+                String tierNote = tier == MemberTier.NORMAL ? "" : "(" + tier.getLabel() + " "
+                        + tier.getPointsMultiplier().stripTrailingZeros().toPlainString() + " 倍)";
                 pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,
-                        "訂單 " + order.getOrderNo() + " 完成回饋");
+                        "訂單 " + order.getOrderNo() + " 完成回饋" + tierNote);
             }
         } else {
             order.changeStatus(target, OrderActor.ADMIN, note);

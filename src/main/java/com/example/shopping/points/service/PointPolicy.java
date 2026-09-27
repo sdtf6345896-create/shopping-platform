@@ -23,7 +23,12 @@ public class PointPolicy {
     }
 
     public int pointsEarnedFor(BigDecimal paidAmount) {
-        return paidAmount.multiply(earnRate).setScale(0, RoundingMode.DOWN).intValue();
+        return pointsEarnedFor(paidAmount, BigDecimal.ONE);
+    }
+
+    /** 依會員等級倍率計算回饋點數(無條件捨去) */
+    public int pointsEarnedFor(BigDecimal paidAmount, BigDecimal multiplier) {
+        return paidAmount.multiply(earnRate).multiply(multiplier).setScale(0, RoundingMode.DOWN).intValue();
     }
 
     public int maxRedeemable(int balance, BigDecimal payableAmount) {
