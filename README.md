@@ -1,6 +1,7 @@
 # 購物平台 Shopping Platform
 
 [![GitHub repo](https://img.shields.io/badge/GitHub-shopping--platform-181717?logo=github)](https://github.com/sdtf6345896-create/shopping-platform)
+[![CI](https://github.com/sdtf6345896-create/shopping-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/sdtf6345896-create/shopping-platform/actions/workflows/ci.yml)
 [![Last commit](https://img.shields.io/github/last-commit/sdtf6345896-create/shopping-platform)](https://github.com/sdtf6345896-create/shopping-platform/commits/master)
 [![Stars](https://img.shields.io/github/stars/sdtf6345896-create/shopping-platform?style=flat)](https://github.com/sdtf6345896-create/shopping-platform/stargazers)
 
