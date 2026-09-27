@@ -33,6 +33,7 @@ const emptyForm = () => ({
   minSpendAmount: 0,
   totalQuantity: null,
   perMemberLimit: null,
+  claimable: false,
   startAt: null,
   endAt: null,
 })
@@ -91,6 +92,7 @@ function openEdit(coupon) {
     minSpendAmount: coupon.minSpendAmount,
     totalQuantity: coupon.totalQuantity,
     perMemberLimit: coupon.perMemberLimit,
+    claimable: coupon.claimable,
     startAt: coupon.startAt,
     endAt: coupon.endAt,
   })
@@ -175,6 +177,7 @@ onMounted(loadCoupons)
         <template #default="{ row }">
           {{ row.usedQuantity }} / {{ row.totalQuantity ?? '無限制' }}
           <div v-if="row.perMemberLimit" class="per-member">每人限 {{ row.perMemberLimit }} 次</div>
+          <el-tag v-if="row.claimable" size="small" type="danger" effect="plain">領券中心</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="有效期間" min-width="200">
@@ -251,6 +254,9 @@ onMounted(loadCoupons)
         <el-form-item label="每人限用">
           <el-input-number v-model="form.perMemberLimit" :min="1" placeholder="不限制" />
           <span class="form-hint">次(留空表示不限,已取消的訂單不計)</span>
+        </el-form-item>
+        <el-form-item label="領券中心">
+          <el-switch v-model="form.claimable" active-text="公開讓會員領取" />
         </el-form-item>
         <el-form-item label="開始時間">
           <el-date-picker v-model="form.startAt" type="datetime" placeholder="不限制" value-format="YYYY-MM-DDTHH:mm:ss" />

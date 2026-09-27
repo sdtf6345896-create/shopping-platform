@@ -64,6 +64,10 @@ public class Coupon {
     @Column(name = "end_at")
     private LocalDateTime endAt;
 
+    /** 是否公開於領券中心讓會員領取 */
+    @Column(nullable = false)
+    private boolean claimable;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private CouponStatus status = CouponStatus.ACTIVE;

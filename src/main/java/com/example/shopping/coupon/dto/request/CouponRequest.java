@@ -46,4 +46,7 @@ public class CouponRequest {
     private LocalDateTime startAt;
 
     private LocalDateTime endAt;
+
+    /** 是否公開於領券中心 */
+    private boolean claimable;
 }

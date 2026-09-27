@@ -161,6 +161,7 @@ public class CouponServiceImpl implements CouponService {
         coupon.setMinSpendAmount(request.getMinSpendAmount());
         coupon.setTotalQuantity(request.getTotalQuantity());
         coupon.setPerMemberLimit(request.getPerMemberLimit());
+        coupon.setClaimable(request.isClaimable());
         coupon.setStartAt(request.getStartAt());
         coupon.setEndAt(request.getEndAt());
     }

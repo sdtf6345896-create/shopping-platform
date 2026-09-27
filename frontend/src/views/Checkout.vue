@@ -4,7 +4,7 @@ import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { listAddresses, createAddress } from '../api/address'
 import { checkout } from '../api/order'
-import { applyCoupon } from '../api/coupon'
+import { applyCoupon, getMyCoupons } from '../api/coupon'
 import { getPointBalance } from '../api/points'
 import { maxRedeemable } from '../utils/points'
 import { INVOICE_TYPE_LABELS, validateInvoice } from '../utils/invoice'
@@ -84,6 +84,15 @@ async function loadPoints() {
   } catch {
     pointInfo.value = null
   }
+}
+
+// 已領取的優惠券,選一張就自動帶入代碼並試算
+const myCoupons = ref([])
+
+async function handlePickCoupon(code) {
+  if (!code) return
+  couponCode.value = code
+  await handleApplyCoupon()
 }
 
 async function handleApplyCoupon() {
@@ -185,6 +194,11 @@ onMounted(async () => {
   await Promise.all([
     loadAddresses(),
     loadPoints(),
+    getMyCoupons()
+      .then((list) => {
+        myCoupons.value = list
+      })
+      .catch(() => {}),
     getShippingPolicy()
       .then((policy) => {
         shippingPolicy.value = policy
@@ -227,6 +241,25 @@ onMounted(async () => {
 
     <section class="block">
       <div class="block-title">優惠券</div>
+      <el-select
+        v-if="!appliedCoupon && myCoupons.length"
+        placeholder="從我的優惠券選擇"
+        class="wallet-select"
+        @change="handlePickCoupon"
+      >
+        <el-option
+          v-for="c in myCoupons"
+          :key="c.id"
+          :label="`${c.name}(${c.code})`"
+          :value="c.code"
+          :disabled="Number(c.minSpendAmount) > subtotalAmount"
+        >
+          <span>{{ c.name }}</span>
+          <span class="wallet-hint">
+            {{ Number(c.minSpendAmount) > subtotalAmount ? `滿 NT$ ${c.minSpendAmount} 可用` : c.code }}
+          </span>
+        </el-option>
+      </el-select>
       <div v-if="!appliedCoupon" class="coupon-input">
         <el-input v-model="couponCode" placeholder="輸入優惠券代碼" @keyup.enter="handleApplyCoupon" />
         <el-button type="primary" :loading="applyingCoupon" @click="handleApplyCoupon">套用</el-button>
@@ -422,6 +455,17 @@ onMounted(async () => {
   gap: 8px;
   margin-top: 12px;
   max-width: 360px;
+}
+
+.wallet-select {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.wallet-hint {
+  float: right;
+  color: #999;
+  font-size: 12px;
 }
 
 .shipping-hint {

@@ -10,6 +10,7 @@ const menu = [
   { name: 'MemberOrders', label: '我的訂單' },
   { name: 'MemberWishlist', label: '我的收藏' },
   { name: 'MemberPoints', label: '我的購物金' },
+  { name: 'MemberCoupons', label: '我的優惠券' },
   { name: 'MemberNotifications', label: '通知中心' },
   { name: 'MemberBrowsingHistory', label: '瀏覽紀錄' },
 ]

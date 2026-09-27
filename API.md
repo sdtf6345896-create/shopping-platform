@@ -683,6 +683,19 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 
 ## 優惠券(Coupon）
 
+### `GET /api/coupons/center` — 需會員登入
+領券中心:後台設為 `claimable` 且目前可用(啟用中、在期間內、未發完)的優惠券,附 `claimed` 表示自己是否已領。
+```json
+[ { "id": 5, "code": "SAVE100", "name": "滿千折百", "discountType": "FIXED_AMOUNT", "discountValue": 100,
+    "maxDiscountAmount": null, "minSpendAmount": 1000, "endAt": "2026-12-31T23:59:59", "claimed": false } ]
+```
+
+### `POST /api/coupons/{id}/claim` — 需會員登入
+領取優惠券(重複領取不會重複建立);非公開或目前不可用的券回 400。
+
+### `GET /api/coupons/mine` — 需會員登入
+我的優惠券:已領取且目前仍可使用的(排除過期、停用、發完、已用滿個人次數)。結帳時仍以代碼套用;直接輸入代碼的方式不受影響。
+
 ### `POST /api/coupons/apply` — 需會員登入
 依購物車目前選取的項目試算優惠券折扣,**不會**消耗使用名額(僅供結帳頁預覽,實際扣抵在 `POST /api/orders` 結帳時才會發生)。請求:
 ```json
@@ -726,7 +739,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ```
 代碼重複回 400;`startAt`/`endAt`/`totalQuantity` 皆選填,不帶代表不限。代碼會統一轉大寫儲存。
 
-`perMemberLimit` 選填:每位會員最多可使用幾次(不含已取消的訂單),不填為不限;超過時試算與結帳都會回 400「此優惠券每人限用 N 次」。
+`claimable`(布林,預設 false)表示是否公開於領券中心。`perMemberLimit` 選填:每位會員最多可使用幾次(不含已取消的訂單),不填為不限;超過時試算與結帳都會回 400「此優惠券每人限用 N 次」。
 ### `PUT /api/admin/coupons/{id}` — 需管理員登入
 更新優惠券,body 同上(代碼仍可修改,但不可與其他優惠券重複)。
 

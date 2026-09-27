@@ -7,6 +7,12 @@ const routes = [
   { path: '/products', name: 'ProductList', component: () => import('../views/ProductList.vue') },
   { path: '/products/:id', name: 'ProductDetail', component: () => import('../views/ProductDetail.vue'), props: true },
   { path: '/cart', name: 'Cart', component: () => import('../views/Cart.vue'), meta: { requiresAuth: true } },
+  {
+    path: '/coupons',
+    name: 'CouponCenter',
+    component: () => import('../views/CouponCenter.vue'),
+    meta: { requiresAuth: true },
+  },
   { path: '/checkout', name: 'Checkout', component: () => import('../views/Checkout.vue'), meta: { requiresAuth: true } },
   {
     path: '/orders/:id',
@@ -46,6 +52,7 @@ const routes = [
       { path: 'orders', name: 'MemberOrders', component: () => import('../views/member/OrderList.vue') },
       { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue') },
       { path: 'points', name: 'MemberPoints', component: () => import('../views/member/Points.vue') },
+      { path: 'coupons', name: 'MemberCoupons', component: () => import('../views/member/MyCoupons.vue') },
       {
         path: 'notifications',
         name: 'MemberNotifications',

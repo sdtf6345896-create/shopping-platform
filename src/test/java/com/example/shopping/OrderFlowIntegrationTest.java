@@ -368,7 +368,20 @@ class OrderFlowIntegrationTest {
         String onceCode = ("ONCE" + suffix).toUpperCase();
         call(post("/api/admin/coupons"), adminToken, Map.of(
                 "code", onceCode, "name", "新客限用一次", "discountType", "FIXED_AMOUNT",
-                "discountValue", 50, "minSpendAmount", 0, "perMemberLimit", 1), 200);
+                "discountValue", 50, "minSpendAmount", 0, "perMemberLimit", 1, "claimable", true), 200);
+        // 領券中心 → 領取 → 出現在我的優惠券
+        JsonNode center = call(get("/api/coupons/center"), memberToken, null, 200).at("/data");
+        JsonNode onceInCenter = null;
+        for (JsonNode c : center) {
+            if (c.at("/code").asText().equals(onceCode)) {
+                onceInCenter = c;
+            }
+        }
+        assertThat(onceInCenter).isNotNull();
+        assertThat(onceInCenter.at("/claimed").asBoolean()).isFalse();
+        call(post("/api/coupons/" + onceInCenter.at("/id").asLong() + "/claim"), memberToken, null, 200);
+        assertThat(call(get("/api/coupons/mine"), memberToken, null, 200).at("/data").findValuesAsText("code"))
+                .contains(onceCode);
         call(post("/api/coupons/apply"), memberToken, Map.of("code", onceCode), 200);
         JsonNode badTaxId = call(post("/api/orders"), memberToken, Map.of("addressId", addressId, "paymentMethod", "COD",
                 "invoice", Map.of("type", "COMPANY", "taxId", "12345678", "companyTitle", "範例公司")), 400);
@@ -383,6 +396,9 @@ class OrderFlowIntegrationTest {
         call(post("/api/cart/items"), memberToken, Map.of("skuId", newSkuId, "quantity", 1), 200);
         JsonNode reused = call(post("/api/coupons/apply"), memberToken, Map.of("code", onceCode), 400);
         assertThat(reused.at("/message").asText()).contains("每人限用 1 次");
+        // 用滿個人次數後,不再出現在我的優惠券
+        assertThat(call(get("/api/coupons/mine"), memberToken, null, 200).at("/data").findValuesAsText("code"))
+                .doesNotContain(onceCode);
 
         // ---- 修改密碼:目前密碼錯誤被拒;成功後舊的 refresh token 失效、新密碼可登入 ----
         call(put("/api/members/me/password"), memberToken,

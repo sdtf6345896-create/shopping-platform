@@ -26,6 +26,7 @@ public class CouponResponse {
     private LocalDateTime startAt;
     private LocalDateTime endAt;
     private CouponStatus status;
+    private boolean claimable;
     private LocalDateTime createdAt;
 
     public static CouponResponse from(Coupon coupon) {
@@ -43,6 +44,7 @@ public class CouponResponse {
                 coupon.getStartAt(),
                 coupon.getEndAt(),
                 coupon.getStatus(),
+                coupon.isClaimable(),
                 coupon.getCreatedAt());
     }
 }

@@ -94,6 +94,7 @@ function handleLogout() {
       <nav class="nav-links">
         <router-link to="/">首頁</router-link>
         <router-link to="/products">全部商品</router-link>
+        <router-link to="/coupons">領券中心</router-link>
       </nav>
 
       <el-autocomplete
