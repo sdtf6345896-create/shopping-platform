@@ -1,6 +1,7 @@
 package com.example.shopping.member.controller;
 
 import com.example.shopping.common.ApiResponse;
+import com.example.shopping.member.dto.request.ChangePasswordRequest;
 import com.example.shopping.member.dto.request.MemberUpdateRequest;
 import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.service.MemberService;
@@ -21,6 +22,12 @@ public class MemberController {
     @GetMapping("/me")
     public ApiResponse<MemberResponse> getProfile() {
         return ApiResponse.success(memberService.getProfile(SecurityUtils.getCurrentUserId()));
+    }
+
+    @PutMapping("/me/password")
+    public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        memberService.changePassword(SecurityUtils.getCurrentUserId(), request);
+        return ApiResponse.success("密碼已變更,其他裝置需重新登入", null);
     }
 
     @PutMapping("/me")

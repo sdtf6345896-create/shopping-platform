@@ -1,6 +1,7 @@
 package com.example.shopping.member.service;
 
 import com.example.shopping.common.enums.AccountStatus;
+import com.example.shopping.member.dto.request.ChangePasswordRequest;
 import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.MemberStatusRequest;
@@ -36,6 +37,9 @@ public interface MemberService {
     MemberResponse getProfile(Long memberId);
 
     MemberResponse updateProfile(Long memberId, MemberUpdateRequest request);
+
+    /** 登入狀態下修改密碼:需驗證目前密碼,成功後撤銷所有 refresh token 並寄出安全通知 */
+    void changePassword(Long memberId, ChangePasswordRequest request);
 
     Page<MemberResponse> listAdmin(AccountStatus status, String keyword, Pageable pageable);
 

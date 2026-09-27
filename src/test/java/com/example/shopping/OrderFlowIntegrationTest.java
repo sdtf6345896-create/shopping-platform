@@ -103,7 +103,9 @@ class OrderFlowIntegrationTest {
                 .findFirst().orElseThrow();
         call(post("/api/auth/verify-email"), null, Map.of("token", verifyToken), 200);
 
-        String memberToken = call(post("/api/auth/login"), null, credentials, 200).at("/data/token").asText();
+        JsonNode memberLogin = call(post("/api/auth/login"), null, credentials, 200).at("/data");
+        String memberToken = memberLogin.at("/token").asText();
+        String memberRefreshToken = memberLogin.at("/refreshToken").asText();
 
         // 會員 token 不能打後台 API
         call(get("/api/admin/orders"), memberToken, null, 403);
@@ -312,6 +314,15 @@ class OrderFlowIntegrationTest {
         // ---- 分類銷售報表:查詢在真實資料庫上可以執行 ----
         JsonNode categorySales = call(get("/api/admin/reports/categories"), adminToken, null, 200).at("/data");
         assertThat(categorySales.isArray()).isTrue();
+
+        // ---- 修改密碼:目前密碼錯誤被拒;成功後舊的 refresh token 失效、新密碼可登入 ----
+        call(put("/api/members/me/password"), memberToken,
+                Map.of("currentPassword", "wrong-password", "newPassword", "newPassword456"), 400);
+        call(put("/api/members/me/password"), memberToken,
+                Map.of("currentPassword", "password123", "newPassword", "newPassword456"), 200);
+        call(post("/api/auth/refresh"), null, Map.of("refreshToken", memberRefreshToken), 401);
+        call(post("/api/auth/login"), null, credentials, 400);
+        call(post("/api/auth/login"), null, Map.of("email", email, "password", "newPassword456"), 200);
 
         // 未登入不能查看訂單
         call(get("/api/orders/" + orderId), null, null, 401);

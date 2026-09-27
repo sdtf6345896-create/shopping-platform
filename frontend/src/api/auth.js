@@ -39,3 +39,7 @@ export function getProfile() {
 export function updateProfile(data) {
   return request.put('/members/me', data)
 }
+
+export function changePassword(data) {
+  return request.put('/members/me/password', data)
+}

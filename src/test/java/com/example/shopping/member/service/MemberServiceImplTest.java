@@ -4,6 +4,7 @@ import com.example.shopping.common.enums.AccountStatus;
 import com.example.shopping.common.enums.Role;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
+import com.example.shopping.member.dto.request.ChangePasswordRequest;
 import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.MemberStatusRequest;
@@ -29,10 +30,10 @@ import com.example.shopping.security.JwtTokenProvider;
 import com.example.shopping.security.LoginAttemptService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
@@ -474,6 +475,7 @@ class MemberServiceImplTest {
         memberService.resetPassword(request);
 
         assertThat(activeMember.getPassword()).isEqualTo("new-encoded-password");
+        verify(refreshTokenRepository).revokeAllByMemberId(1L);
         assertThat(resetToken.isUsed()).isTrue();
     }
 
@@ -563,5 +565,47 @@ class MemberServiceImplTest {
 
     private static Member argThatPasswordEquals(String expected) {
         return org.mockito.ArgumentMatchers.argThat(m -> m != null && expected.equals(m.getPassword()));
+    }
+
+    private ChangePasswordRequest changePasswordRequest(String current, String next) {
+        ChangePasswordRequest request = new ChangePasswordRequest();
+        request.setCurrentPassword(current);
+        request.setNewPassword(next);
+        return request;
+    }
+
+    @Test
+    void changePassword_updatesPassword_revokesSessions_andSendsNotice() {
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(activeMember));
+        when(passwordEncoder.matches("password123", "encoded-password")).thenReturn(true);
+        when(passwordEncoder.matches("newPassword456", "encoded-password")).thenReturn(false);
+        when(passwordEncoder.encode("newPassword456")).thenReturn("new-encoded");
+
+        memberService.changePassword(1L, changePasswordRequest("password123", "newPassword456"));
+
+        assertThat(activeMember.getPassword()).isEqualTo("new-encoded");
+        verify(refreshTokenRepository).revokeAllByMemberId(1L);
+        verify(passwordResetMailSender).sendPasswordChangedNotice("test@example.com");
+    }
+
+    @Test
+    void changePassword_throws_whenCurrentPasswordWrong() {
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(activeMember));
+        when(passwordEncoder.matches("wrong", "encoded-password")).thenReturn(false);
+
+        assertThatThrownBy(() -> memberService.changePassword(1L, changePasswordRequest("wrong", "newPassword456")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("目前密碼不正確");
+        verify(refreshTokenRepository, never()).revokeAllByMemberId(any());
+    }
+
+    @Test
+    void changePassword_throws_whenNewPasswordSameAsCurrent() {
+        when(memberRepository.findById(1L)).thenReturn(Optional.of(activeMember));
+        when(passwordEncoder.matches("password123", "encoded-password")).thenReturn(true);
+
+        assertThatThrownBy(() -> memberService.changePassword(1L, changePasswordRequest("password123", "password123")))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining("不可與目前密碼相同");
     }
 }

@@ -4,6 +4,7 @@ import com.example.shopping.common.enums.AccountStatus;
 import com.example.shopping.common.enums.Role;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
+import com.example.shopping.member.dto.request.ChangePasswordRequest;
 import com.example.shopping.member.dto.request.ForgotPasswordRequest;
 import com.example.shopping.member.dto.request.LoginRequest;
 import com.example.shopping.member.dto.request.MemberStatusRequest;
@@ -224,6 +225,22 @@ public class MemberServiceImpl implements MemberService {
         Member member = findMemberOrThrow(resetToken.getMemberId());
         member.setPassword(passwordEncoder.encode(request.getNewPassword()));
         resetToken.setUsed(true);
+        // 重設密碼常是帳號疑似被盜的補救,舊的登入狀態一律作廢
+        refreshTokenRepository.revokeAllByMemberId(member.getId());
+    }
+
+    @Override
+    public void changePassword(Long memberId, ChangePasswordRequest request) {
+        Member member = findMemberOrThrow(memberId);
+        if (!passwordEncoder.matches(request.getCurrentPassword(), member.getPassword())) {
+            throw new BusinessException("目前密碼不正確");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), member.getPassword())) {
+            throw new BusinessException("新密碼不可與目前密碼相同");
+        }
+        member.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        refreshTokenRepository.revokeAllByMemberId(memberId);
+        passwordResetMailSender.sendPasswordChangedNotice(member.getEmail());
     }
 
     @Override

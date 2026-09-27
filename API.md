@@ -160,6 +160,10 @@ REFUNDED        → (終態)
 ### `PUT /api/members/me`
 更新自己的姓名/手機。請求:`{ "name": "...", "phone": "..." }` → `MemberResponse`
 
+
+### `PUT /api/members/me/password`
+登入狀態下修改密碼。請求:`{ "currentPassword": "...", "newPassword": "..." }`(新密碼至少 8 碼)。目前密碼錯誤、或新舊密碼相同回 400。成功後撤銷此會員**所有** refresh token(其他裝置須重新登入),並寄出「密碼已變更」安全通知信。
+> `POST /api/auth/reset-password`(忘記密碼)成功後同樣會撤銷所有 refresh token。
 ---
 
 ## 會員等級(Member Tier)— 需會員登入
@@ -760,6 +764,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/auth/register` | 公開 |
 | POST | `/api/auth/login` | 公開 |
 | GET / PUT | `/api/members/me` | 會員 |
+| PUT | `/api/members/me/password` | 會員 |
 | GET / POST | `/api/members/addresses` | 會員 |
 | PUT / DELETE | `/api/members/addresses/{id}` | 會員 |
 | POST | `/api/admin/auth/login` | 公開 |
