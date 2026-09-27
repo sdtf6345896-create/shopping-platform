@@ -17,6 +17,7 @@ import com.example.shopping.order.dto.request.OrderStatusRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
+import com.example.shopping.order.mail.OrderMailSender;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
@@ -58,19 +59,22 @@ public class OrderServiceImpl implements OrderService {
     private final MemberRepository memberRepository;
     private final CouponService couponService;
     private final CouponRepository couponRepository;
+    private final OrderMailSender orderMailSender;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
                              AddressRepository addressRepository,
                              MemberRepository memberRepository,
                              CouponService couponService,
-                             CouponRepository couponRepository) {
+                             CouponRepository couponRepository,
+                             OrderMailSender orderMailSender) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
         this.memberRepository = memberRepository;
         this.couponService = couponService;
         this.couponRepository = couponRepository;
+        this.orderMailSender = orderMailSender;
     }
 
     @Override
@@ -147,6 +151,7 @@ public class OrderServiceImpl implements OrderService {
 
         Orders saved = orderRepository.save(order);
         cartItemRepository.deleteAll(cartItems);
+        orderMailSender.notifyStatusChanged(saved);
 
         return OrderResponse.from(saved);
     }
@@ -158,6 +163,7 @@ public class OrderServiceImpl implements OrderService {
             throw new BusinessException("訂單狀態不正確,無法付款");
         }
         markPaid(order);
+        orderMailSender.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }
 
@@ -165,6 +171,7 @@ public class OrderServiceImpl implements OrderService {
     public OrderResponse cancelByMember(Long memberId, Long orderId) {
         Orders order = findOwnedOrThrow(memberId, orderId);
         cancelOrder(order);
+        orderMailSender.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }
 
@@ -197,6 +204,7 @@ public class OrderServiceImpl implements OrderService {
         } else {
             order.setStatus(target);
         }
+        orderMailSender.notifyStatusChanged(order);
 
         return OrderResponse.from(order);
     }

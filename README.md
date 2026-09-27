@@ -20,7 +20,7 @@
 - 商品列表:分類篩選、價格區間、搜尋、排序
 - 商品詳情:規格選擇、評論與評分
 - 購物車、願望清單、瀏覽紀錄
-- 結帳流程:收件資訊 → 優惠券折抵 → 付款方式 → 訂單確認
+- 結帳流程:收件資訊 → 優惠券折抵 → 付款方式 → 訂單確認(狀態變更會寄 email 通知)
 - 會員中心:訂單查詢、個人資料、收件地址管理
 
 **後台管理**
@@ -61,15 +61,15 @@ npm run dev
 
 開發伺服器預設在 `http://localhost:5173`,已設定 Vite proxy 轉發 `/api` 到後端。
 
-### 忘記密碼信(選用,真實 SMTP)
+### 寄信設定(選用,真實 SMTP)
 
-預設不設定 `MAIL_HOST` 時,忘記密碼連結只會輸出到後端 log(模擬寄信)。要改成真的寄出 email,啟動時加上:
+忘記密碼信、訂單狀態通知信都走同一套寄信機制。預設不設定 `MAIL_HOST` 時,信件內容只會輸出到後端 log(模擬寄信)。要改成真的寄出 email,啟動時加上:
 
 ```bash
 MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=you@gmail.com MAIL_PASSWORD=<app-password> mvn spring-boot:run
 ```
 
-（Gmail 需要用「應用程式密碼」而非登入密碼;也可以換成 Mailtrap、SendGrid 等其他 SMTP 服務。）若寄信失敗(帳密錯誤、連不上等),會自動退回 log 模擬,不影響忘記密碼流程本身。
+（Gmail 需要用「應用程式密碼」而非登入密碼;也可以換成 Mailtrap、SendGrid 等其他 SMTP 服務。）若寄信失敗(帳密錯誤、連不上等),會自動退回 log 模擬,不影響原本的 API 流程。
 
 ## 測試
 
