@@ -68,6 +68,9 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     int claimCartReminder(@Param("memberId") Long memberId, @Param("now") LocalDateTime now,
                           @Param("lastActivity") LocalDateTime lastActivity);
 
+    @Query("select m.marketingOptIn from Member m where m.id = :memberId")
+    Boolean findMarketingOptInById(@Param("memberId") Long memberId);
+
     /** 當月壽星中今年還沒領過生日禮的啟用會員 id */
     @Query("select m.id from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
             + " and m.birthday is not null and extract(month from m.birthday) = :month"

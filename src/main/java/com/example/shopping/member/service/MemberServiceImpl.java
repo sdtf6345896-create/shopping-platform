@@ -277,6 +277,9 @@ public class MemberServiceImpl implements MemberService {
         if (request.getBirthday() != null) {
             applyBirthday(member, request.getBirthday(), LocalDate.now());
         }
+        if (request.getMarketingOptIn() != null) {
+            member.setMarketingOptIn(request.getMarketingOptIn());
+        }
         return MemberResponse.from(member);
     }
 

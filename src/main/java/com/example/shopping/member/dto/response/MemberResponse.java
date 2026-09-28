@@ -20,6 +20,7 @@ public class MemberResponse {
     /** 購物金餘額 */
     private int points;
     private LocalDate birthday;
+    private boolean marketingOptIn;
     private LocalDateTime createdAt;
 
     public static MemberResponse from(Member member) {
@@ -31,6 +32,7 @@ public class MemberResponse {
                 member.getStatus(),
                 member.getPoints(),
                 member.getBirthday(),
+                member.isMarketingOptIn(),
                 member.getCreatedAt());
     }
 }

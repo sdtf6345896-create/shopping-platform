@@ -74,6 +74,11 @@ public class Member {
     @Column(name = "cart_reminded_at", insertable = false, updatable = false)
     private LocalDateTime cartRemindedAt;
 
+    /** 是否接收行銷類通知(購物車提醒、收藏商品特價、發券通知);訂單、退貨等交易通知不受影響 */
+    @Column(name = "marketing_opt_in", nullable = false)
+    @ColumnDefault("true")
+    private boolean marketingOptIn = true;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

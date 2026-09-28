@@ -28,7 +28,7 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
 
     @Query("select m.id as memberId, max(c.updatedAt) as lastActivity, count(c) as itemCount"
             + " from CartItem c join c.member m"
-            + " where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
+            + " where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE and m.marketingOptIn = true"
             + " group by m.id, m.cartRemindedAt"
             + " having max(c.updatedAt) < :cutoff"
             + " and (m.cartRemindedAt is null or m.cartRemindedAt < max(c.updatedAt))")

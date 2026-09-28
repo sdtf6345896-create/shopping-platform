@@ -1,7 +1,6 @@
 package com.example.shopping.coupon.service;
 
 import com.example.shopping.common.enums.CouponStatus;
-import com.example.shopping.common.enums.NotificationType;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
 import com.example.shopping.coupon.dto.request.CouponIssueRequest;
@@ -14,7 +13,7 @@ import com.example.shopping.member.entity.Member;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.tier.MemberTier;
 import com.example.shopping.member.tier.MemberTierService;
-import com.example.shopping.notification.service.NotificationService;
+import com.example.shopping.notification.service.MarketingNotifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -41,18 +40,18 @@ public class CouponIssueService {
     private final MemberCouponRepository memberCouponRepository;
     private final MemberRepository memberRepository;
     private final MemberTierService memberTierService;
-    private final NotificationService notificationService;
+    private final MarketingNotifier marketingNotifier;
 
     public CouponIssueService(CouponRepository couponRepository,
                               MemberCouponRepository memberCouponRepository,
                               MemberRepository memberRepository,
                               MemberTierService memberTierService,
-                              NotificationService notificationService) {
+                              MarketingNotifier marketingNotifier) {
         this.couponRepository = couponRepository;
         this.memberCouponRepository = memberCouponRepository;
         this.memberRepository = memberRepository;
         this.memberTierService = memberTierService;
-        this.notificationService = notificationService;
+        this.marketingNotifier = marketingNotifier;
     }
 
     public CouponIssueResponse issue(Long couponId, CouponIssueRequest request) {
@@ -84,9 +83,9 @@ public class CouponIssueService {
 
         String title = "你獲得一張優惠券:" + coupon.getName();
         String content = "優惠碼 " + coupon.getCode() + " 已放進「我的優惠券」,結帳時輸入即可使用。";
+        // 券一律放進錢包;通知屬於行銷類,會員關閉行銷通知時不發
         for (MemberCoupon memberCoupon : newHolders) {
-            notificationService.notify(memberCoupon.getMemberId(), NotificationType.SYSTEM, title, content,
-                    "/member/coupons");
+            marketingNotifier.notify(memberCoupon.getMemberId(), title, content, "/member/coupons");
         }
         return new CouponIssueResponse(memberIds.size(), newHolders.size(), memberIds.size() - newHolders.size(),
                 unmatchedEmails);

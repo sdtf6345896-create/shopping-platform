@@ -19,4 +19,7 @@ public class MemberUpdateRequest {
     /** 生日;只能設定一次,已設定時需與原值相同(null 表示不變) */
     @Past(message = "生日必須是過去的日期")
     private LocalDate birthday;
+
+    /** 是否接收行銷通知;null 表示不變 */
+    private Boolean marketingOptIn;
 }

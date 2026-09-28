@@ -178,6 +178,7 @@ REFUNDED        → (終態)
 ### `PUT /api/members/me`
 更新自己的姓名/手機/生日。請求:`{ "name": "...", "phone": "...", "birthday": "1990-05-20" }` → `MemberResponse`
 
+- `marketingOptIn` 選填(`true`/`false`,不帶表示不變):是否接收行銷類站內通知——購物車提醒、收藏商品特價、後台發券通知。關閉時優惠券仍會放進錢包,只是不通知;訂單、退貨、問答回覆、購物金異動、貨到通知(會員自行訂閱)等不受影響。`MemberResponse` 帶 `marketingOptIn`
 - `birthday` 選填,只能設定一次;已設定後送不同的值回 400(送 null 或相同值不變)
 - 生日禮:每年生日當月自動發放 `app.birthday.reward-points`(預設 100)點購物金並發站內通知;在生日當月才設定生日的,當年不發、隔年起發放
 

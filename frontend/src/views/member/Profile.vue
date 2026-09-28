@@ -16,6 +16,7 @@ const form = reactive({
   name: '',
   phone: '',
   birthday: null,
+  marketingOptIn: true,
 })
 // 生日設定後不可自行修改(後端也會擋),避免反覆改生日領生日禮
 const birthdayLocked = ref(false)
@@ -36,6 +37,7 @@ async function load() {
     form.name = profile.name
     form.phone = profile.phone
     form.birthday = profile.birthday || null
+    form.marketingOptIn = profile.marketingOptIn !== false
     birthdayLocked.value = !!profile.birthday
   } finally {
     loading.value = false
@@ -46,7 +48,12 @@ async function handleSave() {
   await formRef.value.validate()
   saving.value = true
   try {
-    await authStore.updateProfile({ name: form.name, phone: form.phone, birthday: form.birthday })
+    await authStore.updateProfile({
+      name: form.name,
+      phone: form.phone,
+      birthday: form.birthday,
+      marketingOptIn: form.marketingOptIn,
+    })
     birthdayLocked.value = !!form.birthday
     ElMessage.success('更新成功')
   } finally {
@@ -143,6 +150,12 @@ onMounted(load)
         />
         <div class="hint-block birthday-hint">
           {{ birthdayLocked ? '生日設定後無法修改,如需更正請聯絡客服' : '生日當月送購物金!設定後無法修改,請確認正確' }}
+        </div>
+      </el-form-item>
+      <el-form-item label="優惠通知">
+        <el-switch v-model="form.marketingOptIn" active-text="接收" inactive-text="不接收" />
+        <div class="hint-block birthday-hint">
+          購物車提醒、收藏商品特價、優惠券發放等站內通知;訂單、退貨等交易通知不受影響
         </div>
       </el-form-item>
       <el-button type="primary" :loading="saving" @click="handleSave">儲存變更</el-button>
