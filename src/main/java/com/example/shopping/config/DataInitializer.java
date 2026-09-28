@@ -126,7 +126,7 @@ public class DataInitializer implements CommandLineRunner {
 
         List<Spec> specs = List.of(
                 new Spec(20, OrderStatus.COMPLETED, PaymentMethod.CREDIT_CARD,
-                        List.of(new Item("TSHIRT-BLK-M", 1), new Item("EARBUD-BLK", 1))),
+                        List.of(new Item("POLO-NVY-M", 1), new Item("EARBUD-BLK", 1))),
                 new Spec(17, OrderStatus.COMPLETED, PaymentMethod.ATM,
                         List.of(new Item("DRESS-FLR-S", 1))),
                 new Spec(14, OrderStatus.COMPLETED, PaymentMethod.CREDIT_CARD,
@@ -138,7 +138,7 @@ public class DataInitializer implements CommandLineRunner {
                 new Spec(5, OrderStatus.PAID, PaymentMethod.ATM,
                         List.of(new Item("EARBUD-BLK", 1))),
                 new Spec(2, OrderStatus.SHIPPING, PaymentMethod.CREDIT_CARD,
-                        List.of(new Item("TSHIRT-BLK-L", 1), new Item("DRESS-FLR-M", 1))),
+                        List.of(new Item("POLO-WHT-M", 1), new Item("DRESS-FLR-M", 1))),
                 new Spec(0, OrderStatus.PENDING_PAYMENT, PaymentMethod.COD,
                         List.of(new Item("BOTTLE-WHT", 1)))
         );
@@ -198,7 +198,7 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         List<ReviewSeed> reviewSeeds = List.of(
-                new ReviewSeed("TSHIRT-BLK-M", 5, "布料厚度剛好,洗過幾次也沒有變形,回購中。"),
+                new ReviewSeed("POLO-NVY-M", 5, "布料厚度剛好,洗過幾次也沒有變形,回購中。"),
                 new ReviewSeed("EARBUD-BLK", 4, "音質不錯,但是盒子有點大不好放口袋。"),
                 new ReviewSeed("DRESS-FLR-S", 3, "版型偏小,建議大半號購買。"),
                 new ReviewSeed("CARD-BEG-M", 5, "顏色跟照片一樣好看,質感很好。")
