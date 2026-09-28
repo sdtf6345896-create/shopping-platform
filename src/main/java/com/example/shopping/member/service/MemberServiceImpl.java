@@ -117,7 +117,7 @@ public class MemberServiceImpl implements MemberService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    // 不能是 readOnly:登入會寫入 refresh token(H2 不檢查唯讀,MySQL 會直接拒絕寫入)
     public LoginResponse login(LoginRequest request) {
         loginAttemptService.checkNotLocked(LOGIN_SCOPE, request.getEmail());
 

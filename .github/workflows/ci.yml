@@ -95,6 +95,14 @@ jobs:
           curl -fs -X POST http://localhost:8081/api/admin/auth/login \
             -H 'Content-Type: application/json' \
             -d '{"username":"admin","password":"admin123"}' | grep -q '"token"'
+          # 會員登入會寫入 refresh token:測試用的 H2 不檢查唯讀交易,只有真的 MySQL 才會抓到這類錯誤
+          curl -fs -X POST http://localhost:8081/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"demo@momoshop.test","password":"demo1234"}' > member-login.json
+          REFRESH=$(python3 -c 'import json; print(json.load(open("member-login.json", encoding="utf-8"))["data"]["refreshToken"])')
+          curl -fs -X POST http://localhost:8081/api/auth/refresh \
+            -H 'Content-Type: application/json' \
+            -d "{\"refreshToken\":\"$REFRESH\"}" | grep -q '"token"'
 
       - name: Show logs on failure
         if: failure()
