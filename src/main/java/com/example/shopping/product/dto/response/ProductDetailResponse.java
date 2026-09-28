@@ -31,9 +31,14 @@ public class ProductDetailResponse {
     private String mainImage;
     /** 主圖以外的商品圖片網址 */
     private List<String> images;
+    /** 規格表 */
+    private List<SpecRow> specs;
     private ProductStatus status;
     private int salesCount;
     private List<SkuResponse> skus;
+
+    public record SpecRow(String name, String value) {
+    }
 
     public static ProductDetailResponse from(Product product) {
         return new ProductDetailResponse(
@@ -51,6 +56,7 @@ public class ProductDetailResponse {
                 product.getUnpublishAt(),
                 product.getMainImage(),
                 product.getImages().stream().map(ProductImage::getUrl).toList(),
+                product.getSpecs().stream().map(s -> new SpecRow(s.getName(), s.getValue())).toList(),
                 product.getStatus(),
                 product.getSalesCount(),
                 product.getSkus().stream().map(SkuResponse::from).toList());

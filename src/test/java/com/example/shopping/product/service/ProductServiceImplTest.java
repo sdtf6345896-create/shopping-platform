@@ -7,6 +7,7 @@ import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
 import com.example.shopping.product.dto.request.BatchProductStatusRequest;
 import com.example.shopping.product.dto.request.ProductRequest;
+import com.example.shopping.product.dto.request.ProductSpecRequest;
 import com.example.shopping.product.dto.request.ProductStatusRequest;
 import com.example.shopping.product.dto.request.SkuRequest;
 import com.example.shopping.product.dto.request.StockUpdateRequest;
@@ -16,6 +17,7 @@ import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.entity.ProductSpec;
 import com.example.shopping.product.event.ProductDeletingEvent;
 import com.example.shopping.product.event.SkusRemovingEvent;
 import com.example.shopping.product.repository.ProductRepository;
@@ -39,6 +41,7 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -363,6 +366,21 @@ class ProductServiceImplTest {
         category.setId(5L);
         when(productRepository.findById(1L)).thenReturn(Optional.of(existingProduct));
         when(categoryRepository.findById(5L)).thenReturn(Optional.of(category));
+    }
+
+    @Test
+    void update_replacesSpecTableInGivenOrder_andClearsWhenOmitted() {
+        stubUpdate();
+        ProductRequest request = saleRequest(null, null, null);
+        request.setSpecs(List.of(new ProductSpecRequest(" 材質 ", " 純棉 "), new ProductSpecRequest("產地", "台灣")));
+
+        ProductDetailResponse response = productService.update(1L, request);
+
+        assertThat(response.getSpecs()).extracting(ProductDetailResponse.SpecRow::name, ProductDetailResponse.SpecRow::value)
+                .containsExactly(tuple("材質", "純棉"), tuple("產地", "台灣"));
+        assertThat(existingProduct.getSpecs()).extracting(ProductSpec::getSortOrder).containsExactly(0, 1);
+
+        assertThat(productService.update(1L, saleRequest(null, null, null)).getSpecs()).isEmpty();
     }
 
     @Test

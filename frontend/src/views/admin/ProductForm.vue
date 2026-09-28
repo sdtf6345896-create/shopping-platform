@@ -40,6 +40,8 @@ const form = reactive({
   mainImage: '',
   images: [],
   skus: [],
+  // 規格表:[{ name: '材質', value: '純棉' }]
+  specs: [],
   // 限時特價
   saleEnabled: false,
   saleDiscountPercent: 20,
@@ -54,9 +56,13 @@ const disablePastDate = (date) => date.getTime() < new Date().setHours(0, 0, 0, 
 
 // 送出時把表單轉成 API 需要的格式(特價關閉時三個欄位都送 null)
 function buildPayload() {
-  const { saleEnabled, saleDiscountPercent, salePeriod, ...rest } = form
+  const { saleEnabled, saleDiscountPercent, salePeriod, specs, ...rest } = form
   return {
     ...rest,
+    // 整列空白的規格列直接略過
+    specs: specs
+      .map((s) => ({ name: s.name.trim(), value: s.value.trim() }))
+      .filter((s) => s.name || s.value),
     saleDiscountPercent: saleEnabled ? saleDiscountPercent : null,
     saleStartAt: saleEnabled ? salePeriod?.[0] : null,
     saleEndAt: saleEnabled ? salePeriod?.[1] : null,
@@ -128,6 +134,16 @@ function removeSku(index) {
   form.skus.splice(index, 1)
 }
 
+const MAX_SPECS = 20
+
+function addSpec() {
+  form.specs.push({ name: '', value: '' })
+}
+
+function removeSpec(index) {
+  form.specs.splice(index, 1)
+}
+
 async function loadCategories() {
   categories.value = await listAdminCategories()
 }
@@ -142,6 +158,7 @@ async function loadProduct() {
     form.price = data.price
     form.mainImage = data.mainImage
     form.images = [...(data.images || [])]
+    form.specs = (data.specs || []).map((s) => ({ ...s }))
     form.saleEnabled = data.saleDiscountPercent != null
     form.saleDiscountPercent = data.saleDiscountPercent ?? 20
     form.salePeriod = data.saleStartAt && data.saleEndAt ? [data.saleStartAt, data.saleEndAt] : null
@@ -167,6 +184,10 @@ async function handleSubmit() {
   }
   if (form.skus.length === 0) {
     ElMessage.warning('請至少新增一個規格(SKU)')
+    return
+  }
+  if (form.specs.some((s) => !s.name.trim() !== !s.value.trim())) {
+    ElMessage.warning('規格表的每一列都需要填寫項目與內容')
     return
   }
   saving.value = true
@@ -209,6 +230,16 @@ onMounted(async () => {
       </el-form-item>
       <el-form-item label="商品描述">
         <el-input v-model="form.description" type="textarea" :rows="4" style="width: 400px" />
+      </el-form-item>
+      <el-form-item label="規格表">
+        <div class="spec-editor">
+          <div v-for="(spec, index) in form.specs" :key="index" class="spec-row">
+            <el-input v-model="spec.name" placeholder="項目(例:材質)" maxlength="30" style="width: 140px" />
+            <el-input v-model="spec.value" placeholder="內容(例:100% 純棉)" maxlength="200" style="width: 260px" />
+            <el-button link type="danger" @click="removeSpec(index)">移除</el-button>
+          </div>
+          <el-button v-if="form.specs.length < MAX_SPECS" size="small" @click="addSpec">+ 新增規格列</el-button>
+        </div>
       </el-form-item>
       <el-form-item label="價格" prop="price">
         <el-input-number v-model="form.price" :min="0" :precision="2" />
@@ -334,6 +365,19 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.spec-editor {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.spec-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 .field-hint {
   width: 100%;
   color: #999;

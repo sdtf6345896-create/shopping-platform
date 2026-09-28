@@ -16,6 +16,7 @@ import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
+import com.example.shopping.product.entity.ProductSpec;
 import com.example.shopping.product.event.ProductDeletingEvent;
 import com.example.shopping.product.event.SkusRemovingEvent;
 import com.example.shopping.product.repository.ProductRepository;
@@ -264,6 +265,12 @@ public class ProductServiceImpl implements ProductService {
         product.setPrice(request.getPrice());
         product.setMainImage(request.getMainImage());
         product.replaceImages(request.getImages());
+        product.replaceSpecs(request.getSpecs() == null ? null : request.getSpecs().stream().map(r -> {
+            ProductSpec spec = new ProductSpec();
+            spec.setName(r.name().trim());
+            spec.setValue(r.value().trim());
+            return spec;
+        }).toList());
         applySale(product, request);
         applySchedule(product, request);
     }

@@ -52,6 +52,11 @@ public class ProductRequest {
     /** 排程下架時間,選填 */
     private LocalDateTime unpublishAt;
 
+    /** 規格表(選填,最多 20 列) */
+    @Size(max = 20, message = "規格表最多 20 列")
+    @Valid
+    private List<ProductSpecRequest> specs;
+
     @NotEmpty(message = "至少需要一個規格(SKU)")
     @Valid
     private List<SkuRequest> skus;

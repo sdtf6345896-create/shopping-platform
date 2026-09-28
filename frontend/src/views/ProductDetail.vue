@@ -453,6 +453,15 @@ watch(
             <p class="label">商品描述</p>
             <p>{{ product.description || '暫無商品描述' }}</p>
           </div>
+          <div v-if="product.specs?.length" class="spec-table-wrap">
+            <p class="label">商品規格</p>
+            <table class="spec-table">
+              <tr v-for="spec in product.specs" :key="spec.name + spec.value">
+                <th>{{ spec.name }}</th>
+                <td>{{ spec.value }}</td>
+              </tr>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -737,6 +746,31 @@ watch(
 .qty-section,
 .description {
   margin-top: 20px;
+}
+
+.spec-table-wrap {
+  margin-top: 16px;
+}
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.spec-table th,
+.spec-table td {
+  padding: 8px 12px;
+  border: 1px solid #eee;
+  text-align: left;
+  vertical-align: top;
+}
+
+.spec-table th {
+  width: 30%;
+  background: #fafafa;
+  color: #666;
+  font-weight: normal;
 }
 
 .sku-list {

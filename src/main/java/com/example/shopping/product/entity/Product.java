@@ -85,6 +85,11 @@ public class Product {
     @OrderBy("sortOrder ASC, id ASC")
     private List<ProductImage> images = new ArrayList<>();
 
+    /** 規格表(材質、產地、尺寸…) */
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC, id ASC")
+    private List<ProductSpec> specs = new ArrayList<>();
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
@@ -123,6 +128,20 @@ public class Product {
             image.setUrl(url.trim());
             image.setSortOrder(order++);
             images.add(image);
+        }
+    }
+
+    /** 以新清單整個取代規格表(依傳入順序排序) */
+    public void replaceSpecs(List<ProductSpec> incoming) {
+        specs.clear();
+        if (incoming == null) {
+            return;
+        }
+        int order = 0;
+        for (ProductSpec spec : incoming) {
+            spec.setProduct(this);
+            spec.setSortOrder(order++);
+            specs.add(spec);
         }
     }
 
