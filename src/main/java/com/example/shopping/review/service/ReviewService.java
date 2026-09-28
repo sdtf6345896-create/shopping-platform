@@ -11,7 +11,8 @@ import java.util.Optional;
 public interface ReviewService {
 
     /** @param withImagesOnly true 時只回傳附照片的評論 */
-    Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, Pageable pageable);
+    /** @param mostHelpful true 依「有幫助」票數排序,否則新到舊(只看有照片時一律新到舊) */
+    Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, boolean mostHelpful, Pageable pageable);
 
     ReviewSummaryResponse getSummary(Long productId);
 

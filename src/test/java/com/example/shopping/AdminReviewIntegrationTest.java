@@ -86,7 +86,7 @@ class AdminReviewIntegrationTest {
 
         adminReviewService.setHidden(spam.getId(), true);
 
-        assertThat(reviewService.listByProduct(product.getId(), false, PageRequest.of(0, 10)).getContent())
+        assertThat(reviewService.listByProduct(product.getId(), false, false, PageRequest.of(0, 10)).getContent())
                 .extracting(ReviewResponse::getId).containsExactly(good.getId());
         assertThat(reviewService.getSummary(product.getId()).getReviewCount()).isEqualTo(1);
         assertThat(productRepository.findById(product.getId()).orElseThrow().getRatingAverage())
@@ -98,7 +98,7 @@ class AdminReviewIntegrationTest {
         adminReviewService.reply(good.getId(), "謝謝支持,歡迎再次光臨!");
         assertThat(notificationRepository.findByMemberId(happy.getId(), PageRequest.of(0, 10)).getTotalElements())
                 .isEqualTo(1);
-        assertThat(reviewService.listByProduct(product.getId(), false, PageRequest.of(0, 10)).getContent().get(0)
+        assertThat(reviewService.listByProduct(product.getId(), false, false, PageRequest.of(0, 10)).getContent().get(0)
                 .getSellerReply()).isEqualTo("謝謝支持,歡迎再次光臨!");
 
         String keyword = "評價管理測試商品-" + suffix;

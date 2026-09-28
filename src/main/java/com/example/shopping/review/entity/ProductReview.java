@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
@@ -52,6 +53,11 @@ public class ProductReview {
     /** 被管理員隱藏的評價不出現在前台,也不列入評分統計 */
     @Column(nullable = false)
     private boolean hidden;
+
+    /** 「有幫助」票數。唯讀對應:由 ProductReviewRepository 的相對值 UPDATE 增減,評論者編輯評價時不會蓋掉 */
+    @Column(name = "helpful_count", nullable = false, insertable = false, updatable = false)
+    @ColumnDefault("0")
+    private int helpfulCount;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

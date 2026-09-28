@@ -13,6 +13,7 @@ import com.example.shopping.review.entity.ProductReview;
 import com.example.shopping.review.repository.ProductReviewRepository;
 import com.example.shopping.review.repository.ReviewSummaryProjection;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,9 +48,13 @@ public class ReviewServiceImpl implements ReviewService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, Pageable pageable) {
+    public Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, boolean mostHelpful,
+                                              Pageable pageable) {
         Page<ProductReview> page = withImagesOnly
                 ? productReviewRepository.findWithImagesByProductId(productId, pageable)
+                : mostHelpful
+                ? productReviewRepository.findByProductIdAndHiddenFalseOrderByHelpfulCountDescCreatedAtDesc(
+                        productId, PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()))
                 : productReviewRepository.findByProductIdAndHiddenFalseOrderByCreatedAtDesc(productId, pageable);
         return page.map(ReviewResponse::from);
     }

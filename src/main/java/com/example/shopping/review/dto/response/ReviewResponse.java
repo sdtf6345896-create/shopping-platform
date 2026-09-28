@@ -24,6 +24,8 @@ public class ReviewResponse {
     private LocalDateTime repliedAt;
     /** 是否被管理員隱藏(前台列表不會出現,只有評論者本人在「我的評價」看得到) */
     private boolean hidden;
+    /** 「有幫助」票數 */
+    private int helpfulCount;
 
     public static ReviewResponse from(ProductReview review) {
         return new ReviewResponse(
@@ -36,7 +38,8 @@ public class ReviewResponse {
                 review.getUpdatedAt(),
                 review.getSellerReply(),
                 review.getRepliedAt(),
-                review.isHidden());
+                review.isHidden(),
+                review.getHelpfulCount());
     }
 
     private static String maskName(String name) {

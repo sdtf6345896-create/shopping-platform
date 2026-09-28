@@ -9,7 +9,16 @@ import ReviewPhotos from '../components/ReviewPhotos.vue'
 import { uploadMemberImage } from '../api/upload'
 import { formatCountdown, remainingMs } from '../utils/countdown'
 import ProductQuestions from '../components/ProductQuestions.vue'
-import { listReviews, getReviewSummary, getMyReview, upsertMyReview, deleteMyReview } from '../api/review'
+import {
+  listReviews,
+  getReviewSummary,
+  getMyReview,
+  upsertMyReview,
+  deleteMyReview,
+  getMyHelpfulVotes,
+  unvoteReviewHelpful,
+  voteReviewHelpful,
+} from '../api/review'
 import { isFavorited as fetchIsFavorited, addToWishlist, removeFromWishlist } from '../api/wishlist'
 import { recordView } from '../api/browsingHistory'
 import { listMyStockAlerts, subscribeStockAlert, unsubscribeStockAlert } from '../api/stockAlert'
@@ -216,6 +225,10 @@ const reviewForm = reactive({ rating: 5, content: '', images: [] })
 const MAX_REVIEW_PHOTOS = 5
 const uploadingPhoto = ref(false)
 const photosOnly = ref(false)
+// 評價排序:latest 新到舊 / helpful 最有幫助
+const reviewOrder = ref('latest')
+// 自己按過「有幫助」的評價 id
+const helpfulVoted = ref(new Set())
 
 function beforePhotoUpload(file) {
   if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
@@ -252,6 +265,34 @@ function handlePhotosOnlyChange() {
   loadReviews()
 }
 
+async function loadHelpfulVotes() {
+  if (!authStore.isLoggedIn) {
+    helpfulVoted.value = new Set()
+    return
+  }
+  try {
+    helpfulVoted.value = new Set(await getMyHelpfulVotes(props.id))
+  } catch {
+    helpfulVoted.value = new Set()
+  }
+}
+
+async function handleToggleHelpful(review) {
+  if (!authStore.isLoggedIn) {
+    router.push({ name: 'Login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  const voted = helpfulVoted.value.has(review.id)
+  const result = voted
+    ? await unvoteReviewHelpful(props.id, review.id)
+    : await voteReviewHelpful(props.id, review.id)
+  review.helpfulCount = result.helpfulCount
+  const next = new Set(helpfulVoted.value)
+  if (result.voted) next.add(review.id)
+  else next.delete(review.id)
+  helpfulVoted.value = next
+}
+
 async function loadReviewSummary() {
   reviewSummary.value = await getReviewSummary(props.id)
 }
@@ -263,6 +304,7 @@ async function loadReviews() {
       page: reviewsPage.value,
       size: 5,
       withImages: photosOnly.value || undefined,
+      orderBy: reviewOrder.value,
     })
     reviews.value = data.content
     reviewsTotal.value = data.totalElements
@@ -343,7 +385,16 @@ async function loadPage() {
   reviewsPage.value = 0
   quantity.value = 1
   await load()
-  await Promise.all([loadReviewSummary(), loadReviews(), loadMyReview(), loadFavoriteState(), loadRelated(), loadStockAlerts(), loadBoughtTogether()])
+  await Promise.all([
+    loadReviewSummary(),
+    loadReviews(),
+    loadMyReview(),
+    loadHelpfulVotes(),
+    loadFavoriteState(),
+    loadRelated(),
+    loadStockAlerts(),
+    loadBoughtTogether(),
+  ])
 
   if (authStore.isLoggedIn) {
     recordView(props.id).catch(() => {
@@ -557,9 +608,15 @@ watch(
           </div>
         </div>
 
-        <el-checkbox v-model="photosOnly" class="photos-only" @change="handlePhotosOnlyChange">
-          只看有照片的評論
-        </el-checkbox>
+        <div class="review-toolbar">
+          <el-checkbox v-model="photosOnly" class="photos-only" @change="handlePhotosOnlyChange">
+            只看有照片的評論
+          </el-checkbox>
+          <el-radio-group v-model="reviewOrder" size="small" @change="handlePhotosOnlyChange">
+            <el-radio-button value="latest">最新</el-radio-button>
+            <el-radio-button value="helpful">最有幫助</el-radio-button>
+          </el-radio-group>
+        </div>
 
         <div v-loading="reviewsLoading" class="review-list">
           <el-empty v-if="!reviewsLoading && reviews.length === 0" description="還沒有人評論,搶頭香吧" :image-size="60" />
@@ -573,6 +630,17 @@ watch(
             <ReviewPhotos :images="review.images" />
             <div v-if="review.sellerReply" class="seller-reply">
               <span class="seller-reply-label">賣家回覆</span>{{ review.sellerReply }}
+            </div>
+            <div class="helpful-row">
+              <el-button
+                size="small"
+                :type="helpfulVoted.has(review.id) ? 'primary' : 'default'"
+                plain
+                :disabled="myReview?.id === review.id"
+                @click="handleToggleHelpful(review)"
+              >
+                👍 有幫助{{ review.helpfulCount ? `(${review.helpfulCount})` : '' }}
+              </el-button>
             </div>
           </div>
         </div>
@@ -612,6 +680,18 @@ watch(
 </template>
 
 <style scoped>
+.review-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.helpful-row {
+  margin-top: 8px;
+}
+
 .promo-tags {
   display: flex;
   flex-wrap: wrap;

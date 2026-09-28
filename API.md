@@ -709,13 +709,19 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 ## 商品評論(Reviews)
 
 ### `GET /api/products/{productId}/reviews`
-公開。評論列表(新到舊)。Query:`withImages`(`true` 只看有照片的評論)、`page`、`size`。
+公開。評論列表。Query:`withImages`(`true` 只看有照片的評論)、`orderBy`(`latest` 新到舊,預設;`helpful` 依「有幫助」票數多到少,同票數新的在前)、`page`、`size`。每筆帶 `helpfulCount`。
 ```json
 { "id": 1, "memberName": "陳**", "rating": 5, "content": "布料厚度剛好", "images": ["/uploads/xxx.jpg"],
   "createdAt": "2026-09-27T18:00:00", "updatedAt": "2026-09-27T18:00:00",
   "sellerReply": "謝謝支持!", "repliedAt": "2026-09-28T09:00:00", "hidden": false }
 ```
 被管理員隱藏的評論不會出現在列表,也不列入 summary 與商品評分。
+
+### `POST` / `DELETE /api/products/{productId}/reviews/{reviewId}/helpful` — 需會員登入
+對評論按 / 收回「有幫助」,每人每則一票(重複按不重複計)。不能投自己的評論(400);被隱藏或不屬於此商品的評論回 404。回應 `{ "reviewId": 5, "helpfulCount": 3, "voted": true }`。
+
+### `GET /api/products/{productId}/reviews/helpful/me`
+自己在此商品按過「有幫助」的評論 id 陣列;未登入回空陣列。
 
 ### `GET /api/products/{productId}/reviews/summary`
 公開。`{ "averageRating": 4.5, "reviewCount": 12 }`

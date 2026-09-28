@@ -15,6 +15,17 @@ public interface ProductReviewRepository extends JpaRepository<ProductReview, Lo
     /** 前台列表:不含被隱藏的評價 */
     Page<ProductReview> findByProductIdAndHiddenFalseOrderByCreatedAtDesc(Long productId, Pageable pageable);
 
+    /** 前台列表依「有幫助」票數排序(同票數新的在前) */
+    Page<ProductReview> findByProductIdAndHiddenFalseOrderByHelpfulCountDescCreatedAtDesc(Long productId,
+                                                                                          Pageable pageable);
+
+    @Modifying(flushAutomatically = true)
+    @Query("update ProductReview r set r.helpfulCount = r.helpfulCount + :delta where r.id = :reviewId")
+    int addHelpfulCount(@Param("reviewId") Long reviewId, @Param("delta") int delta);
+
+    @Query("select r.helpfulCount from ProductReview r where r.id = :reviewId")
+    int findHelpfulCountById(@Param("reviewId") Long reviewId);
+
     Optional<ProductReview> findByProductIdAndMemberId(Long productId, Long memberId);
 
     @Query(value = "select r from ProductReview r where r.product.id = :productId and r.hidden = false "
