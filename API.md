@@ -845,6 +845,13 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ### `GET /api/admin/orders/export`
 依與列表相同的查詢條件匯出 CSV(新到舊,最多 10,000 筆),回應為檔案下載(`Content-Disposition: attachment; filename="orders-YYYYMMDD.csv"`),不是 JSON。檔案為 UTF-8 含 BOM,Excel 可直接開啟;以 `=`、`+`、`-`、`@` 開頭的文字欄位會加上 `'` 前綴,避免被 Excel 當成公式執行(CSV injection)。
 
+### 後台內部備註 `/api/admin/notes` — 需管理員登入
+管理員對訂單 / 會員留下的內部筆記,會員端看不到。
+- `GET ?targetType=ORDER&targetId=5`:新到舊 `[ { "id", "adminUsername", "content", "createdAt" } ]`
+- `POST` `{ "targetType": "MEMBER", "targetId": 3, "content": "客人偏好週末到貨" }`(最多 500 字)
+- `DELETE /{id}`:只能刪自己寫的,刪別人的回 400
+`targetType` 為 `ORDER` 或 `MEMBER`,對象不存在回 404。
+
 ### `GET /api/admin/order-messages/awaiting`
 待回覆的訂單留言(每張訂單最後一則是買家留言者,舊到新),分頁。每筆:`{ "orderId", "orderNo", "memberName", "memberEmail", "lastMessage", "lastMessageAt" }`。
 
@@ -1000,6 +1007,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | GET / POST | `/api/orders/{id}/messages` | 會員 |
 | GET | `/api/admin/order-messages/awaiting` | 管理員 |
+| GET / POST | `/api/admin/notes` | 管理員 |
+| DELETE | `/api/admin/notes/{id}` | 管理員 |
 | GET / POST | `/api/admin/orders/{id}/messages` | 管理員 |
 | PATCH | `/api/admin/products/status` | 管理員 |
 | POST | `/api/admin/products/stock-import` | 管理員 |

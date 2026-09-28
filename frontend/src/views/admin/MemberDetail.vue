@@ -1,4 +1,5 @@
 <script setup>
+import AdminNotes from '../../components/AdminNotes.vue'
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { getAdminMember, getAdminMemberTier, listAdminMemberPoints } from '../../api/admin/member'
@@ -106,6 +107,11 @@ onMounted(async () => {
           :current-page="ordersPage + 1"
           @current-change="(p) => { ordersPage = p - 1; loadOrders() }"
         />
+      </div>
+
+      <div class="block">
+        <div class="block-title">內部備註</div>
+        <AdminNotes target-type="MEMBER" :target-id="member.id" />
       </div>
 
       <div class="block">

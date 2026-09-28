@@ -1,4 +1,5 @@
 <script setup>
+import AdminNotes from '../../components/AdminNotes.vue'
 import OrderMessageThread from '../../components/OrderMessageThread.vue'
 import { SHIPPING_METHOD_LABELS } from '../../utils/shipping'
 import { describeInvoice } from '../../utils/invoice'
@@ -160,6 +161,11 @@ onMounted(load)
         >
           前往退貨管理審核 →
         </router-link>
+      </div>
+
+      <div class="block">
+        <div class="block-title">內部備註</div>
+        <AdminNotes target-type="ORDER" :target-id="order.id" />
       </div>
 
       <div class="block">
