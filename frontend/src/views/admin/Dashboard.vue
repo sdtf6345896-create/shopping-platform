@@ -17,6 +17,7 @@ const todos = computed(() => {
     { label: '待出貨訂單', value: d.ordersToShip, to: { name: 'AdminOrderList', query: { status: 'PAID' } } },
     { label: '待審核退貨', value: d.pendingReturns, to: { name: 'AdminReturnList' } },
     { label: '待回覆提問', value: d.unansweredQuestions, to: { name: 'AdminQuestionList' } },
+    { label: '待回覆訂單留言', value: d.awaitingOrderMessages, to: { name: 'AdminOrderMessageList' } },
     { label: `低庫存規格(≤${d.lowStockThreshold})`, value: d.lowStockSkus, to: { name: 'AdminReport' } },
     {
       label: '待付款訂單',

@@ -28,3 +28,16 @@ export function getAdminOrder(id) {
 export function updateOrderStatus(id, payload) {
   return request.patch(`/admin/orders/${id}/status`, payload)
 }
+
+// 最後一則是買家留言、等待回覆的訂單
+export function listAwaitingOrderMessages(params) {
+  return request.get('/admin/order-messages/awaiting', { params })
+}
+
+export function listAdminOrderMessages(orderId) {
+  return request.get(`/admin/orders/${orderId}/messages`)
+}
+
+export function replyOrderMessage(orderId, content) {
+  return request.post(`/admin/orders/${orderId}/messages`, { content })
+}

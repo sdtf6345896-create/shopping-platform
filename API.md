@@ -541,6 +541,12 @@ REFUNDED        → (終態)
 取消訂單。只能對 `PENDING_PAYMENT` 或 `PAID` 的訂單執行,成功後歸還庫存;若該訂單有使用優惠券,也會歸還一次使用名額。
 請求 body 選填:`{ "reason": "重複下單" }`(最多 100 字),會寫入訂單歷程(「會員取消訂單:重複下單」),後台訂單詳情可看到。
 
+### `GET /api/orders/{id}/messages`
+訂單留言串(舊到新):`[ { "id": 1, "sender": "MEMBER", "content": "可以週六送嗎?", "createdAt": "..." } ]`,`sender` 為 `MEMBER` 或 `ADMIN`。非本人訂單回 404。
+
+### `POST /api/orders/{id}/messages`
+會員對自己的訂單留言。請求:`{ "content": "..." }`(1~500 字),回傳新留言。每張訂單最多 100 則(含賣家回覆),超過回 400。
+
 > 訂單成立、付款成功、出貨、完成、取消時,都會寄一封通知信給下單會員(標題依狀態而異,例如「商品出貨通知」)。實際寄送方式與忘記密碼信共用同一套 SMTP 設定(見 README),未設定時以 log 模擬,寄送失敗也不會讓 API request 失敗。
 
 ---
@@ -788,6 +794,12 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ### `GET /api/admin/orders/export`
 依與列表相同的查詢條件匯出 CSV(新到舊,最多 10,000 筆),回應為檔案下載(`Content-Disposition: attachment; filename="orders-YYYYMMDD.csv"`),不是 JSON。檔案為 UTF-8 含 BOM,Excel 可直接開啟;以 `=`、`+`、`-`、`@` 開頭的文字欄位會加上 `'` 前綴,避免被 Excel 當成公式執行(CSV injection)。
 
+### `GET /api/admin/order-messages/awaiting`
+待回覆的訂單留言(每張訂單最後一則是買家留言者,舊到新),分頁。每筆:`{ "orderId", "orderNo", "memberName", "memberEmail", "lastMessage", "lastMessageAt" }`。
+
+### `GET /api/admin/orders/{id}/messages` / `POST /api/admin/orders/{id}/messages`
+後台查看 / 回覆訂單留言,格式同會員端。回覆後以站內通知提醒買家,並記入管理員操作紀錄。
+
 ### `GET /api/admin/orders/ship-template`
 下載所有**已付款(待出貨)**訂單的出貨單號範本 CSV(舊到新,UTF-8 含 BOM)。欄位:`訂單編號,物流業者,物流單號,收件人,收件電話,收件地址,商品明細,訂單備註`,物流兩欄留空讓管理員填寫。
 
@@ -816,8 +828,9 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ```json
 { "todayOrders": 4, "todayRevenue": 2500.00, "todayNewMembers": 2,
   "pendingPaymentOrders": 1, "ordersToShip": 5, "pendingReturns": 1,
-  "unansweredQuestions": 3, "lowStockSkus": 6, "lowStockThreshold": 10 }
+  "unansweredQuestions": 3, "awaitingOrderMessages": 2, "lowStockSkus": 6, "lowStockThreshold": 10 }
 ```
+`awaitingOrderMessages` 為最後一則是買家留言、等待回覆的訂單數。
 `ordersToShip` 為已付款待出貨(`PAID`)的訂單數;`lowStockSkus` 為上架商品中庫存 ≤ `lowStockThreshold` 的規格數。
 
 ### `GET /api/admin/reports/summary`
@@ -926,6 +939,9 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/coupons/{id}/status` | 管理員 |
 | POST | `/api/admin/coupons/{id}/issue` | 管理員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
+| GET / POST | `/api/orders/{id}/messages` | 會員 |
+| GET | `/api/admin/order-messages/awaiting` | 管理員 |
+| GET / POST | `/api/admin/orders/{id}/messages` | 管理員 |
 | PATCH | `/api/admin/products/status` | 管理員 |
 | POST | `/api/admin/products/stock-import` | 管理員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |

@@ -4,6 +4,7 @@ import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.enums.ReturnStatus;
 import com.example.shopping.member.repository.MemberRepository;
+import com.example.shopping.order.message.OrderMessageRepository;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.question.repository.ProductQuestionRepository;
@@ -28,19 +29,22 @@ public class DashboardService {
     private final ReturnRequestRepository returnRequestRepository;
     private final ProductQuestionRepository questionRepository;
     private final ProductSkuRepository productSkuRepository;
+    private final OrderMessageRepository orderMessageRepository;
 
     public DashboardService(ReportService reportService,
                             OrderRepository orderRepository,
                             MemberRepository memberRepository,
                             ReturnRequestRepository returnRequestRepository,
                             ProductQuestionRepository questionRepository,
-                            ProductSkuRepository productSkuRepository) {
+                            ProductSkuRepository productSkuRepository,
+                            OrderMessageRepository orderMessageRepository) {
         this.reportService = reportService;
         this.orderRepository = orderRepository;
         this.memberRepository = memberRepository;
         this.returnRequestRepository = returnRequestRepository;
         this.questionRepository = questionRepository;
         this.productSkuRepository = productSkuRepository;
+        this.orderMessageRepository = orderMessageRepository;
     }
 
     public DashboardResponse getDashboard() {
@@ -55,6 +59,7 @@ public class DashboardService {
                 orderRepository.countByStatus(OrderStatus.PAID),
                 returnRequestRepository.countByStatus(ReturnStatus.PENDING),
                 questionRepository.countByAnsweredAtIsNull(),
+                orderMessageRepository.countAwaitingReply(),
                 productSkuRepository.countByProductStatusAndStockLessThanEqual(ProductStatus.ON_SALE, LOW_STOCK_THRESHOLD),
                 LOW_STOCK_THRESHOLD);
     }

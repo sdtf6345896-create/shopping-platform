@@ -1,4 +1,5 @@
 <script setup>
+import OrderMessageThread from '../../components/OrderMessageThread.vue'
 import { SHIPPING_METHOD_LABELS } from '../../utils/shipping'
 import { describeInvoice } from '../../utils/invoice'
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
@@ -231,6 +232,11 @@ onMounted(load)
         <p class="meta">申請時間:{{ order.returnRequest.createdAt?.slice(0, 19).replace('T', ' ') }}</p>
         <p class="meta">退貨原因:{{ order.returnRequest.reason }}</p>
         <p v-if="order.returnRequest.adminNote" class="meta">處理說明:{{ order.returnRequest.adminNote }}</p>
+      </div>
+
+      <div class="block">
+        <div class="block-title">訂單留言</div>
+        <OrderMessageThread :order-id="order.id" />
       </div>
 
       <div class="block">

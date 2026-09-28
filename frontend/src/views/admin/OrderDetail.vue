@@ -1,4 +1,5 @@
 <script setup>
+import OrderMessageThread from '../../components/OrderMessageThread.vue'
 import { SHIPPING_METHOD_LABELS } from '../../utils/shipping'
 import { describeInvoice } from '../../utils/invoice'
 import { onMounted, reactive, ref } from 'vue'
@@ -155,6 +156,11 @@ onMounted(load)
         >
           前往退貨管理審核 →
         </router-link>
+      </div>
+
+      <div class="block">
+        <div class="block-title">訂單留言</div>
+        <OrderMessageThread :order-id="order.id" mode="admin" />
       </div>
 
       <div class="block">

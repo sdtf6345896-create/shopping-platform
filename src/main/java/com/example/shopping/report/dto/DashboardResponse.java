@@ -22,6 +22,8 @@ public class DashboardResponse {
     private long pendingReturns;
     /** 尚未回覆的商品提問 */
     private long unansweredQuestions;
+    /** 最後一則是會員留言、等待回覆的訂單 */
+    private long awaitingOrderMessages;
     /** 低庫存(小於等於門檻)的上架商品規格數 */
     private long lowStockSkus;
     private int lowStockThreshold;

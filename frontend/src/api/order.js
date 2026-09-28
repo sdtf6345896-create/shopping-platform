@@ -31,3 +31,11 @@ export function confirmReceipt(id) {
 export function cancelOrder(id, reason) {
   return request.post(`/orders/${id}/cancel`, { reason: reason || null })
 }
+
+export function getOrderMessages(orderId) {
+  return request.get(`/orders/${orderId}/messages`)
+}
+
+export function postOrderMessage(orderId, content) {
+  return request.post(`/orders/${orderId}/messages`, { content })
+}

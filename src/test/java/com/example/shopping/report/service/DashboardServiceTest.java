@@ -6,6 +6,7 @@ import com.example.shopping.common.enums.ReturnStatus;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.order.repository.OrderRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.order.message.OrderMessageRepository;
 import com.example.shopping.question.repository.ProductQuestionRepository;
 import com.example.shopping.report.dto.DashboardResponse;
 import com.example.shopping.report.dto.SalesSummaryResponse;
@@ -38,6 +39,8 @@ class DashboardServiceTest {
     private ProductQuestionRepository questionRepository;
     @Mock
     private ProductSkuRepository productSkuRepository;
+    @Mock
+    private OrderMessageRepository orderMessageRepository;
 
     @InjectMocks
     private DashboardService dashboardService;
@@ -52,6 +55,7 @@ class DashboardServiceTest {
         when(orderRepository.countByStatus(OrderStatus.PAID)).thenReturn(5L);
         when(returnRequestRepository.countByStatus(ReturnStatus.PENDING)).thenReturn(1L);
         when(questionRepository.countByAnsweredAtIsNull()).thenReturn(3L);
+        when(orderMessageRepository.countAwaitingReply()).thenReturn(2L);
         when(productSkuRepository.countByProductStatusAndStockLessThanEqual(ProductStatus.ON_SALE, 10)).thenReturn(6L);
 
         DashboardResponse dashboard = dashboardService.getDashboard();
@@ -63,6 +67,7 @@ class DashboardServiceTest {
         assertThat(dashboard.getOrdersToShip()).isEqualTo(5);
         assertThat(dashboard.getPendingReturns()).isEqualTo(1);
         assertThat(dashboard.getUnansweredQuestions()).isEqualTo(3);
+        assertThat(dashboard.getAwaitingOrderMessages()).isEqualTo(2);
         assertThat(dashboard.getLowStockSkus()).isEqualTo(6);
         assertThat(dashboard.getLowStockThreshold()).isEqualTo(10);
     }
