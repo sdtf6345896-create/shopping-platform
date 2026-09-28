@@ -94,6 +94,7 @@ REFUNDED        → (終態)
 { "email": "you@example.com", "password": "password123", "name": "王小明", "phone": "0912345678" }
 ```
 - `password` 至少 8 碼;`phone` 選填
+- `referralCode` 選填,好友的邀請碼(不分大小寫);填了但找不到或邀請人已停用回 400
 
 回應 `data`:`MemberResponse`
 ```json
@@ -156,6 +157,14 @@ REFUNDED        → (終態)
 ---
 
 ## 會員個人資料(Member)— 需會員登入
+
+### `GET /api/members/me/referral`
+我的邀請碼與成果(第一次呼叫時產生 8 碼邀請碼):
+```json
+{ "code": "K7M2QX9A", "invitedCount": 3, "rewardedCount": 1,
+  "referrerPoints": 100, "refereePoints": 50, "minOrderAmount": 300 }
+```
+被邀請的新會員**第一筆**商品金額(不含運費)達 `minOrderAmount` 的訂單完成(確認收貨/自動完成)時,邀請人得 `referrerPoints`、新會員得 `refereePoints` 點購物金,每位新會員只發一次。可用 `app.referral.*` 調整。前端邀請連結格式:`/register?ref=CODE`。
 
 ### `GET /api/members/me`
 取得自己的個人資料 → `MemberResponse`(同上)

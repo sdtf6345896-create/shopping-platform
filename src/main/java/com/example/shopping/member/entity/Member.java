@@ -57,6 +57,19 @@ public class Member {
     @Column(name = "birthday_reward_year", insertable = false, updatable = false)
     private Integer birthdayRewardYear;
 
+    /** 邀請碼,第一次查看時才產生。唯讀對應:由 MemberRepository 的條件式 UPDATE 寫入,避免併發時被舊資料蓋掉 */
+    @Column(name = "referral_code", length = 12, insertable = false, updatable = false)
+    private String referralCode;
+
+    /** 邀請人的會員 id,註冊時決定、之後不變 */
+    @Column(name = "referred_by_id", updatable = false)
+    private Long referredById;
+
+    /** 邀請獎勵是否已發放。唯讀對應:由條件式 UPDATE 認領,確保只發一次 */
+    @Column(name = "referral_rewarded", nullable = false, insertable = false, updatable = false)
+    @ColumnDefault("false")
+    private boolean referralRewarded;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

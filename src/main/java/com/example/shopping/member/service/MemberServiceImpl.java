@@ -43,6 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.UUID;
 
 import static com.example.shopping.member.repository.MemberSpecifications.hasStatus;
@@ -108,6 +109,7 @@ public class MemberServiceImpl implements MemberService {
         member.setPassword(passwordEncoder.encode(request.getPassword()));
         member.setName(request.getName());
         member.setPhone(request.getPhone());
+        member.setReferredById(resolveReferrer(request.getReferralCode()));
 
         Member saved = memberRepository.save(member);
         sendVerificationEmail(saved);
@@ -276,6 +278,16 @@ public class MemberServiceImpl implements MemberService {
             applyBirthday(member, request.getBirthday(), LocalDate.now());
         }
         return MemberResponse.from(member);
+    }
+
+    /** 邀請碼不分大小寫;填了但找不到(或邀請人已停用)就擋下,避免會員以為有綁定成功 */
+    private Long resolveReferrer(String referralCode) {
+        if (referralCode == null || referralCode.isBlank()) {
+            return null;
+        }
+        return memberRepository.findActiveByReferralCode(referralCode.trim().toUpperCase(Locale.ROOT))
+                .map(Member::getId)
+                .orElseThrow(() -> new BusinessException("邀請碼無效,請確認後再試,或留空直接註冊"));
     }
 
     /**

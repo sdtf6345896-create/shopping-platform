@@ -26,6 +26,7 @@ import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
+import com.example.shopping.order.event.OrderCompletedEvent;
 import com.example.shopping.order.invoice.InvoiceService;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
@@ -46,6 +47,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -97,6 +99,9 @@ class OrderServiceImplTest {
     private PointService pointService;
     @Spy
     private PointPolicy pointPolicy = new PointPolicy(new BigDecimal("0.01"), new BigDecimal("0.5"));
+
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -719,6 +724,7 @@ class OrderServiceImplTest {
         orderService.updateStatus(1L, request);
 
         verify(pointService).credit(eq(1L), eq(1L), eq(5), eq(PointTransactionType.EARN), any());
+        verify(eventPublisher).publishEvent(new OrderCompletedEvent(1L, 1L, "ORD1", new BigDecimal("500")));
     }
 
     @Test

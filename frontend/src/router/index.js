@@ -53,6 +53,7 @@ const routes = [
       { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue') },
       { path: 'points', name: 'MemberPoints', component: () => import('../views/member/Points.vue') },
       { path: 'coupons', name: 'MemberCoupons', component: () => import('../views/member/MyCoupons.vue') },
+      { path: 'referral', name: 'MemberReferral', component: () => import('../views/member/Referral.vue') },
       {
         path: 'notifications',
         name: 'MemberNotifications',

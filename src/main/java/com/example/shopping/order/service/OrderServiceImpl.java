@@ -24,6 +24,7 @@ import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.dto.response.ReorderResponse;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
+import com.example.shopping.order.event.OrderCompletedEvent;
 import com.example.shopping.order.export.OrderCsvWriter;
 import com.example.shopping.order.invoice.InvoiceService;
 import com.example.shopping.order.mail.OrderNotifier;
@@ -36,6 +37,7 @@ import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -93,6 +95,7 @@ public class OrderServiceImpl implements OrderService {
     private final ShippingPolicy shippingPolicy;
     private final MemberTierService memberTierService;
     private final InvoiceService invoiceService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -108,7 +111,8 @@ public class OrderServiceImpl implements OrderService {
                              ProductRepository productRepository,
                              ShippingPolicy shippingPolicy,
                              MemberTierService memberTierService,
-                             InvoiceService invoiceService) {
+                             InvoiceService invoiceService,
+                             ApplicationEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -124,6 +128,7 @@ public class OrderServiceImpl implements OrderService {
         this.shippingPolicy = shippingPolicy;
         this.memberTierService = memberTierService;
         this.invoiceService = invoiceService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -390,6 +395,8 @@ public class OrderServiceImpl implements OrderService {
             pointService.credit(order.getMember().getId(), order.getId(), earned, PointTransactionType.EARN,
                     "訂單 " + order.getOrderNo() + " 完成回饋" + tierNote);
         }
+        eventPublisher.publishEvent(new OrderCompletedEvent(order.getMember().getId(), order.getId(),
+                order.getOrderNo(), order.getTotalAmount().subtract(order.getShippingFee())));
     }
 
     private void markPaid(Orders order, OrderActor actor, String note) {

@@ -7,6 +7,8 @@ public enum PointTransactionType {
     REDEEM,
     /** 訂單取消退還 */
     REFUND,
+    /** 邀請好友獎勵 */
+    REFERRAL,
     /** 生日禮 */
     BIRTHDAY,
     /** 管理員或系統調整(例如活動贈送) */

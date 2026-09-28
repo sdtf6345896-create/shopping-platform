@@ -11,6 +11,7 @@ const menu = [
   { name: 'MemberWishlist', label: '我的收藏' },
   { name: 'MemberPoints', label: '我的購物金' },
   { name: 'MemberCoupons', label: '我的優惠券' },
+  { name: 'MemberReferral', label: '邀請好友' },
   { name: 'MemberNotifications', label: '通知中心' },
   { name: 'MemberBrowsingHistory', label: '瀏覽紀錄' },
 ]

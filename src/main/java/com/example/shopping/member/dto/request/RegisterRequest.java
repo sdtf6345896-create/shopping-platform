@@ -22,4 +22,8 @@ public class RegisterRequest {
     private String name;
 
     private String phone;
+
+    /** 好友的邀請碼,選填 */
+    @Size(max = 12, message = "邀請碼格式不正確")
+    private String referralCode;
 }

@@ -37,6 +37,30 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
             + " and lower(m.email) in :emails")
     List<Member> findActiveByEmailsIgnoreCase(@Param("emails") Collection<String> emails);
 
+    @Query("select m from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
+            + " and m.referralCode = :code")
+    Optional<Member> findActiveByReferralCode(@Param("code") String code);
+
+    boolean existsByReferralCode(String referralCode);
+
+    @Query("select m.referralCode from Member m where m.id = :memberId")
+    String findReferralCodeById(@Param("memberId") Long memberId);
+
+    /** 還沒有邀請碼時才寫入,回傳受影響筆數(0 = 已經有了) */
+    @Modifying(flushAutomatically = true)
+    @Query("update Member m set m.referralCode = :code where m.id = :memberId and m.referralCode is null")
+    int assignReferralCode(@Param("memberId") Long memberId, @Param("code") String code);
+
+    long countByReferredById(Long referrerId);
+
+    long countByReferredByIdAndReferralRewardedTrue(Long referrerId);
+
+    /** 認領邀請獎勵:被邀請且尚未發放才更新,回傳受影響筆數(0 = 不適用或已發過) */
+    @Modifying(flushAutomatically = true)
+    @Query("update Member m set m.referralRewarded = true where m.id = :memberId"
+            + " and m.referredById is not null and m.referralRewarded = false")
+    int claimReferralReward(@Param("memberId") Long memberId);
+
     /** 當月壽星中今年還沒領過生日禮的啟用會員 id */
     @Query("select m.id from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
             + " and m.birthday is not null and extract(month from m.birthday) = :month"

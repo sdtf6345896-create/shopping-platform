@@ -1,10 +1,11 @@
 <script setup>
 import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
 
 const formRef = ref()
@@ -14,6 +15,8 @@ const form = reactive({
   password: '',
   name: '',
   phone: '',
+  // 從好友分享的邀請連結(/register?ref=XXXX)進來會自動帶入
+  referralCode: typeof route.query.ref === 'string' ? route.query.ref : '',
 })
 
 const rules = {
@@ -32,7 +35,7 @@ async function handleSubmit() {
   await formRef.value.validate()
   loading.value = true
   try {
-    await authStore.register(form)
+    await authStore.register({ ...form, referralCode: form.referralCode.trim() || null })
     ElMessage.success('註冊成功,請至信箱完成 Email 驗證')
     router.push({ path: '/verify-email', query: { email: form.email } })
   } finally {
@@ -57,6 +60,9 @@ async function handleSubmit() {
         </el-form-item>
         <el-form-item label="手機號碼(選填)" prop="phone">
           <el-input v-model="form.phone" />
+        </el-form-item>
+        <el-form-item label="邀請碼(選填)" prop="referralCode">
+          <el-input v-model="form.referralCode" maxlength="12" placeholder="好友的邀請碼" />
         </el-form-item>
         <el-button type="primary" class="submit-btn" :loading="loading" @click="handleSubmit">註冊</el-button>
       </el-form>
