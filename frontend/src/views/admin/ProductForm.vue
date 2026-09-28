@@ -38,7 +38,13 @@ const form = reactive({
   saleEnabled: false,
   saleDiscountPercent: 20,
   salePeriod: null, // ['YYYY-MM-DDTHH:mm:ss', 'YYYY-MM-DDTHH:mm:ss']
+  // 排程上架 / 下架(選填,時間到由後端排程自動切換狀態)
+  publishAt: null,
+  unpublishAt: null,
 })
+
+// 排程只能選未來的時間
+const disablePastDate = (date) => date.getTime() < new Date().setHours(0, 0, 0, 0)
 
 // 送出時把表單轉成 API 需要的格式(特價關閉時三個欄位都送 null)
 function buildPayload() {
@@ -133,6 +139,8 @@ async function loadProduct() {
     form.saleEnabled = data.saleDiscountPercent != null
     form.saleDiscountPercent = data.saleDiscountPercent ?? 20
     form.salePeriod = data.saleStartAt && data.saleEndAt ? [data.saleStartAt, data.saleEndAt] : null
+    form.publishAt = data.publishAt
+    form.unpublishAt = data.unpublishAt
     form.skus = data.skus.map((s) => ({
       skuCode: s.skuCode,
       specName: s.specName,
@@ -217,6 +225,28 @@ onMounted(async () => {
         </div>
       </el-form-item>
 
+      <el-form-item label="排程上下架">
+        <div class="sale-editor">
+          <el-date-picker
+            v-model="form.publishAt"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            placeholder="自動上架時間(選填)"
+            :disabled-date="disablePastDate"
+            size="small"
+          />
+          <el-date-picker
+            v-model="form.unpublishAt"
+            type="datetime"
+            value-format="YYYY-MM-DDTHH:mm:ss"
+            placeholder="自動下架時間(選填)"
+            :disabled-date="disablePastDate"
+            size="small"
+          />
+        </div>
+        <div class="field-hint">時間到會自動切換上架狀態(約 1 分鐘內生效);新品預告可先存成「下架」並設定上架時間</div>
+      </el-form-item>
+
       <el-form-item label="商品主圖">
         <div v-loading="uploading" class="image-upload">
           <el-upload
@@ -294,6 +324,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.field-hint {
+  width: 100%;
+  color: #999;
+  font-size: 12px;
+}
+
 .product-form {
   background: #fff;
   border: 1px solid #eee;

@@ -88,6 +88,9 @@ async function handleBatchStatus(status) {
 }
 
 // 庫存 CSV 匯入:全有或全無,有錯誤時列出每一行的問題
+// 排程時間只顯示到分鐘,例如 10-01 09:00
+const formatSchedule = (value) => value.slice(5, 16).replace('T', ' ')
+
 const importing = ref(false)
 const importResult = ref(null)
 
@@ -182,11 +185,13 @@ onMounted(() => {
       <el-table-column label="價格" width="100">
         <template #default="{ row }">NT$ {{ row.price }}</template>
       </el-table-column>
-      <el-table-column label="狀態" width="100">
+      <el-table-column label="狀態" width="130">
         <template #default="{ row }">
           <el-tag :type="row.status === 'ON_SALE' ? 'success' : 'info'">
             {{ row.status === 'ON_SALE' ? '上架中' : '已下架' }}
           </el-tag>
+          <div v-if="row.publishAt" class="schedule">{{ formatSchedule(row.publishAt) }} 上架</div>
+          <div v-if="row.unpublishAt" class="schedule">{{ formatSchedule(row.unpublishAt) }} 下架</div>
         </template>
       </el-table-column>
       <el-table-column prop="salesCount" label="銷量" width="80" />
@@ -225,6 +230,12 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.schedule {
+  margin-top: 2px;
+  color: #e6a23c;
+  font-size: 12px;
+}
+
 .header-actions {
   display: flex;
   align-items: center;

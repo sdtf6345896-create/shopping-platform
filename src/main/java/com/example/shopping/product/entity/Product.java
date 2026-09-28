@@ -69,6 +69,14 @@ public class Product {
     @Column(name = "sale_end_at")
     private LocalDateTime saleEndAt;
 
+    /** 排程上架時間;時間到由 ProductScheduleService 改為上架並清空 */
+    @Column(name = "publish_at")
+    private LocalDateTime publishAt;
+
+    /** 排程下架時間;時間到由 ProductScheduleService 改為下架並清空 */
+    @Column(name = "unpublish_at")
+    private LocalDateTime unpublishAt;
+
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductSku> skus = new ArrayList<>();
 

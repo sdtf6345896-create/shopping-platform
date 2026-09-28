@@ -21,6 +21,9 @@ public class ProductListResponse {
     private Integer saleDiscountPercent;
     private LocalDateTime saleEndAt;
     private ProductStatus status;
+    /** 排程上架 / 下架時間(後台列表顯示用) */
+    private LocalDateTime publishAt;
+    private LocalDateTime unpublishAt;
     private int salesCount;
     private BigDecimal ratingAverage;
     private int reviewCount;
@@ -35,6 +38,8 @@ public class ProductListResponse {
                 product.isOnSale() ? product.getSaleDiscountPercent() : null,
                 product.isOnSale() ? product.getSaleEndAt() : null,
                 product.getStatus(),
+                product.getPublishAt(),
+                product.getUnpublishAt(),
                 product.getSalesCount(),
                 product.getRatingAverage(),
                 product.getReviewCount());

@@ -399,7 +399,7 @@ REFUNDED        → (終態)
   ]
 }
 ```
-`saleDiscountPercent`(1~90)、`saleStartAt`、`saleEndAt` 選填,設定限時特價時三者都要填且結束須晚於開始;不帶 `saleDiscountPercent` 表示取消特價。更新商品時規格以 `skuCode` 比對:同編號就地更新(id 不變),新編號新增,移除的規格若已有訂單會回 400。
+`saleDiscountPercent`(1~90)、`saleStartAt`、`saleEndAt` 選填,設定限時特價時三者都要填且結束須晚於開始;不帶 `saleDiscountPercent` 表示取消特價。`publishAt` / `unpublishAt` 選填,排程上架 / 下架時間:新設定的時間須晚於現在、下架須晚於上架(原樣送回既有值不受限);排程約每分鐘檢查一次,時間到自動切換 `status` 並清空該欄位(兩者都已過期時結果為下架)。不帶表示取消排程。詳情與列表回應都帶這兩個欄位。更新商品時規格以 `skuCode` 比對:同編號就地更新(id 不變),新編號新增,移除的規格若已有訂單會回 400。
 `images` 選填,為主圖以外的商品圖片網址(依陣列順序顯示,最多 8 張);更新時整批取代,不帶或空陣列表示清空圖庫。
 `skus` 至少 1 筆。新商品預設 `OFF_SHELF`(下架)。
 

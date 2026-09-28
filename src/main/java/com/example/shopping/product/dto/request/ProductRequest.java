@@ -46,6 +46,12 @@ public class ProductRequest {
 
     private LocalDateTime saleEndAt;
 
+    /** 排程上架時間,選填 */
+    private LocalDateTime publishAt;
+
+    /** 排程下架時間,選填 */
+    private LocalDateTime unpublishAt;
+
     @NotEmpty(message = "至少需要一個規格(SKU)")
     @Valid
     private List<SkuRequest> skus;

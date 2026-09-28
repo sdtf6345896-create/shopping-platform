@@ -21,6 +21,18 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
     @Query("update Product p set p.status = :status where p.id in :ids")
     int updateStatusByIds(@Param("ids") Collection<Long> ids, @Param("status") ProductStatus status);
 
+    /** 排程上架:時間已到的改為上架並清空排程,回傳筆數 */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Product p set p.status = com.example.shopping.common.enums.ProductStatus.ON_SALE,"
+            + " p.publishAt = null where p.publishAt <= :now")
+    int publishDue(@Param("now") LocalDateTime now);
+
+    /** 排程下架:時間已到的改為下架並清空排程,回傳筆數 */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Product p set p.status = com.example.shopping.common.enums.ProductStatus.OFF_SHELF,"
+            + " p.unpublishAt = null where p.unpublishAt <= :now")
+    int unpublishDue(@Param("now") LocalDateTime now);
+
     /** 搜尋建議:名稱包含關鍵字的商品,熱銷優先(Containing 會跳脫 % 與 _,不會被當成萬用字元) */
     List<Product> findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
             ProductStatus status, String keyword, Pageable pageable);

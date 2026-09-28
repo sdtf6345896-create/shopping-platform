@@ -242,6 +242,25 @@ public class ProductServiceImpl implements ProductService {
         product.setMainImage(request.getMainImage());
         product.replaceImages(request.getImages());
         applySale(product, request);
+        applySchedule(product, request);
+    }
+
+    private static void applySchedule(Product product, ProductRequest request) {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime publishAt = request.getPublishAt();
+        LocalDateTime unpublishAt = request.getUnpublishAt();
+        // 沒改動的舊排程可以原樣送回;新設定的時間必須在未來,否則會在下一輪排程立刻套用,容易誤會
+        if (publishAt != null && !publishAt.equals(product.getPublishAt()) && !publishAt.isAfter(now)) {
+            throw new BusinessException("排程上架時間必須晚於現在");
+        }
+        if (unpublishAt != null && !unpublishAt.equals(product.getUnpublishAt()) && !unpublishAt.isAfter(now)) {
+            throw new BusinessException("排程下架時間必須晚於現在");
+        }
+        if (publishAt != null && unpublishAt != null && !unpublishAt.isAfter(publishAt)) {
+            throw new BusinessException("排程下架時間必須晚於上架時間");
+        }
+        product.setPublishAt(publishAt);
+        product.setUnpublishAt(unpublishAt);
     }
 
     private List<ProductSku> toSkus(List<SkuRequest> skuRequests) {

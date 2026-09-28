@@ -26,6 +26,8 @@ public class ProductDetailResponse {
     private Integer saleDiscountPercent;
     private LocalDateTime saleStartAt;
     private LocalDateTime saleEndAt;
+    private LocalDateTime publishAt;
+    private LocalDateTime unpublishAt;
     private String mainImage;
     /** 主圖以外的商品圖片網址 */
     private List<String> images;
@@ -45,6 +47,8 @@ public class ProductDetailResponse {
                 product.getSaleDiscountPercent(),
                 product.getSaleStartAt(),
                 product.getSaleEndAt(),
+                product.getPublishAt(),
+                product.getUnpublishAt(),
                 product.getMainImage(),
                 product.getImages().stream().map(ProductImage::getUrl).toList(),
                 product.getStatus(),

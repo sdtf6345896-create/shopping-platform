@@ -362,6 +362,36 @@ class ProductServiceImplTest {
     }
 
     @Test
+    void update_setsSchedule_andRejectsPastOrReversedTimes() {
+        stubUpdate();
+        LocalDateTime now = LocalDateTime.now();
+        ProductRequest request = saleRequest(null, null, null);
+        request.setPublishAt(now.plusDays(1));
+        request.setUnpublishAt(now.plusDays(8));
+
+        ProductDetailResponse response = productService.update(1L, request);
+        assertThat(response.getPublishAt()).isEqualTo(now.plusDays(1));
+        assertThat(response.getUnpublishAt()).isEqualTo(now.plusDays(8));
+
+        // 原樣送回既有排程可以(即使送出當下已過了幾秒)
+        ProductRequest unchanged = saleRequest(null, null, null);
+        unchanged.setPublishAt(existingProduct.getPublishAt());
+        unchanged.setUnpublishAt(existingProduct.getUnpublishAt());
+        productService.update(1L, unchanged);
+
+        ProductRequest past = saleRequest(null, null, null);
+        past.setPublishAt(now.minusMinutes(1));
+        assertThatThrownBy(() -> productService.update(1L, past))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("上架時間必須晚於現在");
+
+        ProductRequest reversed = saleRequest(null, null, null);
+        reversed.setPublishAt(now.plusDays(3));
+        reversed.setUnpublishAt(now.plusDays(2));
+        assertThatThrownBy(() -> productService.update(1L, reversed))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("晚於上架時間");
+    }
+
+    @Test
     void update_setsFlashSale_andReportsSalePriceWhileActive() {
         stubUpdate();
         LocalDateTime now = LocalDateTime.now();
