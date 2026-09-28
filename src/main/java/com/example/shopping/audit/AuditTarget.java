@@ -6,6 +6,7 @@ public enum AuditTarget {
     CATEGORY,
     BANNER,
     COUPON,
+    PROMOTION,
     ORDER,
     RETURN,
     MEMBER,

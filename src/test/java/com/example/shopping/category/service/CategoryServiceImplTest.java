@@ -12,6 +12,7 @@ import com.example.shopping.product.repository.ProductRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.example.shopping.promotion.PromotionRepository;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -32,6 +33,8 @@ class CategoryServiceImplTest {
     private CategoryRepository categoryRepository;
     @Mock
     private ProductRepository productRepository;
+    @Mock
+    private PromotionRepository promotionRepository;
 
     @InjectMocks
     private CategoryServiceImpl categoryService;

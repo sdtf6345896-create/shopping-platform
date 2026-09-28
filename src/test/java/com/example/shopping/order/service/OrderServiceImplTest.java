@@ -43,6 +43,8 @@ import com.example.shopping.product.repository.ProductSkuRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import com.example.shopping.promotion.PromotionCalculator;
+import com.example.shopping.promotion.PromotionService;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
@@ -102,6 +104,8 @@ class OrderServiceImplTest {
 
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private PromotionService promotionService;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -116,6 +120,7 @@ class OrderServiceImplTest {
         // 預設扣庫存成功;搶輸最後一件的情境由個別測試覆寫
         lenient().when(productSkuRepository.decrementStock(anyLong(), anyInt())).thenReturn(1);
         lenient().when(memberTierService.tierOf(any())).thenReturn(MemberTier.NORMAL);
+        lenient().when(promotionService.evaluate(any(), any())).thenReturn(PromotionCalculator.Result.none());
 
         Member member = new Member();
         member.setId(1L);
@@ -689,6 +694,24 @@ class OrderServiceImplTest {
         assertThatThrownBy(() -> orderService.checkout(1L, home))
                 .isInstanceOf(BusinessException.class).hasMessageContaining("收件地址");
         verify(productSkuRepository, never()).decrementStock(any(), anyInt());
+    }
+
+    @Test
+    void checkout_appliesPromotionBeforeCoupon() {
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(promotionService.evaluate(any(), any())).thenReturn(
+                new PromotionCalculator.Result(9L, "任選 2 件 9 折", new BigDecimal("118"), List.of()));
+
+        OrderResponse response = orderService.checkout(1L, checkoutRequest());
+
+        // 小計 1180 - 滿件 118 = 1062,已達免運門檻
+        assertThat(response.getPromotionName()).isEqualTo("任選 2 件 9 折");
+        assertThat(response.getPromotionDiscount()).isEqualByComparingTo("118");
+        assertThat(response.getSubtotalAmount()).isEqualByComparingTo("1180");
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("1062");
     }
 
     @Test

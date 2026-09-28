@@ -9,6 +9,7 @@ import com.example.shopping.common.enums.CategoryStatus;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
 import com.example.shopping.product.repository.ProductRepository;
+import com.example.shopping.promotion.PromotionRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,10 +23,13 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
+    private final PromotionRepository promotionRepository;
 
-    public CategoryServiceImpl(CategoryRepository categoryRepository, ProductRepository productRepository) {
+    public CategoryServiceImpl(CategoryRepository categoryRepository, ProductRepository productRepository,
+                               PromotionRepository promotionRepository) {
         this.categoryRepository = categoryRepository;
         this.productRepository = productRepository;
+        this.promotionRepository = promotionRepository;
     }
 
     @Override
@@ -65,6 +69,9 @@ public class CategoryServiceImpl implements CategoryService {
         }
         if (productRepository.existsByCategoryId(id)) {
             throw new BusinessException("此分類底下還有商品,請先移除或搬移商品");
+        }
+        if (promotionRepository.existsByCategoryId(id)) {
+            throw new BusinessException("有滿件折扣活動使用此分類,請先修改或刪除活動");
         }
         categoryRepository.deleteById(id);
     }

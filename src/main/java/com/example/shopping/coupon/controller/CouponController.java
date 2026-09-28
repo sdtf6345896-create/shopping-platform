@@ -7,6 +7,7 @@ import com.example.shopping.coupon.dto.response.CouponApplyResponse;
 import com.example.shopping.coupon.dto.response.WalletCouponResponse;
 import com.example.shopping.coupon.service.CouponService;
 import com.example.shopping.coupon.service.CouponWalletService;
+import com.example.shopping.promotion.PromotionService;
 import com.example.shopping.security.SecurityUtils;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,12 +27,14 @@ public class CouponController {
     private final CouponService couponService;
     private final CartService cartService;
     private final CouponWalletService couponWalletService;
+    private final PromotionService promotionService;
 
     public CouponController(CouponService couponService, CartService cartService,
-                            CouponWalletService couponWalletService) {
+                            CouponWalletService couponWalletService, PromotionService promotionService) {
         this.couponService = couponService;
         this.cartService = cartService;
         this.couponWalletService = couponWalletService;
+        this.promotionService = promotionService;
     }
 
     @GetMapping("/center")
@@ -55,7 +58,9 @@ public class CouponController {
     @PostMapping("/apply")
     public ApiResponse<CouponApplyResponse> apply(@Valid @RequestBody CouponApplyRequest request) {
         Long memberId = SecurityUtils.getCurrentUserId();
-        BigDecimal subtotal = cartService.calculateSubtotal(memberId, request.getCartItemIds());
+        // 與結帳相同:優惠券以扣掉滿件折扣後的金額試算
+        BigDecimal subtotal = cartService.calculateSubtotal(memberId, request.getCartItemIds())
+                .subtract(promotionService.previewForMember(memberId, request.getCartItemIds()).discount());
         return ApiResponse.success(couponService.preview(request.getCode(), subtotal, memberId));
     }
 }

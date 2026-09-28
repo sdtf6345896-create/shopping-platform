@@ -34,6 +34,8 @@ import com.example.shopping.order.shipping.ShippingPolicy;
 import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
+import com.example.shopping.promotion.PromotionCalculator;
+import com.example.shopping.promotion.PromotionService;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
@@ -96,6 +98,7 @@ public class OrderServiceImpl implements OrderService {
     private final MemberTierService memberTierService;
     private final InvoiceService invoiceService;
     private final ApplicationEventPublisher eventPublisher;
+    private final PromotionService promotionService;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -112,7 +115,8 @@ public class OrderServiceImpl implements OrderService {
                              ShippingPolicy shippingPolicy,
                              MemberTierService memberTierService,
                              InvoiceService invoiceService,
-                             ApplicationEventPublisher eventPublisher) {
+                             ApplicationEventPublisher eventPublisher,
+                             PromotionService promotionService) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -129,6 +133,7 @@ public class OrderServiceImpl implements OrderService {
         this.memberTierService = memberTierService;
         this.invoiceService = invoiceService;
         this.eventPublisher = eventPublisher;
+        this.promotionService = promotionService;
     }
 
     @Override
@@ -194,15 +199,21 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        // 滿件折扣先套用,優惠券門檻與折抵都以折扣後金額計算
+        PromotionCalculator.Result promotion = promotionService.evaluate(cartItems, LocalDateTime.now());
+        order.setPromotionDiscount(promotion.discount());
+        order.setPromotionName(promotion.promotionName());
+        BigDecimal afterPromotion = totalAmount.subtract(promotion.discount());
+
         BigDecimal discountAmount = BigDecimal.ZERO;
         String couponCode = request.getCouponCode();
         if (couponCode != null && !couponCode.isBlank()) {
-            CouponApplyResponse applied = couponService.reserve(couponCode.trim(), totalAmount, memberId);
+            CouponApplyResponse applied = couponService.reserve(couponCode.trim(), afterPromotion, memberId);
             discountAmount = applied.getDiscountAmount();
             order.setCoupon(couponRepository.getReferenceById(applied.getCouponId()));
             order.setCouponCode(applied.getCode());
         }
-        BigDecimal payable = totalAmount.subtract(discountAmount);
+        BigDecimal payable = afterPromotion.subtract(discountAmount);
         int pointsToUse = request.getPointsToUse() == null ? 0 : request.getPointsToUse();
         if (pointsToUse > 0) {
             int balance = pointService.getBalance(memberId).getBalance();

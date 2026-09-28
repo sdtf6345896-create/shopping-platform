@@ -7,6 +7,7 @@ const TARGET_LABELS = {
   CATEGORY: '分類',
   BANNER: 'Banner',
   COUPON: '優惠券',
+  PROMOTION: '滿件活動',
   ORDER: '訂單',
   RETURN: '退貨',
   MEMBER: '會員',

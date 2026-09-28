@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { flattenCategories } from './categoryTree'
+import { categoryPath, flattenCategories } from './categoryTree'
 
 describe('flattenCategories', () => {
   it('returns an empty array for an empty tree', () => {
@@ -38,5 +38,22 @@ describe('flattenCategories', () => {
     const tree = [{ id: 1, name: '男裝' }]
 
     expect(flattenCategories(tree)).toEqual([{ id: 1, name: '男裝', depth: 0 }])
+  })
+})
+
+describe('categoryPath', () => {
+  const tree = [
+    { id: 1, name: '女裝', children: [{ id: 11, name: '上衣', children: [] }] },
+    { id: 2, name: '3C', children: [] },
+  ]
+
+  it('returns the ancestors down to the category', () => {
+    expect(categoryPath(tree, 11)).toEqual([1, 11])
+    expect(categoryPath(tree, 2)).toEqual([2])
+  })
+
+  it('returns an empty path for unknown categories', () => {
+    expect(categoryPath(tree, 99)).toEqual([])
+    expect(categoryPath(null, 1)).toEqual([])
   })
 })

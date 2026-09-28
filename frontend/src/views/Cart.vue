@@ -1,11 +1,12 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useCartStore } from '../stores/cart'
 import { addToWishlist } from '../api/wishlist'
 import { getShippingPolicy } from '../api/shipping'
 import { amountToFreeShipping } from '../utils/shipping'
+import { previewCartPromotion } from '../api/promotion'
 
 const router = useRouter()
 const cartStore = useCartStore()
@@ -15,6 +16,28 @@ const selectedIds = ref([])
 const selectedItems = computed(() => cartStore.items.filter((item) => selectedIds.value.includes(item.id)))
 const selectedTotal = computed(() => selectedItems.value.reduce((sum, item) => sum + item.subtotal, 0))
 
+// 滿件折扣:勾選項目或數量改變時重新向後端試算(規則與結帳一致)
+const promotion = ref(null)
+const promotionDiscount = computed(() => Number(promotion.value?.discount || 0))
+let promotionRequest = 0
+watch(
+  () => selectedItems.value.map((item) => `${item.id}:${item.quantity}`).join(','),
+  async () => {
+    const ids = selectedIds.value
+    const seq = ++promotionRequest
+    if (!ids.length) {
+      promotion.value = null
+      return
+    }
+    try {
+      const result = await previewCartPromotion(ids)
+      if (seq === promotionRequest) promotion.value = result
+    } catch {
+      if (seq === promotionRequest) promotion.value = null
+    }
+  },
+)
+
 // 免運進度(以勾選商品的金額估算,實際以結帳套用優惠券後為準)
 const shippingPolicy = ref(null)
 getShippingPolicy()
@@ -22,10 +45,12 @@ getShippingPolicy()
     shippingPolicy.value = policy
   })
   .catch(() => {})
-const toFreeShipping = computed(() => amountToFreeShipping(selectedTotal.value, shippingPolicy.value))
+// 免運門檻以扣掉滿件折扣後的金額計算(與結帳一致)
+const payableTotal = computed(() => selectedTotal.value - promotionDiscount.value)
+const toFreeShipping = computed(() => amountToFreeShipping(payableTotal.value, shippingPolicy.value))
 const freeShippingPercent = computed(() =>
   shippingPolicy.value
-    ? Math.min(100, Math.round((selectedTotal.value / Number(shippingPolicy.value.freeThreshold)) * 100))
+    ? Math.min(100, Math.round((payableTotal.value / Number(shippingPolicy.value.freeThreshold)) * 100))
     : 0,
 )
 const allSelected = computed(
@@ -136,6 +161,16 @@ onMounted(load)
           </div>
         </div>
 
+        <div v-if="promotion && (promotion.promotionId || promotion.hints.length)" class="promotion-box">
+          <div v-if="promotion.promotionId" class="promotion-applied">
+            <el-tag type="danger" size="small">滿件優惠</el-tag>
+            {{ promotion.promotionName }},已折 <strong>NT$ {{ promotionDiscount }}</strong>
+          </div>
+          <div v-for="hint in promotion.hints.slice(0, 2)" :key="hint.promotionId" class="promotion-hint">
+            再買 <strong>{{ hint.missingQuantity }}</strong> 件,即可參加「{{ hint.name }}」
+          </div>
+        </div>
+
         <div v-if="shippingPolicy && selectedItems.length" class="free-shipping">
           <span v-if="toFreeShipping > 0">
             再買 <strong>NT$ {{ toFreeShipping }}</strong> 即可免運(滿 NT$ {{ shippingPolicy.freeThreshold }})
@@ -148,7 +183,8 @@ onMounted(load)
           <el-button @click="handleClear">清空購物車</el-button>
           <div class="summary">
             <span>已選 {{ selectedItems.length }} 項,合計:</span>
-            <span class="total-amount">NT$ {{ selectedTotal }}</span>
+            <span v-if="promotionDiscount > 0" class="original-total">NT$ {{ selectedTotal }}</span>
+            <span class="total-amount">NT$ {{ payableTotal }}</span>
             <el-button type="primary" size="large" @click="handleCheckout">前往結帳</el-button>
           </div>
         </div>
@@ -158,6 +194,30 @@ onMounted(load)
 </template>
 
 <style scoped>
+.promotion-box {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: #fff6f6;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.promotion-applied strong,
+.promotion-hint strong {
+  color: #e4393c;
+}
+
+.promotion-hint {
+  margin-top: 4px;
+  color: #666;
+}
+
+.original-total {
+  color: #999;
+  text-decoration: line-through;
+  margin-right: 6px;
+}
+
 .original-price {
   display: block;
   color: #999;

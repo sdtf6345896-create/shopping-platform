@@ -15,6 +15,9 @@ import { recordView } from '../api/browsingHistory'
 import { listMyStockAlerts, subscribeStockAlert, unsubscribeStockAlert } from '../api/stockAlert'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
+import { listPromotions } from '../api/promotion'
+import { getCategoryTree } from '../api/category'
+import { categoryPath } from '../utils/categoryTree'
 
 const props = defineProps({
   id: { type: [String, Number], required: true },
@@ -25,6 +28,21 @@ const authStore = useAuthStore()
 const cartStore = useCartStore()
 
 const product = ref(null)
+
+// 適用這個商品的滿件折扣(全站活動,或活動分類是商品分類本身 / 上層分類)
+const runningPromotions = ref([])
+const categoryTree = ref([])
+Promise.all([listPromotions(), getCategoryTree()])
+  .then(([promotions, tree]) => {
+    runningPromotions.value = promotions
+    categoryTree.value = tree
+  })
+  .catch(() => {})
+const productPromotions = computed(() => {
+  if (!product.value) return []
+  const path = categoryPath(categoryTree.value, product.value.categoryId)
+  return runningPromotions.value.filter((p) => p.categoryId == null || path.includes(p.categoryId))
+})
 const loading = ref(true)
 const selectedSkuId = ref(null)
 const quantity = ref(1)
@@ -351,6 +369,11 @@ watch(
         <div class="info">
           <h1 class="name">{{ product.name }}</h1>
           <p class="category">分類:{{ product.categoryName }}</p>
+          <div v-if="productPromotions.length" class="promo-tags">
+            <el-tag v-for="p in productPromotions" :key="p.id" type="danger" effect="plain" size="small">
+              {{ p.name }}
+            </el-tag>
+          </div>
           <div v-if="salePrice != null" class="sale-banner">
             <span class="sale-tag">限時特價 -{{ product.saleDiscountPercent }}%</span>
             <span v-if="saleTimeLeft > 0" class="sale-countdown">剩餘 {{ formatCountdown(saleTimeLeft) }}</span>
@@ -555,6 +578,13 @@ watch(
 </template>
 
 <style scoped>
+.promo-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 4px 0 8px;
+}
+
 .related-section {
   margin-top: 24px;
 }

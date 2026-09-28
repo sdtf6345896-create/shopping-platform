@@ -69,6 +69,10 @@ const formatTime = (value) => value?.slice(0, 19).replace('T', ' ')
 
     <section v-if="isReceipt" class="totals">
       <p><span>商品小計</span><span>NT$ {{ order.subtotalAmount }}</span></p>
+      <p v-if="order.promotionDiscount > 0">
+        <span>滿件優惠({{ order.promotionName }})</span>
+        <span>- NT$ {{ order.promotionDiscount }}</span>
+      </p>
       <p v-if="order.discountAmount > 0">
         <span>優惠折抵{{ order.couponCode ? `(${order.couponCode})` : '' }}</span>
         <span>- NT$ {{ order.discountAmount }}</span>

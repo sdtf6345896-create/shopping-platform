@@ -43,7 +43,7 @@ public class Orders {
     @JoinColumn(name = "address_id")
     private Address address;
 
-    /** 商品原價小計(套用優惠券前) */
+    /** 商品小計(套用滿件折扣與優惠券前) */
     @Column(name = "subtotal_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal subtotalAmount;
 
@@ -51,11 +51,19 @@ public class Orders {
     @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    /** 滿件折扣金額(結帳時自動套用的活動) */
+    @Column(name = "promotion_discount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal promotionDiscount = BigDecimal.ZERO;
+
+    /** 套用的滿件折扣活動名稱快照,未套用為 null */
+    @Column(name = "promotion_name", length = 50)
+    private String promotionName;
+
     /** 運費(未達免運門檻時收取) */
     @Column(name = "shipping_fee", nullable = false, precision = 10, scale = 2)
     private BigDecimal shippingFee = BigDecimal.ZERO;
 
-    /** 實付金額(= subtotalAmount - discountAmount - pointsUsed + shippingFee) */
+    /** 實付金額(= subtotalAmount - promotionDiscount - discountAmount - pointsUsed + shippingFee) */
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 

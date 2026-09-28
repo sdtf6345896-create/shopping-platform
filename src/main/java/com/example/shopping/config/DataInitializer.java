@@ -20,6 +20,8 @@ import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.review.entity.ProductReview;
 import com.example.shopping.review.repository.ProductReviewRepository;
 import com.example.shopping.review.service.ReviewService;
+import com.example.shopping.promotion.Promotion;
+import com.example.shopping.promotion.PromotionRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -54,6 +56,7 @@ public class DataInitializer implements CommandLineRunner {
     private final ReviewService reviewService;
     private final PasswordEncoder passwordEncoder;
     private final JdbcTemplate jdbcTemplate;
+    private final PromotionRepository promotionRepository;
 
     public DataInitializer(AdminRepository adminRepository,
                             MemberRepository memberRepository,
@@ -64,7 +67,8 @@ public class DataInitializer implements CommandLineRunner {
                             PointService pointService,
                             ReviewService reviewService,
                             PasswordEncoder passwordEncoder,
-                            JdbcTemplate jdbcTemplate) {
+                            JdbcTemplate jdbcTemplate,
+                            PromotionRepository promotionRepository) {
         this.adminRepository = adminRepository;
         this.memberRepository = memberRepository;
         this.addressRepository = addressRepository;
@@ -75,6 +79,7 @@ public class DataInitializer implements CommandLineRunner {
         this.reviewService = reviewService;
         this.passwordEncoder = passwordEncoder;
         this.jdbcTemplate = jdbcTemplate;
+        this.promotionRepository = promotionRepository;
     }
 
     @Override
@@ -191,6 +196,16 @@ public class DataInitializer implements CommandLineRunner {
 
         seedDemoReviews(member);
         seedDemoFlashSale();
+        seedDemoPromotion();
+    }
+
+    /** 一個全站的滿件折扣,購物車 / 結帳頁一開始就看得到「再買幾件」提示 */
+    private void seedDemoPromotion() {
+        Promotion promotion = new Promotion();
+        promotion.setName("全站任選 3 件 95 折");
+        promotion.setMinQuantity(3);
+        promotion.setDiscountPercent(5);
+        promotionRepository.save(promotion);
     }
 
     private void seedDemoReviews(Member member) {

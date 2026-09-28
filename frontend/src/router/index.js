@@ -99,6 +99,7 @@ const routes = [
         component: () => import('../views/admin/MemberDetail.vue'),
         props: true,
       },
+      { path: 'promotions', name: 'AdminPromotionList', component: () => import('../views/admin/PromotionList.vue') },
       { path: 'coupons', name: 'AdminCouponList', component: () => import('../views/admin/CouponList.vue') },
       {
         path: 'order-messages',

@@ -9,6 +9,7 @@ import { getPointBalance } from '../api/points'
 import { maxRedeemable } from '../utils/points'
 import { INVOICE_TYPE_LABELS, validateInvoice } from '../utils/invoice'
 import { getShippingPolicy } from '../api/shipping'
+import { previewCartPromotion } from '../api/promotion'
 import { CVS_BRANDS, amountToFreeShipping, shippingFeeFor, validateCvsPickup } from '../utils/shipping'
 import { useCartStore } from '../stores/cart'
 
@@ -66,6 +67,10 @@ const checkoutItems = computed(() => {
 })
 const subtotalAmount = computed(() => checkoutItems.value.reduce((sum, item) => sum + item.subtotal, 0))
 
+// 滿件折扣:後端依結帳項目試算,先於優惠券套用
+const promotion = ref(null)
+const promotionDiscount = computed(() => Number(promotion.value?.discount || 0))
+
 const couponCode = ref('')
 const appliedCoupon = ref(null)
 const applyingCoupon = ref(false)
@@ -75,7 +80,7 @@ const discountAmount = computed(() => appliedCoupon.value?.discountAmount || 0)
 const pointInfo = ref(null)
 const usePoints = ref(false)
 const pointsToUse = ref(0)
-const payableBeforePoints = computed(() => subtotalAmount.value - discountAmount.value)
+const payableBeforePoints = computed(() => subtotalAmount.value - promotionDiscount.value - discountAmount.value)
 const pointLimit = computed(() =>
   pointInfo.value
     ? maxRedeemable(pointInfo.value.balance, payableBeforePoints.value, pointInfo.value.maxRedeemRatio)
@@ -239,6 +244,11 @@ onMounted(async () => {
     getShippingPolicy()
       .then((policy) => {
         shippingPolicy.value = policy
+      })
+      .catch(() => {}),
+    previewCartPromotion(cartStore.checkoutSelection)
+      .then((result) => {
+        promotion.value = result
       })
       .catch(() => {}),
   ])
@@ -423,6 +433,10 @@ onMounted(async () => {
       <div class="confirm-row">
         <span>小計</span>
         <span>NT$ {{ subtotalAmount }}</span>
+      </div>
+      <div v-if="promotionDiscount > 0" class="confirm-row discount-row">
+        <span>滿件優惠({{ promotion.promotionName }})</span>
+        <span>- NT$ {{ promotionDiscount }}</span>
       </div>
       <div v-if="appliedCoupon" class="confirm-row discount-row">
         <span>優惠折抵</span>

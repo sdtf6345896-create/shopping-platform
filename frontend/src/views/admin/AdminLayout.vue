@@ -13,6 +13,7 @@ const menu = [
   { name: 'AdminCategoryList', label: '分類管理' },
   { name: 'AdminOrderList', label: '訂單管理', matchNames: ['AdminOrderList', 'AdminOrderDetail'] },
   { name: 'AdminReturnList', label: '退貨管理' },
+  { name: 'AdminPromotionList', label: '滿件活動' },
   { name: 'AdminCouponList', label: '優惠券管理' },
   { name: 'AdminQuestionList', label: '商品問答' },
   { name: 'AdminReviewList', label: '評價管理' },

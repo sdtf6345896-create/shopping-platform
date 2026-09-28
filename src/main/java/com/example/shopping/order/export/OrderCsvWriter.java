@@ -38,7 +38,7 @@ public final class OrderCsvWriter {
 
     private static final List<String> HEADERS = List.of(
             "訂單編號", "建立時間", "狀態", "付款方式", "會員 Email", "配送方式", "收件人", "收件電話", "收件地址",
-            "商品明細", "商品小計", "折抵金額", "優惠券", "購物金折抵", "運費", "實付金額", "物流業者", "物流單號", "訂單備註", "發票");
+            "商品明細", "商品小計", "滿件折扣", "折抵金額", "優惠券", "購物金折抵", "運費", "實付金額", "物流業者", "物流單號", "訂單備註", "發票");
 
     /** 出貨單號匯入範本:前三欄是匯入要讀的欄位,其餘欄位只是方便對照,匯入時忽略 */
     public static final List<String> SHIP_TEMPLATE_HEADERS = List.of(
@@ -80,6 +80,7 @@ public final class OrderCsvWriter {
                     order.getReceiverAddress(),
                     order.getItems().stream().map(OrderCsvWriter::describeItem).collect(Collectors.joining("; ")),
                     String.valueOf(order.getSubtotalAmount()),
+                    String.valueOf(order.getPromotionDiscount()),
                     String.valueOf(order.getDiscountAmount()),
                     nullToEmpty(order.getCouponCode()),
                     String.valueOf(order.getPointsUsed()),

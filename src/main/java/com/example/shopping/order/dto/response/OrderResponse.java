@@ -20,6 +20,8 @@ public class OrderResponse {
     private OrderStatus status;
     private PaymentMethod paymentMethod;
     private BigDecimal subtotalAmount;
+    private BigDecimal promotionDiscount;
+    private String promotionName;
     private BigDecimal discountAmount;
     private BigDecimal totalAmount;
     private String couponCode;
@@ -50,6 +52,8 @@ public class OrderResponse {
                 order.getStatus(),
                 order.getPaymentMethod(),
                 order.getSubtotalAmount(),
+                order.getPromotionDiscount(),
+                order.getPromotionName(),
                 order.getDiscountAmount(),
                 order.getTotalAmount(),
                 order.getCouponCode(),

@@ -723,6 +723,29 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 
 ---
 
+## 滿件折扣(Promotion)
+
+結帳時自動套用、不需輸入代碼。活動範圍(指定分類含子分類,或全站)內的商品合計達 `minQuantity` 件時,這些商品打 `discountPercent`% 折扣(以實際售價含限時特價計算,無條件捨去到整數元)。同時符合多個活動只套用折扣金額最大的一個。**先套用滿件折扣,再以折扣後金額計算優惠券門檻與折抵、購物金上限與免運門檻**。訂單回應帶 `promotionDiscount` 與 `promotionName`(活動名稱快照),`totalAmount = subtotalAmount - promotionDiscount - discountAmount - pointsUsed + shippingFee`。
+
+### `GET /api/promotions`
+公開。進行中的活動:`[ { "id", "name", "categoryId", "categoryName", "minQuantity", "discountPercent", "startAt", "endAt", "active", "running" } ]`(`categoryId` 為 `null` 表示全站)。
+
+### `GET /api/cart/promotion` — 需會員登入
+以購物車試算。Query:`cartItemIds`(選填,逗號分隔,不帶為整個購物車)。
+```json
+{ "promotionId": 3, "promotionName": "女裝任選 2 件 9 折", "discount": 85,
+  "hints": [ { "promotionId": 1, "name": "全站任選 3 件 95 折", "missingQuantity": 1, "discountPercent": 5 } ] }
+```
+`hints` 為已有商品在範圍內、但還差幾件才達標的活動(差最少的排前面)。`POST /api/coupons/apply` 試算的優惠券也以扣掉滿件折扣後的金額計算。
+
+### 後台 `/api/admin/promotions` — 需管理員登入
+`GET` 列表;`POST` 新增、`PUT /{id}` 修改,請求:
+```json
+{ "name": "女裝任選 2 件 9 折", "categoryId": 1, "minQuantity": 2, "discountPercent": 10,
+  "startAt": null, "endAt": "2026-10-31T23:59:59", "active": true }
+```
+`minQuantity` 2~99、`discountPercent` 1~90,`startAt` / `endAt` 選填(兩者都填時結束須晚於開始)。`PATCH /{id}/active` `{ "active": false }` 啟用 / 停用;`DELETE /{id}` 刪除(已成立訂單只存快照,不受影響)。被活動使用的分類無法刪除。以上變更皆記入管理員操作紀錄。
+
 ## 優惠券(Coupon）
 
 ### `GET /api/coupons/center` — 需會員登入
@@ -912,6 +935,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/products/hot-searches` | 公開 |
 | GET | `/api/products/flash-sale` | 公開 |
 | GET | `/api/shipping/policy` | 公開 |
+| GET | `/api/promotions` | 公開 |
+| GET | `/api/cart/promotion` | 會員 |
 | GET | `/api/products/{id}/bought-together` | 公開 |
 | GET | `/api/products/{id}/related` | 公開 |
 | GET | `/api/recommendations` | 會員 |
@@ -957,6 +982,9 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/coupons/center` | 會員 |
 | POST | `/api/coupons/{id}/claim` | 會員 |
 | GET | `/api/coupons/mine` | 會員 |
+| GET / POST | `/api/admin/promotions` | 管理員 |
+| PUT / DELETE | `/api/admin/promotions/{id}` | 管理員 |
+| PATCH | `/api/admin/promotions/{id}/active` | 管理員 |
 | GET / POST | `/api/admin/coupons` | 管理員 |
 | GET / PUT / DELETE | `/api/admin/coupons/{id}` | 管理員 |
 | PATCH | `/api/admin/coupons/{id}/status` | 管理員 |

@@ -204,6 +204,10 @@ onMounted(load)
           <span>小計</span>
           <span>NT$ {{ order.subtotalAmount }}</span>
         </div>
+        <div v-if="order.promotionDiscount > 0" class="item-row discount-row">
+          <span>滿件優惠({{ order.promotionName }})</span>
+          <span>- NT$ {{ order.promotionDiscount }}</span>
+        </div>
         <div v-if="order.discountAmount > 0" class="item-row discount-row">
           <span>優惠折抵{{ order.couponCode ? `(${order.couponCode})` : '' }}</span>
           <span>- NT$ {{ order.discountAmount }}</span>
