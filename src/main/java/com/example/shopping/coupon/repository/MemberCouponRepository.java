@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long> {
@@ -17,6 +18,9 @@ public interface MemberCouponRepository extends JpaRepository<MemberCoupon, Long
 
     @Query("select mc.coupon.id from MemberCoupon mc where mc.memberId = :memberId")
     List<Long> findClaimedCouponIds(@Param("memberId") Long memberId);
+
+    @Query("select mc.memberId from MemberCoupon mc where mc.coupon.id = :couponId and mc.memberId in :memberIds")
+    List<Long> findHolderIds(@Param("couponId") Long couponId, @Param("memberIds") Collection<Long> memberIds);
 
     @Modifying
     @Query("delete from MemberCoupon mc where mc.memberId = :memberId")

@@ -5,9 +5,12 @@ import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
 import com.example.shopping.common.enums.CouponStatus;
+import com.example.shopping.coupon.dto.request.CouponIssueRequest;
 import com.example.shopping.coupon.dto.request.CouponRequest;
 import com.example.shopping.coupon.dto.request.CouponStatusRequest;
+import com.example.shopping.coupon.dto.response.CouponIssueResponse;
 import com.example.shopping.coupon.dto.response.CouponResponse;
+import com.example.shopping.coupon.service.CouponIssueService;
 import com.example.shopping.coupon.service.CouponService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
@@ -19,9 +22,11 @@ import org.springframework.web.bind.annotation.*;
 public class AdminCouponController {
 
     private final CouponService couponService;
+    private final CouponIssueService couponIssueService;
 
-    public AdminCouponController(CouponService couponService) {
+    public AdminCouponController(CouponService couponService, CouponIssueService couponIssueService) {
         this.couponService = couponService;
+        this.couponIssueService = couponIssueService;
     }
 
     @GetMapping
@@ -55,6 +60,15 @@ public class AdminCouponController {
     public ApiResponse<CouponResponse> updateStatus(@PathVariable Long id,
                                                      @Valid @RequestBody CouponStatusRequest request) {
         return ApiResponse.success("狀態更新成功", couponService.updateStatus(id, request));
+    }
+
+    @AdminAudit(action = "發放優惠券", target = AuditTarget.COUPON,
+            detail = "#request.target + (#request.minTier != null ? ' ' + #request.minTier : '')"
+                    + " + ' → 新發 ' + #result.data.issued() + ' 人'")
+    @PostMapping("/{id}/issue")
+    public ApiResponse<CouponIssueResponse> issue(@PathVariable Long id, @Valid @RequestBody CouponIssueRequest request) {
+        CouponIssueResponse result = couponIssueService.issue(id, request);
+        return ApiResponse.success("已發放給 " + result.issued() + " 位會員", result);
     }
 
     @AdminAudit(action = "刪除優惠券", target = AuditTarget.COUPON)

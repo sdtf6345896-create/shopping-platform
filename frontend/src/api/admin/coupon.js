@@ -23,3 +23,8 @@ export function updateCouponStatus(id, status) {
 export function deleteCoupon(id) {
   return request.delete(`/admin/coupons/${id}`)
 }
+
+// 直接發券到會員錢包:payload = { target: 'ALL' | 'TIER' | 'EMAILS', minTier, emails }
+export function issueCoupon(id, payload) {
+  return request.post(`/admin/coupons/${id}/issue`, payload, { timeout: 60000 })
+}

@@ -8,11 +8,14 @@ import {
   updateCouponStatus,
   deleteCoupon,
 } from '../../api/admin/coupon'
+import CouponIssueDialog from '../../components/CouponIssueDialog.vue'
 import { COUPON_STATUS_LABELS, DISCOUNT_TYPE_LABELS, formatDiscount } from '../../utils/couponEnums'
 
 const coupons = ref([])
 const total = ref(0)
 const loading = ref(true)
+// 正在發放的優惠券(開啟發券視窗)
+const issuingCoupon = ref(null)
 
 const filters = reactive({
   keyword: '',
@@ -197,7 +200,7 @@ onMounted(loadCoupons)
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180">
+      <el-table-column label="操作" width="220">
         <template #default="{ row }">
           <el-switch
             :model-value="row.status === 'ACTIVE'"
@@ -205,6 +208,9 @@ onMounted(loadCoupons)
             @change="(v) => handleToggleStatus(row, v)"
           />
           <el-button link size="small" @click="openEdit(row)">編輯</el-button>
+          <el-button link size="small" type="primary" :disabled="row.status !== 'ACTIVE'" @click="issuingCoupon = row">
+            發放
+          </el-button>
           <el-button link size="small" type="danger" @click="handleDelete(row)">刪除</el-button>
         </template>
       </el-table-column>
@@ -270,6 +276,8 @@ onMounted(loadCoupons)
         <el-button type="primary" @click="handleSave">儲存</el-button>
       </template>
     </el-dialog>
+
+    <CouponIssueDialog :coupon="issuingCoupon" @close="issuingCoupon = null" />
   </div>
 </template>
 

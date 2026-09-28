@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /** 會員等級即時由訂單計算,不另外存欄位,不會有等級與消費紀錄不同步的問題 */
 @Service
@@ -32,6 +33,12 @@ public class MemberTierService {
         BigDecimal toNext = next == null ? BigDecimal.ZERO : next.getThreshold().subtract(spending).max(BigDecimal.ZERO);
         return new MemberTierResponse(tier, tier.getLabel(), tier.getPointsMultiplier(), spending,
                 next, next == null ? null : next.getLabel(), toNext);
+    }
+
+    /** 目前等級至少為 tier 的啟用會員 id;tier 為最低等級時請直接取全部會員 */
+    public List<Long> activeMemberIdsAtLeast(MemberTier tier) {
+        return orderRepository.findMemberIdsWithMerchandiseAmountAtLeast(OrderStatus.COMPLETED,
+                LocalDateTime.now().minusMonths(LOOKBACK_MONTHS), tier.getThreshold());
     }
 
     private BigDecimal spendingOf(Long memberId) {

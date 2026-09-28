@@ -761,6 +761,19 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ### `PATCH /api/admin/coupons/{id}/status` — 需管理員登入
 請求:`{ "status": "DISABLED" }`
 
+### `POST /api/admin/coupons/{id}/issue` — 需管理員登入
+把優惠券直接放進會員的「我的優惠券」並發站內通知(不需要是領券中心的券)。請求:
+```json
+{ "target": "TIER", "minTier": "GOLD" }
+{ "target": "EMAILS", "emails": ["a@example.com", "b@example.com"] }
+{ "target": "ALL" }
+```
+- `TIER`:等級至少為 `minTier`(`SILVER` / `GOLD`,依近 12 個月完成訂單計算)的啟用會員
+- `EMAILS`:最多 1,000 個,不分大小寫;找不到或已停用的列在 `unmatchedEmails`
+- 已持有的會員略過(不重複發、不重複通知);停用、過期或已兌換完畢的券回 400
+
+回應:`{ "targeted": 12, "issued": 10, "alreadyHeld": 2, "unmatchedEmails": [] }`。會記入管理員操作紀錄。
+
 ### `DELETE /api/admin/coupons/{id}` — 需管理員登入
 刪除優惠券。已被使用過(`usedQuantity > 0`)的優惠券無法刪除,回 400,請改用停用。
 
@@ -910,6 +923,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET / POST | `/api/admin/coupons` | 管理員 |
 | GET / PUT / DELETE | `/api/admin/coupons/{id}` | 管理員 |
 | PATCH | `/api/admin/coupons/{id}/status` | 管理員 |
+| POST | `/api/admin/coupons/{id}/issue` | 管理員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
 | PATCH | `/api/admin/products/status` | 管理員 |
 | POST | `/api/admin/products/stock-import` | 管理員 |

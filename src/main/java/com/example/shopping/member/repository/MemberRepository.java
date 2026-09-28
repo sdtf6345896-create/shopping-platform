@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +28,14 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
     @Modifying(flushAutomatically = true)
     @Query("update Member m set m.points = m.points + :amount where m.id = :memberId")
     int addPoints(@Param("memberId") Long memberId, @Param("amount") int amount);
+
+    @Query("select m.id from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE")
+    List<Long> findActiveIds();
+
+    /** 依 Email(不分大小寫)找啟用中的會員 */
+    @Query("select m from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
+            + " and lower(m.email) in :emails")
+    List<Member> findActiveByEmailsIgnoreCase(@Param("emails") Collection<String> emails);
 
     /** 當月壽星中今年還沒領過生日禮的啟用會員 id */
     @Query("select m.id from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"

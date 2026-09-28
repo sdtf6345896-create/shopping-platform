@@ -29,6 +29,14 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
     BigDecimal sumMerchandiseAmount(@Param("memberId") Long memberId, @Param("status") OrderStatus status,
                                     @Param("since") LocalDateTime since);
 
+    /** 某時間之後指定狀態訂單的商品金額合計達門檻的啟用會員 id(依等級發券用) */
+    @Query("select o.member.id from Orders o where o.member.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
+            + " and o.status = :status and o.createdAt >= :since"
+            + " group by o.member.id having sum(o.totalAmount - o.shippingFee) >= :threshold")
+    List<Long> findMemberIdsWithMerchandiseAmountAtLeast(@Param("status") OrderStatus status,
+                                                          @Param("since") LocalDateTime since,
+                                                          @Param("threshold") BigDecimal threshold);
+
     List<Orders> findByStatusAndShippedAtBefore(OrderStatus status, LocalDateTime shippedBefore);
 
     List<Orders> findByOrderNoIn(Collection<String> orderNos);
