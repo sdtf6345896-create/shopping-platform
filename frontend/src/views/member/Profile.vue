@@ -15,7 +15,14 @@ const form = reactive({
   email: '',
   name: '',
   phone: '',
+  birthday: null,
 })
+// 生日設定後不可自行修改(後端也會擋),避免反覆改生日領生日禮
+const birthdayLocked = ref(false)
+
+function disabledBirthday(date) {
+  return date.getTime() >= Date.now() || date.getFullYear() < 1900
+}
 
 const rules = {
   name: [{ required: true, message: '請輸入姓名', trigger: 'blur' }],
@@ -28,6 +35,8 @@ async function load() {
     form.email = profile.email
     form.name = profile.name
     form.phone = profile.phone
+    form.birthday = profile.birthday || null
+    birthdayLocked.value = !!profile.birthday
   } finally {
     loading.value = false
   }
@@ -37,7 +46,8 @@ async function handleSave() {
   await formRef.value.validate()
   saving.value = true
   try {
-    await authStore.updateProfile({ name: form.name, phone: form.phone })
+    await authStore.updateProfile({ name: form.name, phone: form.phone, birthday: form.birthday })
+    birthdayLocked.value = !!form.birthday
     ElMessage.success('更新成功')
   } finally {
     saving.value = false
@@ -121,6 +131,20 @@ onMounted(load)
       <el-form-item label="手機">
         <el-input v-model="form.phone" />
       </el-form-item>
+      <el-form-item label="生日">
+        <el-date-picker
+          v-model="form.birthday"
+          type="date"
+          value-format="YYYY-MM-DD"
+          placeholder="選擇生日"
+          :disabled="birthdayLocked"
+          :disabled-date="disabledBirthday"
+          :default-value="new Date(1995, 0, 1)"
+        />
+        <div class="hint-block birthday-hint">
+          {{ birthdayLocked ? '生日設定後無法修改,如需更正請聯絡客服' : '生日當月送購物金!設定後無法修改,請確認正確' }}
+        </div>
+      </el-form-item>
       <el-button type="primary" :loading="saving" @click="handleSave">儲存變更</el-button>
     </el-form>
 
@@ -174,6 +198,11 @@ onMounted(load)
   color: #999;
   font-size: 13px;
   margin: 0 0 12px;
+}
+
+.birthday-hint {
+  margin: 4px 0 0;
+  line-height: 1.4;
 }
 
 .section-title {

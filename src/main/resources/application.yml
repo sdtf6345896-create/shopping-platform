@@ -66,6 +66,8 @@ app:
   points:
     earn-rate: 0.01          # 訂單完成回饋 1% 購物金(1 點 = NT$1)
     max-redeem-ratio: 0.5    # 單筆最多折抵應付金額的 50%
+  birthday:
+    reward-points: 100       # 生日當月贈送的購物金(0 = 關閉生日禮)
   order:
     payment-timeout-minutes: ${ORDER_PAYMENT_TIMEOUT_MINUTES:30}   # 線上付款期限,逾期自動取消(貨到付款不受限)
     expire-check-interval-ms: 60000                               # 逾期訂單掃描間隔

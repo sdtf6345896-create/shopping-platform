@@ -5,6 +5,7 @@ import com.example.shopping.member.entity.Member;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Getter
@@ -18,6 +19,7 @@ public class MemberResponse {
     private AccountStatus status;
     /** 購物金餘額 */
     private int points;
+    private LocalDate birthday;
     private LocalDateTime createdAt;
 
     public static MemberResponse from(Member member) {
@@ -28,6 +30,7 @@ public class MemberResponse {
                 member.getPhone(),
                 member.getStatus(),
                 member.getPoints(),
+                member.getBirthday(),
                 member.getCreatedAt());
     }
 }

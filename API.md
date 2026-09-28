@@ -161,7 +161,10 @@ REFUNDED        → (終態)
 取得自己的個人資料 → `MemberResponse`(同上)
 
 ### `PUT /api/members/me`
-更新自己的姓名/手機。請求:`{ "name": "...", "phone": "..." }` → `MemberResponse`
+更新自己的姓名/手機/生日。請求:`{ "name": "...", "phone": "...", "birthday": "1990-05-20" }` → `MemberResponse`
+
+- `birthday` 選填,只能設定一次;已設定後送不同的值回 400(送 null 或相同值不變)
+- 生日禮:每年生日當月自動發放 `app.birthday.reward-points`(預設 100)點購物金並發站內通知;在生日當月才設定生日的,當年不發、隔年起發放
 
 
 ### `DELETE /api/members/me`

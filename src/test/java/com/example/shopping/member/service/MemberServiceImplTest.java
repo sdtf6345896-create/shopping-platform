@@ -39,6 +39,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Clock;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
@@ -47,6 +48,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -556,6 +558,38 @@ class MemberServiceImplTest {
 
         assertThatThrownBy(() -> memberService.updateProfile(99L, request))
                 .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void applyBirthday_setsOnce_andRejectsChanges() {
+        LocalDate today = LocalDate.of(2026, 9, 28);
+
+        memberService.applyBirthday(activeMember, LocalDate.of(1990, 3, 5), today);
+        assertThat(activeMember.getBirthday()).isEqualTo(LocalDate.of(1990, 3, 5));
+        verify(memberRepository, never()).claimBirthdayReward(any(), anyInt());
+
+        // 再送一次相同的生日沒關係(前端會帶著原值一起存)
+        memberService.applyBirthday(activeMember, LocalDate.of(1990, 3, 5), today);
+        assertThatThrownBy(() -> memberService.applyBirthday(activeMember, LocalDate.of(1990, 9, 5), today))
+                .isInstanceOf(BusinessException.class);
+        assertThat(activeMember.getBirthday()).isEqualTo(LocalDate.of(1990, 3, 5));
+    }
+
+    @Test
+    void applyBirthday_duringBirthdayMonth_forfeitsThisYearsReward() {
+        memberService.applyBirthday(activeMember, LocalDate.of(1995, 9, 1), LocalDate.of(2026, 9, 28));
+
+        verify(memberRepository).claimBirthdayReward(1L, 2026);
+    }
+
+    @Test
+    void applyBirthday_rejectsFutureOrAncientDates() {
+        LocalDate today = LocalDate.of(2026, 9, 28);
+        assertThatThrownBy(() -> memberService.applyBirthday(activeMember, today, today))
+                .isInstanceOf(BusinessException.class);
+        assertThatThrownBy(() -> memberService.applyBirthday(activeMember, LocalDate.of(1899, 12, 31), today))
+                .isInstanceOf(BusinessException.class);
+        assertThat(activeMember.getBirthday()).isNull();
     }
 
     @Test

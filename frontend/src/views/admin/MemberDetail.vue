@@ -62,6 +62,7 @@ onMounted(async () => {
           </div>
           <p class="meta">Email:{{ member.email }}</p>
           <p class="meta">手機:{{ member.phone || '-' }}</p>
+          <p class="meta">生日:{{ member.birthday || '-' }}</p>
           <p class="meta">註冊時間:{{ formatTime(member.createdAt) }}</p>
         </div>
         <div v-if="tier" class="block">

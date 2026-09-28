@@ -41,6 +41,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -271,7 +272,30 @@ public class MemberServiceImpl implements MemberService {
         Member member = findMemberOrThrow(memberId);
         member.setName(request.getName());
         member.setPhone(request.getPhone());
+        if (request.getBirthday() != null) {
+            applyBirthday(member, request.getBirthday(), LocalDate.now());
+        }
         return MemberResponse.from(member);
+    }
+
+    /**
+     * 生日只能設定一次。在生日當月才設定的,今年的生日禮視為已領(明年起才發),
+     * 避免註冊新帳號、把生日填成本月就能立刻領購物金。
+     */
+    void applyBirthday(Member member, LocalDate birthday, LocalDate today) {
+        if (member.getBirthday() != null) {
+            if (!member.getBirthday().equals(birthday)) {
+                throw new BusinessException("生日設定後無法修改,如需更正請聯絡客服");
+            }
+            return;
+        }
+        if (birthday.getYear() < 1900 || !birthday.isBefore(today)) {
+            throw new BusinessException("生日日期不正確");
+        }
+        member.setBirthday(birthday);
+        if (birthday.getMonth() == today.getMonth()) {
+            memberRepository.claimBirthdayReward(member.getId(), today.getYear());
+        }
     }
 
     @Override

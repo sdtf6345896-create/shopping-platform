@@ -57,6 +57,7 @@ public class AccountDeletionService {
         member.setEmail("deleted-" + memberId + "@deleted.invalid");
         member.setName(DELETED_NAME);
         member.setPhone(null);
+        member.setBirthday(null);
         member.setPassword(passwordEncoder.encode(UUID.randomUUID().toString()));
         member.setEmailVerified(false);
         member.setStatus(AccountStatus.DISABLED);

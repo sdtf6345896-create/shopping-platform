@@ -9,5 +9,6 @@ export const POINT_TYPE_LABELS = {
   EARN: '訂單回饋',
   REDEEM: '結帳折抵',
   REFUND: '取消退還',
+  BIRTHDAY: '生日禮',
   ADJUST: '活動贈送',
 }

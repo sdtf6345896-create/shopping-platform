@@ -9,6 +9,7 @@ import org.hibernate.annotations.ColumnDefault;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -48,6 +49,13 @@ public class Member {
     @Column(nullable = false, insertable = false, updatable = false)
     @ColumnDefault("0")
     private int points;
+
+    /** 生日;設定後會員不可自行修改,避免反覆改生日領取生日禮 */
+    private LocalDate birthday;
+
+    /** 最近一次發放生日禮的年份。唯讀對應:由 MemberRepository 的條件式 UPDATE 認領,確保一年只發一次 */
+    @Column(name = "birthday_reward_year", insertable = false, updatable = false)
+    private Integer birthdayRewardYear;
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
