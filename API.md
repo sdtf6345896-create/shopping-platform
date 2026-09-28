@@ -464,7 +464,7 @@ REFUNDED        → (終態)
 ## 運費(Shipping)
 
 ### `GET /api/shipping/policy`
-公開。運費規則:`{ "fee": 60, "freeThreshold": 999 }`。商品金額(套用優惠券後、折抵購物金前)達 `freeThreshold` 免運,否則結帳時加收 `fee`,記在訂單的 `shippingFee` 並包含在 `totalAmount`。購物金回饋只計算商品金額,不含運費。可用 `app.shipping.fee`、`app.shipping.free-threshold` 調整。
+公開。運費規則:`{ "fee": 60, "cvsFee": 45, "freeThreshold": 999 }`。商品金額(套用優惠券後、折抵購物金前)達 `freeThreshold` 免運,否則結帳時依配送方式加收 `fee`(宅配)或 `cvsFee`(超商取貨),記在訂單的 `shippingFee` 並包含在 `totalAmount`。購物金回饋只計算商品金額,不含運費。可用 `app.shipping.fee`、`app.shipping.cvs-fee`、`app.shipping.free-threshold` 調整。
 
 ---
 
@@ -506,6 +506,14 @@ REFUNDED        → (終態)
 ```json
 { "addressId": 2, "paymentMethod": "CREDIT_CARD", "cartItemIds": [1, 2], "couponCode": "SAVE100", "pointsToUse": 100, "note": "請於平日配送" }
 ```
+`shippingMethod` 選填,`HOME_DELIVERY`(預設,宅配,`addressId` 必填)或 `CVS_PICKUP`(超商取貨,改帶 `cvsPickup`、不需 `addressId`):
+```json
+{ "shippingMethod": "CVS_PICKUP",
+  "cvsPickup": { "brand": "SEVEN_ELEVEN", "storeName": "信義門市", "storeCode": "123456",
+                 "recipientName": "王小明", "recipientPhone": "0912345678" } }
+```
+`brand` 為 `SEVEN_ELEVEN` / `FAMILY_MART` / `HI_LIFE` / `OK_MART`;`storeCode` 選填(最多 8 位數字);`recipientPhone` 需為 09 開頭 10 碼手機。未串接超商電子地圖,門市由會員自填。訂單的 `receiverAddress` 會是門市描述(例如「7-ELEVEN 信義門市(店號 123456)」),回應帶 `shippingMethod`。
+
 `invoice` 選填,電子發票開立方式(不帶為會員載具):
 - `{ "type": "MEMBER_CARRIER" }` 會員載具
 - `{ "type": "MOBILE_BARCODE", "carrierCode": "/ABC1234" }` 手機條碼(斜線 + 7 碼,自動轉大寫)

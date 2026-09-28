@@ -2,6 +2,7 @@ package com.example.shopping.order.mail;
 
 import com.example.shopping.common.enums.NotificationType;
 import com.example.shopping.common.enums.OrderStatus;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.notification.mail.MailSender;
 import com.example.shopping.notification.service.NotificationService;
 import com.example.shopping.order.entity.Orders;
@@ -58,7 +59,9 @@ public class OrderNotifier {
         return switch (order.getStatus()) {
             case PENDING_PAYMENT -> "您的訂單已成立,請於期限內完成付款。";
             case PAID -> "您的訂單已付款成功,我們將盡快為您出貨。";
-            case SHIPPING -> "您的訂單已出貨,請留意收件:" + order.getReceiverAddress()
+            case SHIPPING -> (order.getShippingMethod() == ShippingMethod.CVS_PICKUP
+                    ? "您的訂單已出貨,將送達取貨門市:" + order.getReceiverAddress() + ",到店後請憑證件取貨。"
+                    : "您的訂單已出貨,請留意收件:" + order.getReceiverAddress())
                     + (order.getTrackingNumber() != null
                     ? String.format("%n物流業者:%s%n物流單號:%s", order.getShippingCarrier(), order.getTrackingNumber())
                     : "");

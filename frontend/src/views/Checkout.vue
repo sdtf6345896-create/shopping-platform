@@ -9,7 +9,7 @@ import { getPointBalance } from '../api/points'
 import { maxRedeemable } from '../utils/points'
 import { INVOICE_TYPE_LABELS, validateInvoice } from '../utils/invoice'
 import { getShippingPolicy } from '../api/shipping'
-import { amountToFreeShipping, shippingFeeFor } from '../utils/shipping'
+import { CVS_BRANDS, amountToFreeShipping, shippingFeeFor, validateCvsPickup } from '../utils/shipping'
 import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
@@ -17,6 +17,24 @@ const cartStore = useCartStore()
 
 const addresses = ref([])
 const selectedAddressId = ref(null)
+
+// 配送方式:宅配用地址簿;超商取貨由會員自填門市(記住上次填的,下次免重打)
+const CVS_STORAGE_KEY = 'checkout.cvsPickup'
+const shippingMethod = ref('HOME_DELIVERY')
+const cvsPickup = reactive({ brand: 'SEVEN_ELEVEN', storeName: '', storeCode: '', recipientName: '', recipientPhone: '' })
+try {
+  Object.assign(cvsPickup, JSON.parse(localStorage.getItem(CVS_STORAGE_KEY) || '{}'))
+} catch {
+  // 讀不到就用空白表單
+}
+
+function rememberCvsPickup() {
+  try {
+    localStorage.setItem(CVS_STORAGE_KEY, JSON.stringify(cvsPickup))
+  } catch {
+    // 無痕模式等情況存不了,不影響結帳
+  }
+}
 const paymentMethod = ref('CREDIT_CARD')
 const submitting = ref(false)
 const buyerNote = ref('')
@@ -65,7 +83,9 @@ const pointLimit = computed(() =>
 )
 const appliedPoints = computed(() => (usePoints.value ? Math.min(pointsToUse.value || 0, pointLimit.value) : 0))
 const shippingPolicy = ref(null)
-const shippingFee = computed(() => shippingFeeFor(payableBeforePoints.value, shippingPolicy.value))
+const shippingFee = computed(() =>
+  shippingFeeFor(payableBeforePoints.value, shippingPolicy.value, shippingMethod.value),
+)
 const toFreeShipping = computed(() => amountToFreeShipping(payableBeforePoints.value, shippingPolicy.value))
 const totalAmount = computed(() => payableBeforePoints.value - appliedPoints.value + shippingFee.value)
 
@@ -144,8 +164,14 @@ async function handleCreateAddress() {
 }
 
 async function handleSubmit() {
-  if (!selectedAddressId.value) {
+  const isCvs = shippingMethod.value === 'CVS_PICKUP'
+  if (!isCvs && !selectedAddressId.value) {
     ElMessage.warning('請選擇或新增收件地址')
+    return
+  }
+  const cvsError = isCvs ? validateCvsPickup(cvsPickup) : null
+  if (cvsError) {
+    ElMessage.warning(cvsError)
     return
   }
   if (checkoutItems.value.length === 0) {
@@ -163,7 +189,17 @@ async function handleSubmit() {
   submitting.value = true
   try {
     const order = await checkout({
-      addressId: selectedAddressId.value,
+      shippingMethod: shippingMethod.value,
+      addressId: isCvs ? null : selectedAddressId.value,
+      cvsPickup: isCvs
+        ? {
+            brand: cvsPickup.brand,
+            storeName: cvsPickup.storeName.trim(),
+            storeCode: cvsPickup.storeCode.trim() || null,
+            recipientName: cvsPickup.recipientName.trim(),
+            recipientPhone: cvsPickup.recipientPhone.trim(),
+          }
+        : null,
       paymentMethod: paymentMethod.value,
       cartItemIds: cartStore.checkoutSelection,
       couponCode: appliedCoupon.value?.code || null,
@@ -177,6 +213,7 @@ async function handleSubmit() {
         donationCode: invoice.type === 'DONATION' ? invoice.donationCode.trim() : null,
       },
     })
+    if (isCvs) rememberCvsPickup()
     cartStore.setCheckoutSelection(null)
     await cartStore.fetchCart()
     ElMessage.success('訂單建立成功')
@@ -213,6 +250,46 @@ onMounted(async () => {
     <h2>結帳</h2>
 
     <section class="block">
+      <div class="block-title">
+        <span>配送方式</span>
+      </div>
+      <el-radio-group v-model="shippingMethod" class="shipping-methods">
+        <el-radio-button value="HOME_DELIVERY">
+          宅配到府<template v-if="shippingPolicy"> · NT$ {{ shippingPolicy.fee }}</template>
+        </el-radio-button>
+        <el-radio-button value="CVS_PICKUP">
+          超商取貨<template v-if="shippingPolicy"> · NT$ {{ shippingPolicy.cvsFee }}</template>
+        </el-radio-button>
+      </el-radio-group>
+      <p v-if="shippingPolicy" class="shipping-note">商品金額滿 NT$ {{ shippingPolicy.freeThreshold }} 兩種方式皆免運</p>
+    </section>
+
+    <section v-if="shippingMethod === 'CVS_PICKUP'" class="block">
+      <div class="block-title">
+        <span>取貨門市</span>
+      </div>
+      <el-form :model="cvsPickup" label-width="90px" class="cvs-form">
+        <el-form-item label="超商" required>
+          <el-radio-group v-model="cvsPickup.brand">
+            <el-radio v-for="b in CVS_BRANDS" :key="b.value" :value="b.value">{{ b.label }}</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item label="門市名稱" required>
+          <el-input v-model="cvsPickup.storeName" maxlength="30" placeholder="例如:信義門市" />
+        </el-form-item>
+        <el-form-item label="門市店號">
+          <el-input v-model="cvsPickup.storeCode" maxlength="8" placeholder="選填,可於超商官網門市查詢" />
+        </el-form-item>
+        <el-form-item label="取件人" required>
+          <el-input v-model="cvsPickup.recipientName" maxlength="50" placeholder="需與取貨時出示的證件相符" />
+        </el-form-item>
+        <el-form-item label="手機" required>
+          <el-input v-model="cvsPickup.recipientPhone" maxlength="10" placeholder="到店通知簡訊會寄到這支手機" />
+        </el-form-item>
+      </el-form>
+    </section>
+
+    <section v-else class="block">
       <div class="block-title">
         <span>收件資訊</span>
         <el-button size="small" @click="showAddressDialog = true">新增地址</el-button>
@@ -405,6 +482,20 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.shipping-methods {
+  margin-bottom: 4px;
+}
+
+.shipping-note {
+  margin: 6px 0 0;
+  color: #999;
+  font-size: 12px;
+}
+
+.cvs-form {
+  max-width: 480px;
+}
+
 .checkout-page {
   max-width: 720px;
 }

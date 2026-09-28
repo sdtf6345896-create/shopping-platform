@@ -18,6 +18,7 @@ public class ShippingController {
     /** 公開的運費規則,前台購物車 / 結帳頁用來顯示「再買多少免運」 */
     @GetMapping("/policy")
     public ApiResponse<ShippingPolicyResponse> policy() {
-        return ApiResponse.success(new ShippingPolicyResponse(shippingPolicy.getFee(), shippingPolicy.getFreeThreshold()));
+        return ApiResponse.success(new ShippingPolicyResponse(
+                shippingPolicy.getFee(), shippingPolicy.getCvsFee(), shippingPolicy.getFreeThreshold()));
     }
 }

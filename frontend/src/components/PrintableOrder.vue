@@ -33,7 +33,9 @@ const formatTime = (value) => value?.slice(0, 19).replace('T', ' ')
 
     <section class="receiver">
       <p><span class="label">收件人</span>{{ order.receiverName }} {{ order.receiverPhone }}</p>
-      <p><span class="label">地址</span>{{ order.receiverAddress }}</p>
+      <p>
+        <span class="label">{{ order.shippingMethod === 'CVS_PICKUP' ? '取貨門市' : '地址' }}</span>{{ order.receiverAddress }}
+      </p>
       <p v-if="order.buyerNote"><span class="label">備註</span>{{ order.buyerNote }}</p>
       <p v-if="order.trackingNumber">
         <span class="label">物流</span>{{ order.shippingCarrier }} {{ order.trackingNumber }}

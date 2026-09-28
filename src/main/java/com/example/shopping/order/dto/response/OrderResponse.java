@@ -2,6 +2,7 @@ package com.example.shopping.order.dto.response;
 
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.order.entity.Orders;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,6 +26,7 @@ public class OrderResponse {
     private int pointsUsed;
     private BigDecimal shippingFee;
     private int pointsEarned;
+    private ShippingMethod shippingMethod;
     private String receiverName;
     private String receiverPhone;
     private String receiverAddress;
@@ -54,6 +56,7 @@ public class OrderResponse {
                 order.getPointsUsed(),
                 order.getShippingFee(),
                 order.getPointsEarned(),
+                order.getShippingMethod(),
                 order.getReceiverName(),
                 order.getReceiverPhone(),
                 order.getReceiverAddress(),

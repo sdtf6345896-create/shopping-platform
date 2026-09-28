@@ -1,7 +1,9 @@
 package com.example.shopping.order.dto.request;
 
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.order.invoice.InvoiceRequest;
+import com.example.shopping.order.shipping.CvsPickupRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -15,8 +17,15 @@ import java.util.List;
 @Setter
 public class CheckoutRequest {
 
-    @NotNull(message = "收件地址不可為空")
+    /** 配送方式,不填為宅配 */
+    private ShippingMethod shippingMethod;
+
+    /** 宅配的收件地址 id(宅配必填) */
     private Long addressId;
+
+    /** 超商取貨資訊(超商取貨必填) */
+    @Valid
+    private CvsPickupRequest cvsPickup;
 
     @NotNull(message = "付款方式不可為空")
     private PaymentMethod paymentMethod;

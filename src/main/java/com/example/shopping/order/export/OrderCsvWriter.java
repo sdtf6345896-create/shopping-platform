@@ -2,6 +2,7 @@ package com.example.shopping.order.export;
 
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.order.entity.OrderItem;
 import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.invoice.InvoiceInfo;
@@ -36,7 +37,7 @@ public final class OrderCsvWriter {
             PaymentMethod.COD, "貨到付款"));
 
     private static final List<String> HEADERS = List.of(
-            "訂單編號", "建立時間", "狀態", "付款方式", "會員 Email", "收件人", "收件電話", "收件地址",
+            "訂單編號", "建立時間", "狀態", "付款方式", "會員 Email", "配送方式", "收件人", "收件電話", "收件地址",
             "商品明細", "商品小計", "折抵金額", "優惠券", "購物金折抵", "運費", "實付金額", "物流業者", "物流單號", "訂單備註", "發票");
 
     /** 出貨單號匯入範本:前三欄是匯入要讀的欄位,其餘欄位只是方便對照,匯入時忽略 */
@@ -73,6 +74,7 @@ public final class OrderCsvWriter {
                     STATUS_LABELS.get(order.getStatus()),
                     PAYMENT_LABELS.get(order.getPaymentMethod()),
                     order.getMember().getEmail(),
+                    order.getShippingMethod() == ShippingMethod.CVS_PICKUP ? "超商取貨" : "宅配",
                     order.getReceiverName(),
                     order.getReceiverPhone(),
                     order.getReceiverAddress(),

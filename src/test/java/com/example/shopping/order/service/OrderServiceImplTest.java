@@ -6,6 +6,7 @@ import com.example.shopping.common.enums.DiscountType;
 import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PaymentMethod;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.common.enums.PointTransactionType;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
@@ -28,6 +29,8 @@ import com.example.shopping.order.entity.Orders;
 import com.example.shopping.order.invoice.InvoiceService;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.order.shipping.CvsBrand;
+import com.example.shopping.order.shipping.CvsPickupRequest;
 import com.example.shopping.order.shipping.ShippingPolicy;
 import com.example.shopping.points.dto.PointBalanceResponse;
 import com.example.shopping.points.service.PointPolicy;
@@ -89,7 +92,7 @@ class OrderServiceImplTest {
     @Spy
     private InvoiceService invoiceService = new InvoiceService();
     @Spy
-    private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("999"));
+    private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("45"), new BigDecimal("999"));
     @Mock
     private PointService pointService;
     @Spy
@@ -625,6 +628,51 @@ class OrderServiceImplTest {
         orderService.updateStatus(1L, request);
 
         verify(pointService, never()).credit(any(), any(), anyInt(), any(), any());
+    }
+
+    @Test
+    void checkout_cvsPickup_usesStoreAsReceiverAndChargesCvsFee() {
+        product.setSaleDiscountPercent(20);
+        product.setSaleStartAt(LocalDateTime.now().minusHours(1));
+        product.setSaleEndAt(LocalDateTime.now().plusHours(1));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CvsPickupRequest pickup = new CvsPickupRequest();
+        pickup.setBrand(CvsBrand.SEVEN_ELEVEN);
+        pickup.setStoreName(" 信義門市 ");
+        pickup.setStoreCode("123456");
+        pickup.setRecipientName(" 王小明 ");
+        pickup.setRecipientPhone("0912345678");
+        CheckoutRequest request = checkoutRequest();
+        request.setAddressId(null);
+        request.setShippingMethod(ShippingMethod.CVS_PICKUP);
+        request.setCvsPickup(pickup);
+
+        OrderResponse response = orderService.checkout(1L, request);
+
+        assertThat(response.getShippingMethod()).isEqualTo(ShippingMethod.CVS_PICKUP);
+        assertThat(response.getReceiverName()).isEqualTo("王小明");
+        assertThat(response.getReceiverPhone()).isEqualTo("0912345678");
+        assertThat(response.getReceiverAddress()).isEqualTo("7-ELEVEN 信義門市(店號 123456)");
+        // 944 未滿免運門檻,超商運費 45
+        assertThat(response.getShippingFee()).isEqualByComparingTo("45");
+        verify(addressRepository, never()).findByIdAndMemberId(any(), any());
+    }
+
+    @Test
+    void checkout_requiresPickupInfoOrAddress_beforeTouchingStock() {
+        CheckoutRequest cvs = checkoutRequest();
+        cvs.setShippingMethod(ShippingMethod.CVS_PICKUP);
+        assertThatThrownBy(() -> orderService.checkout(1L, cvs))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("超商取貨");
+
+        CheckoutRequest home = checkoutRequest();
+        home.setAddressId(null);
+        assertThatThrownBy(() -> orderService.checkout(1L, home))
+                .isInstanceOf(BusinessException.class).hasMessageContaining("收件地址");
+        verify(productSkuRepository, never()).decrementStock(any(), anyInt());
     }
 
     @Test

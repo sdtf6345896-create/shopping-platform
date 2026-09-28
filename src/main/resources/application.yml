@@ -61,7 +61,8 @@ app:
   mail:
     max-per-email-per-hour: 3   # 忘記密碼 / 重寄驗證信,同一信箱每小時上限
   shipping:
-    fee: 60                  # 未達免運門檻的運費
+    fee: 60                  # 未達免運門檻的宅配運費
+    cvs-fee: 45              # 未達免運門檻的超商取貨運費
     free-threshold: 999      # 商品金額(套用優惠券後)滿此金額免運
   points:
     earn-rate: 0.01          # 訂單完成回饋 1% 購物金(1 點 = NT$1)

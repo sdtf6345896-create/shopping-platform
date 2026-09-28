@@ -5,6 +5,7 @@ import com.example.shopping.cart.repository.CartItemRepository;
 import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
 import com.example.shopping.common.enums.PointTransactionType;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.common.exception.ResourceNotFoundException;
@@ -27,6 +28,7 @@ import com.example.shopping.order.export.OrderCsvWriter;
 import com.example.shopping.order.invoice.InvoiceService;
 import com.example.shopping.order.mail.OrderNotifier;
 import com.example.shopping.order.repository.OrderRepository;
+import com.example.shopping.order.shipping.CvsPickupRequest;
 import com.example.shopping.order.shipping.ShippingPolicy;
 import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
@@ -139,24 +141,19 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public OrderResponse checkout(Long memberId, CheckoutRequest request) {
-        Address address = addressRepository.findByIdAndMemberId(request.getAddressId(), memberId)
-                .orElseThrow(() -> new BusinessException("收件地址不存在"));
+        Orders order = new Orders();
+        applyShipping(order, memberId, request);
 
         List<CartItem> cartItems = resolveCartItems(memberId, request.getCartItemIds());
         if (cartItems.isEmpty()) {
             throw new BusinessException("購物車是空的,無法結帳");
         }
 
-        Orders order = new Orders();
         order.setOrderNo(generateOrderNo());
         order.setMember(memberRepository.getReferenceById(memberId));
-        order.setAddress(address);
         order.setPaymentMethod(request.getPaymentMethod());
         order.setPaymentDeadline(paymentPolicy.deadlineFor(request.getPaymentMethod(), LocalDateTime.now()));
         order.markCreated(OrderActor.MEMBER);
-        order.setReceiverName(address.getRecipientName());
-        order.setReceiverPhone(address.getPhone());
-        order.setReceiverAddress(address.getCity() + address.getDistrict() + address.getDetailAddress());
         order.setBuyerNote(blankToNull(request.getNote()));
         order.setInvoice(invoiceService.resolve(request.getInvoice()));
 
@@ -211,7 +208,7 @@ public class OrderServiceImpl implements OrderService {
         }
         order.setSubtotalAmount(totalAmount);
         order.setDiscountAmount(discountAmount);
-        BigDecimal shippingFee = shippingPolicy.feeFor(payable);
+        BigDecimal shippingFee = shippingPolicy.feeFor(order.getShippingMethod(), payable);
         order.setPointsUsed(pointsToUse);
         order.setShippingFee(shippingFee);
         order.setTotalAmount(payable.subtract(BigDecimal.valueOf(pointsToUse)).add(shippingFee));
@@ -412,6 +409,32 @@ public class OrderServiceImpl implements OrderService {
         order.setShippedAt(LocalDateTime.now());
         order.changeStatus(OrderStatus.SHIPPING, OrderActor.ADMIN,
                 note != null ? note : carrier + " " + trackingNumber);
+    }
+
+    /** 依配送方式填入收件資訊:宅配用會員地址簿的地址,超商取貨用會員填寫的門市與取件人 */
+    private void applyShipping(Orders order, Long memberId, CheckoutRequest request) {
+        ShippingMethod method = request.getShippingMethod() == null
+                ? ShippingMethod.HOME_DELIVERY : request.getShippingMethod();
+        order.setShippingMethod(method);
+        if (method == ShippingMethod.CVS_PICKUP) {
+            CvsPickupRequest pickup = request.getCvsPickup();
+            if (pickup == null) {
+                throw new BusinessException("請填寫超商取貨門市與取件人");
+            }
+            order.setReceiverName(pickup.getRecipientName().trim());
+            order.setReceiverPhone(pickup.getRecipientPhone());
+            order.setReceiverAddress(pickup.describeStore());
+            return;
+        }
+        if (request.getAddressId() == null) {
+            throw new BusinessException("請選擇收件地址");
+        }
+        Address address = addressRepository.findByIdAndMemberId(request.getAddressId(), memberId)
+                .orElseThrow(() -> new BusinessException("收件地址不存在"));
+        order.setAddress(address);
+        order.setReceiverName(address.getRecipientName());
+        order.setReceiverPhone(address.getPhone());
+        order.setReceiverAddress(address.getCity() + address.getDistrict() + address.getDetailAddress());
     }
 
     private static String blankToNull(String value) {

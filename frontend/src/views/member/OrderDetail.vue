@@ -1,4 +1,5 @@
 <script setup>
+import { SHIPPING_METHOD_LABELS } from '../../utils/shipping'
 import { describeInvoice } from '../../utils/invoice'
 import { computed, h, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
@@ -163,7 +164,10 @@ onMounted(load)
         <p class="meta">建立時間:{{ order.createdAt?.slice(0, 19).replace('T', ' ') }}</p>
         <p class="meta">付款方式:{{ PAYMENT_METHOD_LABELS[order.paymentMethod] }}</p>
         <p class="meta">收件人:{{ order.receiverName }} {{ order.receiverPhone }}</p>
-        <p class="meta">收件地址:{{ order.receiverAddress }}</p>
+        <p class="meta">配送方式:{{ SHIPPING_METHOD_LABELS[order.shippingMethod] || '宅配到府' }}</p>
+        <p class="meta">
+          {{ order.shippingMethod === 'CVS_PICKUP' ? '取貨門市' : '收件地址' }}:{{ order.receiverAddress }}
+        </p>
         <p class="meta">發票:{{ describeInvoice(order.invoice) }}</p>
         <p v-if="order.buyerNote" class="meta buyer-note">訂單備註:{{ order.buyerNote }}</p>
       </div>

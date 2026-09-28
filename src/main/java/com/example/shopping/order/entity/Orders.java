@@ -2,6 +2,7 @@ package com.example.shopping.order.entity;
 
 import com.example.shopping.common.enums.OrderActor;
 import com.example.shopping.common.enums.OrderStatus;
+import com.example.shopping.common.enums.ShippingMethod;
 import com.example.shopping.common.enums.PaymentMethod;
 import com.example.shopping.coupon.entity.Coupon;
 import com.example.shopping.member.entity.Address;
@@ -88,6 +89,11 @@ public class Orders {
     @Column(nullable = false, length = 20)
     private OrderStatus status = OrderStatus.PENDING_PAYMENT;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "shipping_method", nullable = false, length = 20)
+    private ShippingMethod shippingMethod = ShippingMethod.HOME_DELIVERY;
+
+    /** 宅配為收件地址;超商取貨為門市描述 */
     @Column(name = "receiver_name", nullable = false, length = 50)
     private String receiverName;
 
