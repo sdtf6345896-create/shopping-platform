@@ -61,6 +61,13 @@ public interface MemberRepository extends JpaRepository<Member, Long>, JpaSpecif
             + " and m.referredById is not null and m.referralRewarded = false")
     int claimReferralReward(@Param("memberId") Long memberId);
 
+    /** 認領購物車提醒:這次購物車異動之後還沒提醒過才更新,回傳受影響筆數(0 = 已提醒過) */
+    @Modifying(flushAutomatically = true)
+    @Query("update Member m set m.cartRemindedAt = :now where m.id = :memberId"
+            + " and (m.cartRemindedAt is null or m.cartRemindedAt < :lastActivity)")
+    int claimCartReminder(@Param("memberId") Long memberId, @Param("now") LocalDateTime now,
+                          @Param("lastActivity") LocalDateTime lastActivity);
+
     /** 當月壽星中今年還沒領過生日禮的啟用會員 id */
     @Query("select m.id from Member m where m.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
             + " and m.birthday is not null and extract(month from m.birthday) = :month"

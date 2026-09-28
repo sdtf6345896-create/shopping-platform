@@ -71,6 +71,8 @@ app:
     max-redeem-ratio: 0.5    # 單筆最多折抵應付金額的 50%
   birthday:
     reward-points: 100       # 生日當月贈送的購物金(0 = 關閉生日禮)
+  cart:
+    reminder-idle-hours: 24  # 購物車閒置多久發站內提醒(同一個購物車狀態只提醒一次;0 = 關閉)
   referral:
     referrer-points: 100     # 被邀請的好友首筆訂單完成時,邀請人獲得的購物金
     referee-points: 50       # 同上,被邀請的新會員獲得的購物金

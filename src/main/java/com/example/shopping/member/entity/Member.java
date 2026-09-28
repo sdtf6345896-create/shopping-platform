@@ -70,6 +70,10 @@ public class Member {
     @ColumnDefault("false")
     private boolean referralRewarded;
 
+    /** 最近一次發送購物車提醒的時間。唯讀對應:由 MemberRepository 的條件式 UPDATE 認領 */
+    @Column(name = "cart_reminded_at", insertable = false, updatable = false)
+    private LocalDateTime cartRemindedAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
