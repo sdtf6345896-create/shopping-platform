@@ -105,6 +105,7 @@ const routes = [
         name: 'AdminOrderMessageList',
         component: () => import('../views/admin/OrderMessageList.vue'),
       },
+      { path: 'reviews', name: 'AdminReviewList', component: () => import('../views/admin/ReviewList.vue') },
       { path: 'questions', name: 'AdminQuestionList', component: () => import('../views/admin/QuestionList.vue') },
       { path: 'returns', name: 'AdminReturnList', component: () => import('../views/admin/ReturnList.vue') },
       { path: 'audit-logs', name: 'AdminAuditLogList', component: () => import('../views/admin/AuditLogList.vue') },

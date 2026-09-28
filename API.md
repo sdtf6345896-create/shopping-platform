@@ -667,14 +667,25 @@ Query(皆選填):`adminUsername`、`targetType`(`PRODUCT`/`CATEGORY`/`BANNER`/`C
 公開。評論列表(新到舊)。Query:`withImages`(`true` 只看有照片的評論)、`page`、`size`。
 ```json
 { "id": 1, "memberName": "陳**", "rating": 5, "content": "布料厚度剛好", "images": ["/uploads/xxx.jpg"],
-  "createdAt": "2026-09-27T18:00:00", "updatedAt": "2026-09-27T18:00:00" }
+  "createdAt": "2026-09-27T18:00:00", "updatedAt": "2026-09-27T18:00:00",
+  "sellerReply": "謝謝支持!", "repliedAt": "2026-09-28T09:00:00", "hidden": false }
 ```
+被管理員隱藏的評論不會出現在列表,也不列入 summary 與商品評分。
 
 ### `GET /api/products/{productId}/reviews/summary`
 公開。`{ "averageRating": 4.5, "reviewCount": 12 }`
 
 ### `GET /api/products/{productId}/reviews/me` — 需會員登入
-自己對此商品的評論,沒有則 `data` 為 `null`。
+自己對此商品的評論,沒有則 `data` 為 `null`。被隱藏時仍會回傳,`hidden` 為 `true`。
+
+### `GET /api/admin/reviews` — 需管理員登入
+評價管理列表(新到舊)。Query 皆選填:`rating`(1~5)、`replied`(`true`/`false`)、`hidden`(`true`/`false`)、`keyword`(商品名稱)、`page`、`size`。每筆含 `productId`、`productName`、未遮蔽的 `memberName`、`memberEmail`,以及 `sellerReply`、`repliedAt`、`hidden`。
+
+### `PUT /api/admin/reviews/{id}/reply` — 需管理員登入
+公開回覆評價:`{ "reply": "謝謝支持!" }`(最多 500 字,空白表示刪除回覆)。第一次回覆時以站內通知提醒評論者。
+
+### `PATCH /api/admin/reviews/{id}/hidden` — 需管理員登入
+`{ "hidden": true }` 隱藏 / `false` 取消隱藏,並重新計算商品評分。以上兩支都會記入管理員操作紀錄。
 
 ### `PUT /api/products/{productId}/reviews/me` — 需會員登入
 新增或修改自己的評論(每人每商品一則)。需購買過此商品且訂單為已付款 / 出貨中 / 已完成才能評論。
@@ -910,6 +921,9 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/products/{productId}/questions` | 公開 |
 | POST | `/api/products/{productId}/questions` | 會員 |
 | GET | `/api/admin/questions` | 管理員 |
+| GET | `/api/admin/reviews` | 管理員 |
+| PUT | `/api/admin/reviews/{id}/reply` | 管理員 |
+| PATCH | `/api/admin/reviews/{id}/hidden` | 管理員 |
 | PUT | `/api/admin/questions/{id}/answer` | 管理員 |
 | DELETE | `/api/admin/questions/{id}` | 管理員 |
 | GET / POST | `/api/admin/products` | 管理員 |

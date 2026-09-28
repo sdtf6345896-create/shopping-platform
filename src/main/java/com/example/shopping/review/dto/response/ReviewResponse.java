@@ -19,6 +19,11 @@ public class ReviewResponse {
     private List<String> images;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    /** 賣家回覆,未回覆為 null */
+    private String sellerReply;
+    private LocalDateTime repliedAt;
+    /** 是否被管理員隱藏(前台列表不會出現,只有評論者本人在「我的評價」看得到) */
+    private boolean hidden;
 
     public static ReviewResponse from(ProductReview review) {
         return new ReviewResponse(
@@ -28,7 +33,10 @@ public class ReviewResponse {
                 review.getContent(),
                 review.getImages().stream().map(ReviewImage::getUrl).toList(),
                 review.getCreatedAt(),
-                review.getUpdatedAt());
+                review.getUpdatedAt(),
+                review.getSellerReply(),
+                review.getRepliedAt(),
+                review.isHidden());
     }
 
     private static String maskName(String name) {

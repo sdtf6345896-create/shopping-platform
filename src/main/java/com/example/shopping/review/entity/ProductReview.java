@@ -42,6 +42,17 @@ public class ProductReview {
     @OrderBy("sortOrder ASC, id ASC")
     private List<ReviewImage> images = new ArrayList<>();
 
+    /** 賣家公開回覆,未回覆為 null */
+    @Column(name = "seller_reply", length = 500)
+    private String sellerReply;
+
+    @Column(name = "replied_at")
+    private LocalDateTime repliedAt;
+
+    /** 被管理員隱藏的評價不出現在前台,也不列入評分統計 */
+    @Column(nullable = false)
+    private boolean hidden;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

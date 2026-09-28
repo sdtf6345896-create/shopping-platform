@@ -450,6 +450,12 @@ watch(
               </div>
               <p class="review-content">{{ myReview.content || '(未留言)' }}</p>
               <ReviewPhotos :images="myReview.images" />
+              <div v-if="myReview.sellerReply" class="seller-reply">
+                <span class="seller-reply-label">賣家回覆</span>{{ myReview.sellerReply }}
+              </div>
+              <p v-if="myReview.hidden" class="review-hidden-note">
+                此評論因違反社群規範已被隱藏,其他人看不到,如有疑問請聯絡客服。
+              </p>
               <div class="review-actions">
                 <el-button link size="small" @click="openReviewForm">編輯</el-button>
                 <el-button link size="small" type="danger" @click="handleDeleteReview">刪除</el-button>
@@ -508,6 +514,9 @@ watch(
             </div>
             <p class="review-content">{{ review.content || '(未留言)' }}</p>
             <ReviewPhotos :images="review.images" />
+            <div v-if="review.sellerReply" class="seller-reply">
+              <span class="seller-reply-label">賣家回覆</span>{{ review.sellerReply }}
+            </div>
           </div>
         </div>
 
@@ -876,6 +885,29 @@ watch(
   align-items: center;
   justify-content: center;
   color: #999;
+  font-size: 12px;
+}
+
+.seller-reply {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #f7f8fa;
+  border-left: 3px solid #409eff;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #555;
+  white-space: pre-wrap;
+}
+
+.seller-reply-label {
+  margin-right: 6px;
+  font-weight: bold;
+  color: #409eff;
+}
+
+.review-hidden-note {
+  margin: 6px 0 0;
+  color: #e6a23c;
   font-size: 12px;
 }
 

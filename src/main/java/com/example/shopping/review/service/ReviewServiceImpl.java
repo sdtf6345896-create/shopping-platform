@@ -50,7 +50,7 @@ public class ReviewServiceImpl implements ReviewService {
     public Page<ReviewResponse> listByProduct(Long productId, boolean withImagesOnly, Pageable pageable) {
         Page<ProductReview> page = withImagesOnly
                 ? productReviewRepository.findWithImagesByProductId(productId, pageable)
-                : productReviewRepository.findByProductIdOrderByCreatedAtDesc(productId, pageable);
+                : productReviewRepository.findByProductIdAndHiddenFalseOrderByCreatedAtDesc(productId, pageable);
         return page.map(ReviewResponse::from);
     }
 
