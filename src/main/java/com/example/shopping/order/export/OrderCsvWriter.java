@@ -39,7 +39,28 @@ public final class OrderCsvWriter {
             "訂單編號", "建立時間", "狀態", "付款方式", "會員 Email", "收件人", "收件電話", "收件地址",
             "商品明細", "商品小計", "折抵金額", "優惠券", "購物金折抵", "運費", "實付金額", "物流業者", "物流單號", "訂單備註", "發票");
 
+    /** 出貨單號匯入範本:前三欄是匯入要讀的欄位,其餘欄位只是方便對照,匯入時忽略 */
+    public static final List<String> SHIP_TEMPLATE_HEADERS = List.of(
+            "訂單編號", "物流業者", "物流單號", "收件人", "收件電話", "收件地址", "商品明細", "訂單備註");
+
     private OrderCsvWriter() {
+    }
+
+    public static byte[] writeShipTemplate(List<Orders> orders) {
+        StringBuilder sb = new StringBuilder();
+        appendRow(sb, SHIP_TEMPLATE_HEADERS);
+        for (Orders order : orders) {
+            appendRow(sb, List.of(
+                    order.getOrderNo(),
+                    "",
+                    "",
+                    order.getReceiverName(),
+                    order.getReceiverPhone(),
+                    order.getReceiverAddress(),
+                    order.getItems().stream().map(OrderCsvWriter::describeItem).collect(Collectors.joining("; ")),
+                    nullToEmpty(order.getBuyerNote())));
+        }
+        return withBom(sb);
     }
 
     public static byte[] write(List<Orders> orders) {
@@ -68,6 +89,10 @@ public final class OrderCsvWriter {
                     describeInvoice(order.getInvoice())));
         }
 
+        return withBom(sb);
+    }
+
+    private static byte[] withBom(StringBuilder sb) {
         byte[] body = sb.toString().getBytes(StandardCharsets.UTF_8);
         byte[] result = new byte[UTF8_BOM.length + body.length];
         System.arraycopy(UTF8_BOM, 0, result, 0, UTF8_BOM.length);

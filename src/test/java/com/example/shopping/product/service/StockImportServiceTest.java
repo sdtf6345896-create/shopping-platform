@@ -1,7 +1,7 @@
 package com.example.shopping.product.service;
 
+import com.example.shopping.common.csv.CsvImportResponse;
 import com.example.shopping.common.exception.BusinessException;
-import com.example.shopping.product.dto.response.StockImportResponse;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +53,7 @@ class StockImportServiceTest {
     void importCsv_appliesAllRows_ignoringBomHeaderQuotesAndBlankLines() {
         when(productSkuRepository.findBySkuCodeIn(any())).thenReturn(List.of(shirt, bottle));
 
-        StockImportResponse result = stockImportService.importCsv(
+        CsvImportResponse result = stockImportService.importCsv(
                 csv("﻿sku_code,stock\r\nTSHIRT-BLK-M,10\r\n\r\n\"BOTTLE-WHT\", \"25\"\r\n"));
 
         assertThat(result.applied()).isTrue();
@@ -67,7 +67,7 @@ class StockImportServiceTest {
     void importCsv_updatesNothing_whenAnyRowIsInvalid_andReportsEachLine() {
         when(productSkuRepository.findBySkuCodeIn(any())).thenReturn(List.of(shirt, bottle));
 
-        StockImportResponse result = stockImportService.importCsv(csv("""
+        CsvImportResponse result = stockImportService.importCsv(csv("""
                 sku,stock
                 TSHIRT-BLK-M,10
                 BOTTLE-WHT,-1
@@ -80,7 +80,7 @@ class StockImportServiceTest {
         assertThat(result.applied()).isFalse();
         assertThat(result.updated()).isZero();
         assertThat(result.totalRows()).isEqualTo(6);
-        assertThat(result.errors()).extracting(StockImportResponse.RowError::line).containsExactly(3, 4, 5, 6, 7);
+        assertThat(result.errors()).extracting(CsvImportResponse.RowError::line).containsExactly(3, 4, 5, 6, 7);
         assertThat(result.errors().get(0).message()).contains("0 到");
         assertThat(result.errors().get(1).message()).contains("找不到 SKU");
         assertThat(result.errors().get(2).message()).contains("整數");

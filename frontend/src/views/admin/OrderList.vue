@@ -2,7 +2,14 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { exportAdminOrders, listAdminOrders, updateOrderStatus } from '../../api/admin/order'
+import {
+  downloadShipTemplate,
+  exportAdminOrders,
+  importShipCsv,
+  listAdminOrders,
+  updateOrderStatus,
+} from '../../api/admin/order'
+import CsvImportResultDialog from '../../components/CsvImportResultDialog.vue'
 import { filenameFromDisposition, saveBlob } from '../../utils/download'
 import {
   ORDER_STATUS_LABELS,
@@ -44,6 +51,33 @@ async function handleExport() {
     saveBlob(response.data, filename)
   } finally {
     exporting.value = false
+  }
+}
+
+// 批次出貨:下載待出貨範本 → 填物流業者/單號 → 上傳(全有或全無)
+const downloadingTemplate = ref(false)
+const importing = ref(false)
+const importResult = ref(null)
+
+async function handleDownloadShipTemplate() {
+  downloadingTemplate.value = true
+  try {
+    const response = await downloadShipTemplate()
+    saveBlob(response.data, filenameFromDisposition(response.headers['content-disposition'], 'ship.csv'))
+  } finally {
+    downloadingTemplate.value = false
+  }
+}
+
+async function handleImportShip({ file }) {
+  importing.value = true
+  try {
+    importResult.value = await importShipCsv(file)
+    if (importResult.value.applied) {
+      await load()
+    }
+  } finally {
+    importing.value = false
   }
 }
 
@@ -97,7 +131,13 @@ onMounted(load)
   <div>
     <div class="header-row">
       <h3>訂單管理</h3>
-      <el-button :loading="exporting" @click="handleExport">匯出 CSV</el-button>
+      <div class="header-actions">
+        <el-button :loading="downloadingTemplate" @click="handleDownloadShipTemplate">下載待出貨範本</el-button>
+        <el-upload :show-file-list="false" accept=".csv,text/csv" :http-request="handleImportShip">
+          <el-button :loading="importing">匯入出貨單號</el-button>
+        </el-upload>
+        <el-button :loading="exporting" @click="handleExport">匯出 CSV</el-button>
+      </div>
     </div>
 
     <div class="filter-row">
@@ -170,10 +210,24 @@ onMounted(load)
       :current-page="filters.page + 1"
       @current-change="handlePageChange"
     />
+
+    <CsvImportResultDialog
+      :result="importResult"
+      title="批次出貨結果"
+      :success-text="`已將 ${importResult?.updated} 筆訂單改為出貨中,並已通知會員`"
+      rejected-text="出貨任何訂單"
+      @close="importResult = null"
+    />
   </div>
 </template>
 
 <style scoped>
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .header-row {
   display: flex;
   justify-content: space-between;

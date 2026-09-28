@@ -1,18 +1,14 @@
 package com.example.shopping.product.service;
 
-import com.example.shopping.common.exception.BusinessException;
-import com.example.shopping.product.dto.response.StockImportResponse;
-import com.example.shopping.product.dto.response.StockImportResponse.RowError;
+import com.example.shopping.common.csv.CsvImportReader;
+import com.example.shopping.common.csv.CsvImportResponse;
+import com.example.shopping.common.csv.CsvImportResponse.RowError;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,43 +33,15 @@ public class StockImportService {
         this.productSkuRepository = productSkuRepository;
     }
 
-    public StockImportResponse importCsv(MultipartFile file) {
-        if (file.isEmpty()) {
-            throw new BusinessException("請選擇 CSV 檔案");
-        }
-        if (file.getSize() > MAX_FILE_BYTES) {
-            throw new BusinessException("檔案過大,請控制在 1MB 以內");
-        }
+    public CsvImportResponse importCsv(MultipartFile file) {
+        List<CsvImportReader.Row> csvRows =
+                CsvImportReader.read(file, MAX_ROWS, MAX_FILE_BYTES, StockImportService::isHeader);
 
         List<RowError> errors = new ArrayList<>();
-        int totalRows = 0;
         // skuCode -> (行號, 新庫存),保留檔案順序
         Map<String, int[]> rows = new LinkedHashMap<>();
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-            String line;
-            int lineNo = 0;
-            while ((line = reader.readLine()) != null) {
-                lineNo++;
-                if (lineNo == 1) {
-                    line = stripBom(line);
-                    if (isHeader(line)) {
-                        continue;
-                    }
-                }
-                if (line.isBlank()) {
-                    continue;
-                }
-                if (++totalRows > MAX_ROWS) {
-                    throw new BusinessException("一次最多匯入 " + MAX_ROWS + " 筆");
-                }
-                parseRow(line, lineNo, rows, errors);
-            }
-        } catch (IOException e) {
-            throw new BusinessException("無法讀取檔案,請確認為 UTF-8 編碼的 CSV");
-        }
-        if (totalRows == 0) {
-            throw new BusinessException("檔案中沒有資料");
+        for (CsvImportReader.Row row : csvRows) {
+            parseRow(row, rows, errors);
         }
 
         Map<String, ProductSku> skus = productSkuRepository.findBySkuCodeIn(rows.keySet()).stream()
@@ -85,21 +53,20 @@ public class StockImportService {
         });
 
         if (!errors.isEmpty()) {
-            errors.sort((a, b) -> Integer.compare(a.line(), b.line()));
-            return new StockImportResponse(false, totalRows, 0, errors);
+            return CsvImportResponse.rejected(csvRows.size(), errors);
         }
         rows.forEach((code, value) -> skus.get(code).setStock(value[1]));
-        return new StockImportResponse(true, totalRows, rows.size(), List.of());
+        return new CsvImportResponse(true, csvRows.size(), rows.size(), List.of());
     }
 
-    private static void parseRow(String line, int lineNo, Map<String, int[]> rows, List<RowError> errors) {
-        String[] cells = line.split(",", -1);
-        if (cells.length < 2) {
+    private static void parseRow(CsvImportReader.Row row, Map<String, int[]> rows, List<RowError> errors) {
+        int lineNo = row.line();
+        if (row.cells().size() < 2) {
             errors.add(new RowError(lineNo, "格式應為:SKU 編號,庫存"));
             return;
         }
-        String code = unquote(cells[0]);
-        String stockText = unquote(cells[1]);
+        String code = row.cell(0);
+        String stockText = row.cell(1);
         if (code.isEmpty()) {
             errors.add(new RowError(lineNo, "SKU 編號不可為空"));
             return;
@@ -124,17 +91,5 @@ public class StockImportService {
     private static boolean isHeader(String line) {
         String lower = line.toLowerCase();
         return lower.contains("sku") && !lower.matches(".*,\\s*\"?\\d+\"?\\s*$");
-    }
-
-    private static String stripBom(String line) {
-        return line.startsWith("\uFEFF") ? line.substring(1) : line;
-    }
-
-    private static String unquote(String cell) {
-        String trimmed = cell.trim();
-        if (trimmed.length() >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
-            trimmed = trimmed.substring(1, trimmed.length() - 1).trim();
-        }
-        return trimmed;
     }
 }

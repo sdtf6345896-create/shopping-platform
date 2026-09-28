@@ -4,6 +4,7 @@ import com.example.shopping.audit.AdminAudit;
 import com.example.shopping.audit.AuditTarget;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
+import com.example.shopping.common.csv.CsvImportResponse;
 import com.example.shopping.common.enums.ProductStatus;
 import com.example.shopping.product.dto.request.BatchProductStatusRequest;
 import com.example.shopping.product.dto.request.ProductRequest;
@@ -13,7 +14,6 @@ import com.example.shopping.product.dto.response.LowStockSkuResponse;
 import com.example.shopping.product.dto.response.ProductDetailResponse;
 import com.example.shopping.product.dto.response.ProductListResponse;
 import com.example.shopping.product.dto.response.SkuResponse;
-import com.example.shopping.product.dto.response.StockImportResponse;
 import com.example.shopping.product.service.ProductService;
 import com.example.shopping.product.service.StockImportService;
 import jakarta.validation.Valid;
@@ -58,8 +58,8 @@ public class AdminProductController {
     @AdminAudit(action = "匯入庫存 CSV", target = AuditTarget.PRODUCT, targetId = "",
             detail = "#file.originalFilename + ' → ' + (#result?.data?.applied() ? '已更新 ' + #result.data.updated() + ' 筆' : '有錯誤未套用')")
     @PostMapping("/stock-import")
-    public ApiResponse<StockImportResponse> importStock(@RequestParam("file") MultipartFile file) {
-        StockImportResponse result = stockImportService.importCsv(file);
+    public ApiResponse<CsvImportResponse> importStock(@RequestParam("file") MultipartFile file) {
+        CsvImportResponse result = stockImportService.importCsv(file);
         return ApiResponse.success(result.applied() ? "庫存已更新" : "資料有誤,未更新任何庫存", result);
     }
 

@@ -10,6 +10,7 @@ import {
   updateProductStatusBatch,
 } from '../../api/admin/product'
 import { saveBlob } from '../../utils/download'
+import CsvImportResultDialog from '../../components/CsvImportResultDialog.vue'
 import { listAdminCategories } from '../../api/admin/category'
 import { flattenCategories } from '../../utils/categoryTree'
 
@@ -213,28 +214,13 @@ onMounted(() => {
       @current-change="handlePageChange"
     />
 
-    <el-dialog :model-value="!!importResult" title="庫存匯入結果" width="520px" @close="importResult = null">
-      <template v-if="importResult">
-        <el-alert
-          v-if="importResult.applied"
-          type="success"
-          :closable="false"
-          :title="`已更新 ${importResult.updated} 個規格的庫存`"
-        />
-        <template v-else>
-          <el-alert
-            type="error"
-            :closable="false"
-            :title="`共 ${importResult.totalRows} 筆資料,有 ${importResult.errors.length} 個錯誤,未更新任何庫存`"
-            description="請修正後重新上傳整份檔案"
-          />
-          <el-table :data="importResult.errors" size="small" max-height="300" class="import-errors">
-            <el-table-column prop="line" label="行號" width="70" />
-            <el-table-column prop="message" label="問題" />
-          </el-table>
-        </template>
-      </template>
-    </el-dialog>
+    <CsvImportResultDialog
+      :result="importResult"
+      title="庫存匯入結果"
+      :success-text="`已更新 ${importResult?.updated} 個規格的庫存`"
+      rejected-text="更新任何庫存"
+      @close="importResult = null"
+    />
   </div>
 </template>
 
@@ -243,10 +229,6 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.import-errors {
-  margin-top: 12px;
 }
 
 .batch-bar {

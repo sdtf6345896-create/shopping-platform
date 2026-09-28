@@ -766,6 +766,13 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 ### `GET /api/admin/orders/export`
 依與列表相同的查詢條件匯出 CSV(新到舊,最多 10,000 筆),回應為檔案下載(`Content-Disposition: attachment; filename="orders-YYYYMMDD.csv"`),不是 JSON。檔案為 UTF-8 含 BOM,Excel 可直接開啟;以 `=`、`+`、`-`、`@` 開頭的文字欄位會加上 `'` 前綴,避免被 Excel 當成公式執行(CSV injection)。
 
+### `GET /api/admin/orders/ship-template`
+下載所有**已付款(待出貨)**訂單的出貨單號範本 CSV(舊到新,UTF-8 含 BOM)。欄位:`訂單編號,物流業者,物流單號,收件人,收件電話,收件地址,商品明細,訂單備註`,物流兩欄留空讓管理員填寫。
+
+### `POST /api/admin/orders/ship-import`
+批次出貨。`multipart/form-data`,欄位名 `file`;每列前三欄為 `訂單編號,物流業者,物流單號`(其餘欄位忽略,可直接上傳填好的範本),第一列可為標題列,儲存格可用雙引號包住。最多 1,000 列、512KB。
+**全有或全無**:訂單不存在、不是已付款、物流欄位空白或過長、訂單重複任何一列有問題就一筆都不出貨;回應格式同 `stock-import`。成功時每筆訂單都會改為出貨中並寄出出貨通知,並記入管理員操作紀錄。
+
 ### `GET /api/admin/orders/{id}`
 任意訂單詳情。
 
@@ -901,6 +908,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/products/low-stock` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |
 | GET | `/api/admin/orders/export` | 管理員 |
+| GET | `/api/admin/orders/ship-template` | 管理員 |
+| POST | `/api/admin/orders/ship-import` | 管理員 |
 | GET | `/api/admin/orders/{id}` | 管理員 |
 | PATCH | `/api/admin/orders/{id}/status` | 管理員 |
 | GET | `/api/admin/reports/dashboard` | 管理員 |

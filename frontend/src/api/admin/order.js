@@ -9,6 +9,17 @@ export function exportAdminOrders(params) {
   return request.get('/admin/orders/export', { params, responseType: 'blob', timeout: 60000 })
 }
 
+// 所有待出貨訂單的出貨單號範本(填好物流欄位即可上傳)
+export function downloadShipTemplate() {
+  return request.get('/admin/orders/ship-template', { responseType: 'blob', timeout: 60000 })
+}
+
+export function importShipCsv(file) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post('/admin/orders/ship-import', formData, { timeout: 60000 })
+}
+
 export function getAdminOrder(id) {
   return request.get(`/admin/orders/${id}`)
 }

@@ -31,5 +31,10 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
 
     List<Orders> findByStatusAndShippedAtBefore(OrderStatus status, LocalDateTime shippedBefore);
 
+    List<Orders> findByOrderNoIn(Collection<String> orderNos);
+
+    /** 待出貨清單(出貨單號匯入範本用),最舊的排前面 */
+    List<Orders> findByStatusOrderByCreatedAtAsc(OrderStatus status);
+
     List<Orders> findByStatusAndPaymentDeadlineBefore(OrderStatus status, LocalDateTime deadline);
 }
