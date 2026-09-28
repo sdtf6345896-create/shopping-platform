@@ -21,7 +21,8 @@ public interface OrderService {
 
     OrderResponse pay(Long memberId, Long orderId);
 
-    OrderResponse cancelByMember(Long memberId, Long orderId);
+    /** @param reason 會員填寫的取消原因,選填,寫入訂單歷程 */
+    OrderResponse cancelByMember(Long memberId, Long orderId, String reason);
 
     /** 把舊訂單的商品重新加入購物車;下架或缺貨的品項略過,庫存不足時只加入可買的數量 */
     ReorderResponse reorder(Long memberId, Long orderId);

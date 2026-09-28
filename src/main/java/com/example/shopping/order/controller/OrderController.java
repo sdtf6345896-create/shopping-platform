@@ -3,6 +3,7 @@ package com.example.shopping.order.controller;
 import com.example.shopping.common.ApiResponse;
 import com.example.shopping.common.PageResponse;
 import com.example.shopping.common.enums.OrderStatus;
+import com.example.shopping.order.dto.request.CancelOrderRequest;
 import com.example.shopping.order.dto.request.CheckoutRequest;
 import com.example.shopping.order.dto.response.OrderResponse;
 import com.example.shopping.order.dto.response.ReorderResponse;
@@ -58,7 +59,9 @@ public class OrderController {
     }
 
     @PostMapping("/{id}/cancel")
-    public ApiResponse<OrderResponse> cancel(@PathVariable Long id) {
-        return ApiResponse.success("訂單已取消", orderService.cancelByMember(SecurityUtils.getCurrentUserId(), id));
+    public ApiResponse<OrderResponse> cancel(@PathVariable Long id,
+                                             @Valid @RequestBody(required = false) CancelOrderRequest request) {
+        String reason = request == null ? null : request.getReason();
+        return ApiResponse.success("訂單已取消", orderService.cancelByMember(SecurityUtils.getCurrentUserId(), id, reason));
     }
 }

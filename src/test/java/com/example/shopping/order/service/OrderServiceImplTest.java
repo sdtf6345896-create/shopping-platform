@@ -345,11 +345,22 @@ class OrderServiceImplTest {
         Orders order = pendingOrderWithItem(2);
         when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
 
-        OrderResponse response = orderService.cancelByMember(1L, 1L);
+        OrderResponse response = orderService.cancelByMember(1L, 1L, null);
 
         assertThat(response.getStatus()).isEqualTo(OrderStatus.CANCELLED);
         verify(productSkuRepository).incrementStock(1L, 2);
         verify(orderNotifier).notifyStatusChanged(order);
+    }
+
+    @Test
+    void cancelByMember_recordsReasonInStatusLog() {
+        Orders order = pendingOrderWithItem(1);
+        when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
+
+        OrderResponse response = orderService.cancelByMember(1L, 1L, "  重複下單 ");
+
+        assertThat(response.getStatusLogs()).last()
+                .satisfies(log -> assertThat(log.getNote()).isEqualTo("會員取消訂單:重複下單"));
     }
 
     @Test
@@ -361,7 +372,7 @@ class OrderServiceImplTest {
         order.setCoupon(coupon);
         when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
 
-        orderService.cancelByMember(1L, 1L);
+        orderService.cancelByMember(1L, 1L, null);
 
         verify(couponService).release(5L);
     }
@@ -372,7 +383,7 @@ class OrderServiceImplTest {
         order.setStatus(OrderStatus.SHIPPING);
         when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
 
-        assertThatThrownBy(() -> orderService.cancelByMember(1L, 1L))
+        assertThatThrownBy(() -> orderService.cancelByMember(1L, 1L, null))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining("無法取消");
     }
@@ -594,7 +605,7 @@ class OrderServiceImplTest {
         order.setPointsUsed(150);
         when(orderRepository.findByIdAndMemberId(1L, 1L)).thenReturn(Optional.of(order));
 
-        orderService.cancelByMember(1L, 1L);
+        orderService.cancelByMember(1L, 1L, null);
 
         verify(pointService).credit(eq(1L), eq(1L), eq(150), eq(PointTransactionType.REFUND), any());
     }

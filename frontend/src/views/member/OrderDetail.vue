@@ -45,11 +45,24 @@ async function handlePay() {
   }
 }
 
-async function handleCancel() {
-  await ElMessageBox.confirm('確定要取消此訂單嗎?', '提示', { type: 'warning' })
+// 取消訂單:讓會員選原因(選填),寫進訂單歷程供賣家參考
+const CANCEL_REASONS = ['不想買了', '重複下單', '想更改商品或數量', '想更改收件資訊或付款方式', '找到更便宜的']
+const cancelDialogVisible = ref(false)
+const cancelReason = ref('')
+const cancelOther = ref('')
+
+function handleCancel() {
+  cancelReason.value = ''
+  cancelOther.value = ''
+  cancelDialogVisible.value = true
+}
+
+async function submitCancel() {
+  const reason = cancelReason.value === 'OTHER' ? cancelOther.value.trim() : cancelReason.value
   acting.value = true
   try {
-    await cancelOrder(props.id)
+    await cancelOrder(props.id, reason)
+    cancelDialogVisible.value = false
     ElMessage.success('訂單已取消')
     await load()
   } finally {
@@ -265,10 +278,42 @@ onMounted(load)
         </el-button>
       </div>
     </template>
+
+    <el-dialog v-model="cancelDialogVisible" title="取消訂單" width="420px">
+      <p class="cancel-hint">取消後無法復原,已付款的訂單款項將退回原付款方式。請問取消的原因是?(選填)</p>
+      <el-radio-group v-model="cancelReason" class="cancel-reasons">
+        <el-radio v-for="r in CANCEL_REASONS" :key="r" :value="r">{{ r }}</el-radio>
+        <el-radio value="OTHER">其他</el-radio>
+      </el-radio-group>
+      <el-input
+        v-if="cancelReason === 'OTHER'"
+        v-model="cancelOther"
+        maxlength="100"
+        show-word-limit
+        placeholder="請說明原因"
+      />
+      <template #footer>
+        <el-button @click="cancelDialogVisible = false">先不要</el-button>
+        <el-button type="danger" :loading="acting" @click="submitCancel">確定取消訂單</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <style scoped>
+.cancel-hint {
+  margin: 0 0 12px;
+  color: #666;
+  font-size: 13px;
+}
+
+.cancel-reasons {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
 .buyer-note {
   color: #e6a23c;
   white-space: pre-wrap;

@@ -240,9 +240,10 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderResponse cancelByMember(Long memberId, Long orderId) {
+    public OrderResponse cancelByMember(Long memberId, Long orderId, String reason) {
         Orders order = findOwnedOrThrow(memberId, orderId);
-        cancelOrder(order, OrderActor.MEMBER, "會員取消訂單");
+        String trimmed = blankToNull(reason);
+        cancelOrder(order, OrderActor.MEMBER, trimmed == null ? "會員取消訂單" : "會員取消訂單:" + trimmed);
         orderNotifier.notifyStatusChanged(order);
         return OrderResponse.from(order);
     }

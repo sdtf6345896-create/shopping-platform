@@ -28,6 +28,6 @@ export function confirmReceipt(id) {
   return request.post(`/orders/${id}/complete`)
 }
 
-export function cancelOrder(id) {
-  return request.post(`/orders/${id}/cancel`)
+export function cancelOrder(id, reason) {
+  return request.post(`/orders/${id}/cancel`, { reason: reason || null })
 }
