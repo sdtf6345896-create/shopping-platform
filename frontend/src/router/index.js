@@ -7,6 +7,7 @@ import { canAccessAdminRoute } from '../utils/adminPermissions'
 const routes = [
   { path: '/', name: 'Home', component: () => import('../views/Home.vue') },
   { path: '/products', name: 'ProductList', component: () => import('../views/ProductList.vue'), meta: { title: '全部商品' } },
+  { path: '/compare', name: 'Compare', component: () => import('../views/Compare.vue'), meta: { title: '商品比較' } },
   { path: '/products/:id', name: 'ProductDetail', component: () => import('../views/ProductDetail.vue'), props: true },
   { path: '/cart', name: 'Cart', component: () => import('../views/Cart.vue'), meta: { title: '購物車', requiresAuth: true } },
   {

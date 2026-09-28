@@ -6,11 +6,13 @@ import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 import { getHotSearches, suggestProducts } from '../api/product'
 import { useNotificationStore } from '../stores/notification'
+import { useCompareStore } from '../stores/compare'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const cartStore = useCartStore()
+const compareStore = useCompareStore()
 const notificationStore = useNotificationStore()
 
 const searchKeyword = ref(typeof route.query.keyword === 'string' ? route.query.keyword : '')
@@ -106,6 +108,9 @@ function handleLogout() {
         <router-link to="/">首頁</router-link>
         <router-link to="/products">全部商品</router-link>
         <router-link to="/coupons">領券中心</router-link>
+        <router-link to="/compare">
+          商品比較<span v-if="compareStore.count">({{ compareStore.count }})</span>
+        </router-link>
       </nav>
 
       <el-autocomplete

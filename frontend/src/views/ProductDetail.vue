@@ -16,6 +16,7 @@ import { listMyStockAlerts, subscribeStockAlert, unsubscribeStockAlert } from '.
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 import { listPromotions } from '../api/promotion'
+import { MAX_COMPARE, useCompareStore } from '../stores/compare'
 import { setMetaDescription, setPageTitle } from '../utils/pageMeta'
 import { getCategoryTree } from '../api/category'
 import { categoryPath } from '../utils/categoryTree'
@@ -161,6 +162,24 @@ async function loadFavoriteState() {
     return
   }
   favorited.value = await fetchIsFavorited(props.id)
+}
+
+const compareStore = useCompareStore()
+
+function handleToggleCompare() {
+  if (compareStore.has(product.value.id)) {
+    compareStore.remove(product.value.id)
+    ElMessage.success('已從比較清單移除')
+    return
+  }
+  if (!compareStore.add(product.value.id)) {
+    ElMessage.warning(`比較清單最多 ${MAX_COMPARE} 件,請先移除其他商品`)
+    return
+  }
+  ElMessage({
+    type: 'success',
+    message: `已加入比較(${compareStore.count}/${MAX_COMPARE})`,
+  })
 }
 
 async function handleToggleFavorite() {
@@ -436,6 +455,9 @@ watch(
             >
               <el-icon><component :is="favorited ? StarFilled : Star" /></el-icon>
               {{ favorited ? '已收藏' : '收藏' }}
+            </el-button>
+            <el-button size="large" @click="handleToggleCompare">
+              {{ compareStore.has(product.id) ? '已加入比較' : '加入比較' }}
             </el-button>
             <el-button
               v-if="product.status === 'ON_SALE' && selectedSku?.stock === 0"

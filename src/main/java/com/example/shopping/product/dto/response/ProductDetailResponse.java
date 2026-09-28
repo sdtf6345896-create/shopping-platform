@@ -35,6 +35,8 @@ public class ProductDetailResponse {
     private List<SpecRow> specs;
     private ProductStatus status;
     private int salesCount;
+    private BigDecimal ratingAverage;
+    private int reviewCount;
     private List<SkuResponse> skus;
 
     public record SpecRow(String name, String value) {
@@ -59,6 +61,8 @@ public class ProductDetailResponse {
                 product.getSpecs().stream().map(s -> new SpecRow(s.getName(), s.getValue())).toList(),
                 product.getStatus(),
                 product.getSalesCount(),
+                product.getRatingAverage(),
+                product.getReviewCount(),
                 product.getSkus().stream().map(SkuResponse::from).toList());
     }
 }

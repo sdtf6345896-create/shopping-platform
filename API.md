@@ -358,10 +358,12 @@ REFUNDED        → (終態)
   "id": 1, "categoryId": 2, "categoryName": "上衣", "name": "經典圓領T恤",
   "description": "100% 純棉,舒適透氣", "price": 590.00, "mainImage": "https://...",
   "images": ["https://.../2.jpg", "https://.../3.jpg"],
-  "status": "ON_SALE", "salesCount": 3,
+  "status": "ON_SALE", "salesCount": 3, "ratingAverage": 4.5, "reviewCount": 12,
+  "specs": [ { "name": "材質", "value": "100% 純棉" } ],
   "skus": [ { "id": 1, "skuCode": "TSHIRT-BLK-M", "specName": "黑色/M", "price": 590.00, "stock": 3 } ]
 }
 ```
+前台「商品比較」頁(`/compare`)直接用這支 API 逐一載入比較清單中的商品(清單存在瀏覽器,最多 4 件),下架或不存在(404)的商品會自動從清單移除。
 
 ### `GET /api/products/suggestions`
 公開。搜尋框即時建議:名稱包含 `keyword`(不分大小寫)的上架商品,熱銷優先。Query:`keyword`、`limit`(預設 8,最多 10)。`keyword` 空白時回傳空陣列;`%`、`_` 視為一般字元。回傳 `ProductListResponse` 陣列。
