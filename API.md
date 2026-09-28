@@ -158,6 +158,12 @@ REFUNDED        → (終態)
 
 ## 會員個人資料(Member)— 需會員登入
 
+### 常用超商門市 `/api/members/cvs-stores` — 需會員登入
+- `GET`:新到舊 `[ { "id", "brand", "brandLabel", "storeName", "storeCode", "recipientName", "recipientPhone" } ]`
+- `POST`:格式與驗證同結帳的 `cvsPickup`;同一門市 + 取件人 + 手機已存過時不新增(只更新店號),每人最多 5 筆,超過回 400
+- `DELETE /{id}`:只能刪自己的,否則 404
+刪除帳號時一併清除。
+
 ### `GET /api/members/me/referral`
 我的邀請碼與成果(第一次呼叫時產生 8 碼邀請碼):
 ```json
@@ -1036,6 +1042,8 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/coupons/{id}/status` | 管理員 |
 | POST | `/api/admin/coupons/{id}/issue` | 管理員 |
 | POST | `/api/orders/{id}/cancel` | 會員 |
+| GET / POST | `/api/members/cvs-stores` | 會員 |
+| DELETE | `/api/members/cvs-stores/{id}` | 會員 |
 | GET / POST | `/api/orders/{id}/messages` | 會員 |
 | GET | `/api/admin/order-messages/awaiting` | 管理員 |
 | GET / POST | `/api/admin/notes` | 管理員 |

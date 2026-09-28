@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { listAddresses, createAddress, updateAddress, deleteAddress } from '../../api/address'
+import { deleteCvsStore, listCvsStores } from '../../api/cvsStore'
 
 const addresses = ref([])
 const loading = ref(true)
@@ -77,7 +78,28 @@ async function handleDelete(addr) {
   await load()
 }
 
-onMounted(load)
+// 常用超商門市:在結帳頁勾選「存為常用門市」新增,這裡可以查看與刪除
+const cvsStores = ref([])
+
+async function loadCvsStores() {
+  cvsStores.value = await listCvsStores()
+}
+
+async function handleDeleteCvsStore(store) {
+  try {
+    await ElMessageBox.confirm(`確定刪除「${store.brandLabel} ${store.storeName}」?`, '刪除常用門市', { type: 'warning' })
+  } catch {
+    return
+  }
+  await deleteCvsStore(store.id)
+  ElMessage.success('已刪除')
+  await loadCvsStores()
+}
+
+onMounted(() => {
+  load()
+  loadCvsStores()
+})
 </script>
 
 <template>
@@ -130,10 +152,42 @@ onMounted(load)
         <el-button type="primary" @click="handleSave">儲存</el-button>
       </template>
     </el-dialog>
+
+    <h3 class="section-title">常用超商門市</h3>
+    <p class="hint">結帳選擇超商取貨時勾選「存為常用門市」即可新增,最多 5 筆。</p>
+    <el-empty v-if="cvsStores.length === 0" description="尚未儲存常用門市" :image-size="60" />
+    <div v-for="store in cvsStores" :key="store.id" class="cvs-store">
+      <div>
+        <strong>{{ store.brandLabel }} {{ store.storeName }}</strong>
+        <span v-if="store.storeCode" class="muted">(店號 {{ store.storeCode }})</span>
+        <div class="muted">取件人:{{ store.recipientName }} {{ store.recipientPhone }}</div>
+      </div>
+      <el-button link type="danger" @click="handleDeleteCvsStore(store)">刪除</el-button>
+    </div>
   </div>
 </template>
 
 <style scoped>
+.section-title {
+  margin-top: 32px;
+}
+
+.hint,
+.muted {
+  color: #999;
+  font-size: 13px;
+}
+
+.cvs-store {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+}
+
 .header-row {
   display: flex;
   justify-content: space-between;

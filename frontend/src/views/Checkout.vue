@@ -10,6 +10,7 @@ import { maxRedeemable } from '../utils/points'
 import { INVOICE_TYPE_LABELS, validateInvoice } from '../utils/invoice'
 import { getShippingPolicy } from '../api/shipping'
 import { previewCartPromotion } from '../api/promotion'
+import { listCvsStores, saveCvsStore } from '../api/cvsStore'
 import { CVS_BRANDS, amountToFreeShipping, shippingFeeFor, validateCvsPickup } from '../utils/shipping'
 import { useCartStore } from '../stores/cart'
 
@@ -19,21 +20,34 @@ const cartStore = useCartStore()
 const addresses = ref([])
 const selectedAddressId = ref(null)
 
-// 配送方式:宅配用地址簿;超商取貨由會員自填門市(記住上次填的,下次免重打)
-const CVS_STORAGE_KEY = 'checkout.cvsPickup'
+// 配送方式:宅配用地址簿;超商取貨可從常用門市帶入,或自填後勾選存成常用門市
 const shippingMethod = ref('HOME_DELIVERY')
 const cvsPickup = reactive({ brand: 'SEVEN_ELEVEN', storeName: '', storeCode: '', recipientName: '', recipientPhone: '' })
-try {
-  Object.assign(cvsPickup, JSON.parse(localStorage.getItem(CVS_STORAGE_KEY) || '{}'))
-} catch {
-  // 讀不到就用空白表單
+const savedStores = ref([])
+const selectedStoreId = ref(null)
+const saveStore = ref(true)
+
+function applySavedStore(id) {
+  const store = savedStores.value.find((s) => s.id === id)
+  if (!store) return
+  Object.assign(cvsPickup, {
+    brand: store.brand,
+    storeName: store.storeName,
+    storeCode: store.storeCode || '',
+    recipientName: store.recipientName,
+    recipientPhone: store.recipientPhone,
+  })
 }
 
-function rememberCvsPickup() {
+async function loadSavedStores() {
   try {
-    localStorage.setItem(CVS_STORAGE_KEY, JSON.stringify(cvsPickup))
+    savedStores.value = await listCvsStores()
   } catch {
-    // 無痕模式等情況存不了,不影響結帳
+    savedStores.value = []
+  }
+  if (savedStores.value.length) {
+    selectedStoreId.value = savedStores.value[0].id
+    applySavedStore(selectedStoreId.value)
   }
 }
 const paymentMethod = ref('CREDIT_CARD')
@@ -191,20 +205,22 @@ async function handleSubmit() {
     return
   }
 
+  const cvsPayload = isCvs
+    ? {
+        brand: cvsPickup.brand,
+        storeName: cvsPickup.storeName.trim(),
+        storeCode: cvsPickup.storeCode.trim() || null,
+        recipientName: cvsPickup.recipientName.trim(),
+        recipientPhone: cvsPickup.recipientPhone.trim(),
+      }
+    : null
+
   submitting.value = true
   try {
     const order = await checkout({
       shippingMethod: shippingMethod.value,
       addressId: isCvs ? null : selectedAddressId.value,
-      cvsPickup: isCvs
-        ? {
-            brand: cvsPickup.brand,
-            storeName: cvsPickup.storeName.trim(),
-            storeCode: cvsPickup.storeCode.trim() || null,
-            recipientName: cvsPickup.recipientName.trim(),
-            recipientPhone: cvsPickup.recipientPhone.trim(),
-          }
-        : null,
+      cvsPickup: cvsPayload,
       paymentMethod: paymentMethod.value,
       cartItemIds: cartStore.checkoutSelection,
       couponCode: appliedCoupon.value?.code || null,
@@ -218,7 +234,8 @@ async function handleSubmit() {
         donationCode: invoice.type === 'DONATION' ? invoice.donationCode.trim() : null,
       },
     })
-    if (isCvs) rememberCvsPickup()
+    // 存成常用門市失敗(例如已達上限)不影響訂單
+    if (isCvs && saveStore.value && !selectedStoreId.value) saveCvsStore(cvsPayload).catch(() => {})
     cartStore.setCheckoutSelection(null)
     await cartStore.fetchCart()
     ElMessage.success('訂單建立成功')
@@ -235,6 +252,7 @@ onMounted(async () => {
   }
   await Promise.all([
     loadAddresses(),
+    loadSavedStores(),
     loadPoints(),
     getMyCoupons()
       .then((list) => {
@@ -278,7 +296,19 @@ onMounted(async () => {
       <div class="block-title">
         <span>取貨門市</span>
       </div>
-      <el-form :model="cvsPickup" label-width="90px" class="cvs-form">
+      <el-radio-group
+        v-if="savedStores.length"
+        v-model="selectedStoreId"
+        class="saved-stores"
+        @change="applySavedStore"
+      >
+        <el-radio v-for="st in savedStores" :key="st.id" :value="st.id" class="saved-store">
+          <strong>{{ st.brandLabel }} {{ st.storeName }}</strong>
+          <span class="store-meta">{{ st.recipientName }} {{ st.recipientPhone }}</span>
+        </el-radio>
+        <el-radio :value="null" class="saved-store">使用其他門市</el-radio>
+      </el-radio-group>
+      <el-form v-if="!selectedStoreId" :model="cvsPickup" label-width="90px" class="cvs-form">
         <el-form-item label="超商" required>
           <el-radio-group v-model="cvsPickup.brand">
             <el-radio v-for="b in CVS_BRANDS" :key="b.value" :value="b.value">{{ b.label }}</el-radio>
@@ -295,6 +325,9 @@ onMounted(async () => {
         </el-form-item>
         <el-form-item label="手機" required>
           <el-input v-model="cvsPickup.recipientPhone" maxlength="10" placeholder="到店通知簡訊會寄到這支手機" />
+        </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="saveStore">存為常用門市,下次結帳直接選</el-checkbox>
         </el-form-item>
       </el-form>
     </section>
@@ -502,6 +535,20 @@ onMounted(async () => {
 
 .shipping-note {
   margin: 6px 0 0;
+  color: #999;
+  font-size: 12px;
+}
+
+.saved-stores {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.store-meta {
+  margin-left: 8px;
   color: #999;
   font-size: 12px;
 }
