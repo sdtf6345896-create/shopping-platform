@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getCategorySales, getSalesSummary, getTopProducts, getDailySales } from '../../api/admin/report'
+import { exportReport, getCategorySales, getSalesSummary, getTopProducts, getDailySales } from '../../api/admin/report'
+import { filenameFromDisposition, saveBlob } from '../../utils/download'
 import BarChart from '../../components/BarChart.vue'
 import LowStockPanel from '../../components/admin/LowStockPanel.vue'
 
@@ -55,6 +56,19 @@ async function loadAll() {
   }
 }
 
+const exporting = ref(false)
+
+async function handleExport(type) {
+  exporting.value = true
+  try {
+    const params = dateRange.value ? { startDate: dateRange.value[0], endDate: dateRange.value[1] } : {}
+    const response = await exportReport(type, params)
+    saveBlob(response.data, filenameFromDisposition(response.headers['content-disposition'], `report-${type}.csv`))
+  } finally {
+    exporting.value = false
+  }
+}
+
 function handleRangeChange() {
   loadAll()
 }
@@ -75,6 +89,16 @@ onMounted(loadAll)
         :clearable="false"
         @change="handleRangeChange"
       />
+      <el-dropdown trigger="click" @command="handleExport">
+        <el-button :loading="exporting">匯出 CSV</el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="daily">每日營收</el-dropdown-item>
+            <el-dropdown-item command="products">熱銷商品(前 100 名)</el-dropdown-item>
+            <el-dropdown-item command="categories">分類銷售</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
 
     <template v-if="summary">
@@ -153,9 +177,13 @@ onMounted(loadAll)
 <style scoped>
 .header-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 12px;
   margin-bottom: 20px;
+}
+
+.header-row h3 {
+  margin-right: auto;
 }
 
 .stat-grid {

@@ -893,6 +893,9 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 
 三支皆接受 Query:`startDate`、`endDate`(格式 `yyyy-MM-dd`,不帶則預設近 30 天,含今天)。統計只計入 `PAID`/`SHIPPING`/`COMPLETED` 三種狀態的訂單(排除待付款與已取消),金額皆以套用優惠券後的實付金額(`total_amount`)計算。
 
+### `GET /api/admin/reports/export`
+匯出報表 CSV(檔案下載,UTF-8 含 BOM,跳脫與防公式注入規則同訂單匯出)。Query:`type`(必填,`daily` 每日營收 / `products` 熱銷商品前 100 名 / `categories` 分類銷售,不分大小寫,其他值回 400)、`startDate`、`endDate`(同其他報表,不帶為近 30 天)。會記入管理員操作紀錄。
+
 ### `GET /api/admin/reports/dashboard`
 後台首頁總覽。
 ```json
@@ -1033,6 +1036,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | GET | `/api/admin/orders/{id}` | 管理員 |
 | PATCH | `/api/admin/orders/{id}/status` | 管理員 |
 | GET | `/api/admin/reports/dashboard` | 管理員 |
+| GET | `/api/admin/reports/export` | 管理員 |
 | GET | `/api/admin/audit-logs` | 管理員 |
 | GET | `/api/admin/reports/summary` | 管理員 |
 | GET | `/api/admin/reports/top-products` | 管理員 |

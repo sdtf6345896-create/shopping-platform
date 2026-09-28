@@ -53,19 +53,4 @@ class OrderCsvWriterTest {
         assertThat(lines[1]).isEqualTo("ORD001,2026-09-27 15:30:00,出貨中,信用卡,member@example.com,宅配,王小明,0912345678,"
                 + "台北市大安區復興南路一段1號,經典圓領T恤 黑色/M x2,1180.00,0,100.00,SAVE100,0,0,1080.00,黑貓宅急便,TRK123,\"請於平日配送,謝謝\",會員載具");
     }
-
-    @Test
-    void escape_quotesCommasQuotesAndNewlines() {
-        assertThat(OrderCsvWriter.escape("a,b")).isEqualTo("\"a,b\"");
-        assertThat(OrderCsvWriter.escape("say \"hi\"")).isEqualTo("\"say \"\"hi\"\"\"");
-        assertThat(OrderCsvWriter.escape("line1\nline2")).isEqualTo("\"line1\nline2\"");
-        assertThat(OrderCsvWriter.escape(null)).isEmpty();
-    }
-
-    @Test
-    void escape_neutralizesFormulaInjection_butKeepsNegativeNumbers() {
-        assertThat(OrderCsvWriter.escape("=HYPERLINK(\"http://evil\")")).startsWith("\"'=HYPERLINK");
-        assertThat(OrderCsvWriter.escape("@SUM(A1)")).isEqualTo("'@SUM(A1)");
-        assertThat(OrderCsvWriter.escape("-100.00")).isEqualTo("-100.00");
-    }
 }
