@@ -95,6 +95,10 @@ MAIL_HOST=smtp.gmail.com MAIL_PORT=587 MAIL_USERNAME=you@gmail.com MAIL_PASSWORD
 
 （Gmail 需要用「應用程式密碼」而非登入密碼;也可以換成 Mailtrap、SendGrid 等其他 SMTP 服務。）若寄信失敗(帳密錯誤、連不上等),會自動退回 log 模擬,不影響原本的 API 流程。
 
+### SEO(sitemap.xml / robots.txt)
+
+後端依上架商品與啟用中的分類即時產生 `/sitemap.xml` 與 `/robots.txt`(前端 dev server 與 Docker 的 nginx 都已轉發這兩個路徑)。裡面的網址是絕對網址,部署時請把 `SITE_BASE_URL` 設成對外網址(預設 `http://localhost:5173`),例如 `SITE_BASE_URL=https://shop.example.com`。前端每個頁面會設定 `<title>`,商品頁另外以商品名稱與說明設定 `<meta name="description">`。
+
 ## 測試
 
 ```bash

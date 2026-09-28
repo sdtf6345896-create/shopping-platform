@@ -49,7 +49,7 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("GET", "/api/products/**", "/api/categories/**", "/api/banners/**",
                                 "/api/shipping/policy", "/api/promotions").permitAll()
-                        .requestMatchers("GET", "/uploads/**").permitAll()
+                        .requestMatchers("GET", "/uploads/**", "/sitemap.xml", "/robots.txt").permitAll()
                         // 後台管理需要 ADMIN 角色
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // 其餘(購物車、訂單、會員中心)需登入

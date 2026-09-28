@@ -478,6 +478,14 @@ REFUNDED        → (終態)
 
 ---
 
+## SEO
+
+### `GET /sitemap.xml`
+公開,`application/xml`。首頁、商品列表、每個啟用分類(`/products?categoryId=`)與每個上架商品(`/products/{id}`,附 `lastmod`),網址以 `app.site.base-url`(環境變數 `SITE_BASE_URL`)組成絕對網址,最多 50,000 筆。
+
+### `GET /robots.txt`
+公開,`text/plain`。排除後台、會員中心、購物車、結帳、訂單與 `/api/`,並指向 sitemap。
+
 ## 運費(Shipping)
 
 ### `GET /api/shipping/policy`

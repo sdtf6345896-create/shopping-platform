@@ -54,6 +54,8 @@ app:
       lock-minutes: 15   # 鎖定時間
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  site:
+    base-url: ${SITE_BASE_URL:http://localhost:5173}   # 對外網址,產生 sitemap.xml / robots.txt 的絕對網址用
   upload:
     dir: ${UPLOAD_DIR:uploads}
     member-max-per-window: 20   # 會員每 10 分鐘最多上傳幾張圖

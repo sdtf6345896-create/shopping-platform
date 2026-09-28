@@ -16,6 +16,7 @@ import { listMyStockAlerts, subscribeStockAlert, unsubscribeStockAlert } from '.
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 import { listPromotions } from '../api/promotion'
+import { setMetaDescription, setPageTitle } from '../utils/pageMeta'
 import { getCategoryTree } from '../api/category'
 import { categoryPath } from '../utils/categoryTree'
 
@@ -78,6 +79,8 @@ async function load() {
   try {
     try {
       product.value = await getProductDetail(props.id)
+      setPageTitle(product.value.name)
+      setMetaDescription(product.value.description || `${product.value.name},${product.value.categoryName}`)
     } catch (error) {
       // 商品不存在或已下架:導向 404 頁,保留原網址方便使用者確認
       if (error.response?.status === 404) {

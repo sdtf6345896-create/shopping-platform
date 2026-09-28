@@ -21,6 +21,8 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/sitemap.xml': 'http://localhost:8080',
+      '/robots.txt': 'http://localhost:8080',
       '/uploads': {
         target: 'http://localhost:8080',
         changeOrigin: true,

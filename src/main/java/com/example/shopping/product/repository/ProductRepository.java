@@ -33,6 +33,16 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
             + " p.unpublishAt = null where p.unpublishAt <= :now")
     int unpublishDue(@Param("now") LocalDateTime now);
 
+    /** sitemap 用:上架商品的 id 與最後更新時間 */
+    interface SitemapEntry {
+        Long getId();
+
+        LocalDateTime getUpdatedAt();
+    }
+
+    @Query("select p.id as id, p.updatedAt as updatedAt from Product p where p.status = :status order by p.id")
+    List<SitemapEntry> findSitemapEntries(@Param("status") ProductStatus status);
+
     /** 搜尋建議:名稱包含關鍵字的商品,熱銷優先(Containing 會跳脫 % 與 _,不會被當成萬用字元) */
     List<Product> findByStatusAndNameContainingIgnoreCaseOrderBySalesCountDescIdDesc(
             ProductStatus status, String keyword, Pageable pageable);
