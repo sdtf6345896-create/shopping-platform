@@ -1,6 +1,10 @@
 <script setup>
+import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { useAdminAuthStore } from '../../stores/adminAuth'
+import { changeMyAdminPassword } from '../../api/admin/account'
+import { ROLE_LABELS, canAccessAdminRoute } from '../../utils/adminPermissions'
 
 const route = useRoute()
 const router = useRouter()
@@ -20,8 +24,48 @@ const menu = [
   { name: 'AdminOrderMessageList', label: '訂單留言' },
   { name: 'AdminReport', label: '銷售報表' },
   { name: 'AdminMemberList', label: '會員管理', matchNames: ['AdminMemberList', 'AdminMemberDetail'] },
+  { name: 'AdminAccountList', label: '帳號管理' },
   { name: 'AdminAuditLogList', label: '操作紀錄' },
 ]
+
+// 客服只看得到自己能用的選單
+const visibleMenu = computed(() => menu.filter((item) => canAccessAdminRoute(adminAuthStore.role, item.name)))
+
+const passwordDialogVisible = ref(false)
+const passwordFormRef = ref()
+const changingPassword = ref(false)
+const passwordForm = reactive({ currentPassword: '', newPassword: '', confirmPassword: '' })
+const passwordRules = {
+  currentPassword: [{ required: true, message: '請輸入目前密碼', trigger: 'blur' }],
+  newPassword: [
+    { required: true, message: '請輸入新密碼', trigger: 'blur' },
+    { min: 8, message: '密碼長度至少 8 碼', trigger: 'blur' },
+  ],
+  confirmPassword: [
+    {
+      validator: (rule, value, callback) =>
+        value === passwordForm.newPassword ? callback() : callback(new Error('兩次輸入的新密碼不一致')),
+      trigger: 'blur',
+    },
+  ],
+}
+
+function openPasswordDialog() {
+  Object.assign(passwordForm, { currentPassword: '', newPassword: '', confirmPassword: '' })
+  passwordDialogVisible.value = true
+}
+
+async function handleChangePassword() {
+  await passwordFormRef.value.validate()
+  changingPassword.value = true
+  try {
+    await changeMyAdminPassword(passwordForm.currentPassword, passwordForm.newPassword)
+    ElMessage.success('密碼已更新')
+    passwordDialogVisible.value = false
+  } finally {
+    changingPassword.value = false
+  }
+}
 
 function isActive(item) {
   const names = item.matchNames || [item.name]
@@ -40,7 +84,7 @@ function handleLogout() {
       <div class="brand">MomoShop 後台</div>
       <nav class="menu">
         <div
-          v-for="item in menu"
+          v-for="item in visibleMenu"
           :key="item.name"
           class="menu-item"
           :class="{ active: isActive(item) }"
@@ -54,12 +98,34 @@ function handleLogout() {
     <div class="main">
       <header class="topbar">
         <span>{{ adminAuthStore.admin?.name || adminAuthStore.admin?.username }}</span>
+        <el-tag v-if="adminAuthStore.role" size="small" :type="adminAuthStore.isAdmin ? 'danger' : 'info'">
+          {{ ROLE_LABELS[adminAuthStore.role] }}
+        </el-tag>
+        <el-button link @click="openPasswordDialog">修改密碼</el-button>
         <el-button link @click="handleLogout">登出</el-button>
       </header>
       <div class="content">
         <router-view />
       </div>
     </div>
+
+    <el-dialog v-model="passwordDialogVisible" title="修改密碼" width="420px">
+      <el-form ref="passwordFormRef" :model="passwordForm" :rules="passwordRules" label-width="100px">
+        <el-form-item label="目前密碼" prop="currentPassword">
+          <el-input v-model="passwordForm.currentPassword" type="password" show-password autocomplete="current-password" />
+        </el-form-item>
+        <el-form-item label="新密碼" prop="newPassword">
+          <el-input v-model="passwordForm.newPassword" type="password" show-password autocomplete="new-password" />
+        </el-form-item>
+        <el-form-item label="確認新密碼" prop="confirmPassword">
+          <el-input v-model="passwordForm.confirmPassword" type="password" show-password autocomplete="new-password" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="changingPassword" @click="handleChangePassword">更新密碼</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 

@@ -265,8 +265,24 @@ REFUNDED        → (終態)
 
 回應 `data`:
 ```json
-{ "token": "...", "tokenType": "Bearer", "adminId": 1, "username": "admin", "name": "系統管理員" }
+{ "token": "...", "tokenType": "Bearer", "adminId": 1, "username": "admin", "name": "系統管理員", "role": "ADMIN" }
 ```
+
+### 後台角色
+- `ADMIN`:全部後台功能。
+- `STAFF`(客服):`/api/admin/orders/**`、`/order-messages/**`、`/returns/**`、`/questions/**`、`/reviews/**`、`/notes/**`、`/reports/dashboard`、`/account/**`;`/api/admin/products/**`、`/members/**`、`/categories/**` 僅限 `GET`。其餘後台 API 回 403。
+
+後台 token 每次請求都會以資料庫中的帳號狀態與角色為準:帳號被停用後既有 token 立即失效(401),角色調整立即生效,不必等 token 過期。
+
+### `GET /api/admin/account/me` / `PUT /api/admin/account/password` — ADMIN、STAFF
+目前登入的後台帳號 `{ "id", "username", "name", "role", "status", "createdAt" }`;修改自己的密碼 `{ "currentPassword": "...", "newPassword": "..." }`(8~100 碼,目前密碼錯誤回 400)。
+
+### 帳號管理 `/api/admin/accounts` — 僅 ADMIN
+- `GET`:所有後台帳號
+- `POST` `{ "username": "cs01", "name": "客服小美", "password": "...", "role": "STAFF" }`:`username` 3~50 碼英數字(可含 `_ . -`)、不可重複;密碼 8~100 碼
+- `PUT /{id}` `{ "name": "...", "role": "ADMIN", "status": "DISABLED" }`:不能調整自己的角色或狀態;不能停用 / 降級最後一個啟用中的 ADMIN
+- `PUT /{id}/password` `{ "newPassword": "..." }`:重設別人的密碼
+新增、修改、重設密碼都會記入管理員操作紀錄。
 
 ---
 

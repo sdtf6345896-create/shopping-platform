@@ -12,8 +12,10 @@ public class AdminLoginResponse {
     private Long adminId;
     private String username;
     private String name;
+    /** ADMIN 或 STAFF */
+    private String role;
 
-    public static AdminLoginResponse of(String token, Long adminId, String username, String name) {
-        return new AdminLoginResponse(token, "Bearer", adminId, username, name);
+    public static AdminLoginResponse of(String token, Long adminId, String username, String name, String role) {
+        return new AdminLoginResponse(token, "Bearer", adminId, username, name, role);
     }
 }

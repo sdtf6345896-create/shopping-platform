@@ -48,7 +48,7 @@ public class AdminAuthServiceImpl implements AdminAuthService {
             throw new BusinessException("帳號已被停用,請聯繫系統管理員");
         }
 
-        String token = jwtTokenProvider.generateToken(admin.getId(), admin.getUsername(), Role.ADMIN);
-        return AdminLoginResponse.of(token, admin.getId(), admin.getUsername(), admin.getName());
+        String token = jwtTokenProvider.generateToken(admin.getId(), admin.getUsername(), Role.valueOf(admin.getRole()));
+        return AdminLoginResponse.of(token, admin.getId(), admin.getUsername(), admin.getName(), admin.getRole());
     }
 }

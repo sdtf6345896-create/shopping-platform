@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useAdminAuthStore } from '../stores/adminAuth'
 import { setMetaDescription, setPageTitle } from '../utils/pageMeta'
+import { canAccessAdminRoute } from '../utils/adminPermissions'
 
 const routes = [
   { path: '/', name: 'Home', component: () => import('../views/Home.vue') },
@@ -112,6 +113,7 @@ const routes = [
       { path: 'reviews', name: 'AdminReviewList', component: () => import('../views/admin/ReviewList.vue') },
       { path: 'questions', name: 'AdminQuestionList', component: () => import('../views/admin/QuestionList.vue') },
       { path: 'returns', name: 'AdminReturnList', component: () => import('../views/admin/ReturnList.vue') },
+      { path: 'accounts', name: 'AdminAccountList', component: () => import('../views/admin/AccountList.vue') },
       { path: 'audit-logs', name: 'AdminAuditLogList', component: () => import('../views/admin/AuditLogList.vue') },
     ],
   },
@@ -127,11 +129,21 @@ const router = createRouter({
   },
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   if (to.meta.requiresAdminAuth) {
     const adminAuthStore = useAdminAuthStore()
     if (!adminAuthStore.isLoggedIn) {
       return { name: 'AdminLogin', query: { redirect: to.fullPath } }
+    }
+    if (!adminAuthStore.admin) {
+      try {
+        await adminAuthStore.fetchMe()
+      } catch {
+        // token 失效等情況交給 API 的 401 處理(會導回登入頁)
+      }
+    }
+    if (!canAccessAdminRoute(adminAuthStore.role, to.name)) {
+      return { name: 'AdminDashboard' }
     }
     return true
   }

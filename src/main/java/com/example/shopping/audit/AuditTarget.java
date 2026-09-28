@@ -11,5 +11,6 @@ public enum AuditTarget {
     RETURN,
     MEMBER,
     QUESTION,
-    UPLOAD
+    UPLOAD,
+    ACCOUNT
 }

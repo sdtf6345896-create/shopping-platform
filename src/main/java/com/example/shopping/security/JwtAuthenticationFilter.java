@@ -1,5 +1,6 @@
 package com.example.shopping.security;
 
+import com.example.shopping.admin.repository.AdminRepository;
 import com.example.shopping.common.enums.Role;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
@@ -20,9 +21,11 @@ import java.util.List;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final AdminRepository adminRepository;
 
-    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider) {
+    public JwtAuthenticationFilter(JwtTokenProvider jwtTokenProvider, AdminRepository adminRepository) {
         this.jwtTokenProvider = jwtTokenProvider;
+        this.adminRepository = adminRepository;
     }
 
     @Override
@@ -36,6 +39,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = jwtTokenProvider.parseClaims(token);
             AuthenticatedUser user = jwtTokenProvider.toAuthenticatedUser(claims);
             Role role = user.role();
+            if (role.isBackOffice()) {
+                // 後台帳號每次都以資料庫為準:停用立即失效,角色調整立即生效(不必等 token 過期)
+                role = adminRepository.findActiveRoleById(user.id()).map(Role::valueOf).orElse(null);
+                if (role == null) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+                user = new AuthenticatedUser(user.id(), user.subject(), role);
+            }
 
             var authentication = new UsernamePasswordAuthenticationToken(
                     user, null, List.of(new SimpleGrantedAuthority("ROLE_" + role.name())));
