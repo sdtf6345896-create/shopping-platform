@@ -29,4 +29,16 @@ describe('PrintableOrder', () => {
     expect(wrapper.text()).toContain('2 件')
     expect(wrapper.text()).not.toContain('NT$')
   })
+
+  it('packing slip flags gift orders and prints the card message, still without prices', () => {
+    const gift = { ...order, giftWrap: true, giftWrapFee: 30, giftMessage: '生日快樂!' }
+    const packing = mount(PrintableOrder, { props: { order: gift, variant: 'packing' } })
+
+    expect(packing.text()).toContain('禮品包裝')
+    expect(packing.text()).toContain('賀卡:生日快樂!')
+    expect(packing.text()).not.toContain('NT$')
+
+    const receipt = mount(PrintableOrder, { props: { order: gift, variant: 'receipt' } })
+    expect(receipt.text()).toContain('NT$ 30')
+  })
 })

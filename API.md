@@ -521,7 +521,7 @@ REFUNDED        → (終態)
 ## 運費(Shipping)
 
 ### `GET /api/shipping/policy`
-公開。運費規則:`{ "fee": 60, "cvsFee": 45, "freeThreshold": 999 }`。商品金額(套用優惠券後、折抵購物金前)達 `freeThreshold` 免運,否則結帳時依配送方式加收 `fee`(宅配)或 `cvsFee`(超商取貨),記在訂單的 `shippingFee` 並包含在 `totalAmount`。購物金回饋只計算商品金額,不含運費。可用 `app.shipping.fee`、`app.shipping.cvs-fee`、`app.shipping.free-threshold` 調整。
+公開。運費規則:`{ "fee": 60, "cvsFee": 45, "freeThreshold": 999, "giftWrapFee": 30 }`(`giftWrapFee` 為禮品包裝費,見結帳)。商品金額(套用優惠券後、折抵購物金前)達 `freeThreshold` 免運,否則結帳時依配送方式加收 `fee`(宅配)或 `cvsFee`(超商取貨),記在訂單的 `shippingFee` 並包含在 `totalAmount`。購物金回饋只計算商品金額,不含運費。可用 `app.shipping.fee`、`app.shipping.cvs-fee`、`app.shipping.free-threshold` 調整。
 
 ---
 
@@ -574,6 +574,8 @@ REFUNDED        → (終態)
                  "recipientName": "王小明", "recipientPhone": "0912345678" } }
 ```
 `brand` 為 `SEVEN_ELEVEN` / `FAMILY_MART` / `HI_LIFE` / `OK_MART`;`storeCode` 選填(最多 8 位數字);`recipientPhone` 需為 09 開頭 10 碼手機。未串接超商電子地圖,門市由會員自填。訂單的 `receiverAddress` 會是門市描述(例如「7-ELEVEN 信義門市(店號 123456)」),回應帶 `shippingMethod`。
+
+`giftWrap` 選填(`true` 加購禮品包裝,加收 `app.shipping.gift-wrap-fee`,不受免運門檻影響);`giftMessage` 選填賀卡留言(最多 100 字,只在加購禮品包裝時保留)。訂單回應帶 `giftWrap`、`giftWrapFee`、`giftMessage`,揀貨單會標示禮品包裝與賀卡內容;購物金回饋、會員等級與邀請獎勵都不計運費與禮品包裝費。
 
 `invoice` 選填,電子發票開立方式(不帶為會員載具):
 - `{ "type": "MEMBER_CARRIER" }` 會員載具

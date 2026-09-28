@@ -27,6 +27,9 @@ public class OrderResponse {
     private String couponCode;
     private int pointsUsed;
     private BigDecimal shippingFee;
+    private boolean giftWrap;
+    private BigDecimal giftWrapFee;
+    private String giftMessage;
     private int pointsEarned;
     private ShippingMethod shippingMethod;
     private String receiverName;
@@ -59,6 +62,9 @@ public class OrderResponse {
                 order.getCouponCode(),
                 order.getPointsUsed(),
                 order.getShippingFee(),
+                order.isGiftWrap(),
+                order.getGiftWrapFee(),
+                order.getGiftMessage(),
                 order.getPointsEarned(),
                 order.getShippingMethod(),
                 order.getReceiverName(),

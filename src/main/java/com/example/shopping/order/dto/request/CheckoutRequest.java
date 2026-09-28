@@ -52,6 +52,13 @@ public class CheckoutRequest {
     @Size(max = 200, message = "訂單備註最多 200 字")
     private String note;
 
+    /** 是否加購禮品包裝(費用見 /api/shipping/policy 的 giftWrapFee) */
+    private Boolean giftWrap;
+
+    /** 賀卡留言,加購禮品包裝時才會保留 */
+    @Size(max = 100, message = "賀卡留言最多 100 字")
+    private String giftMessage;
+
     /** 發票開立方式,不填為會員載具 */
     @Valid
     private InvoiceRequest invoice;

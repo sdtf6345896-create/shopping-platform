@@ -63,7 +63,18 @@ public class Orders {
     @Column(name = "shipping_fee", nullable = false, precision = 10, scale = 2)
     private BigDecimal shippingFee = BigDecimal.ZERO;
 
-    /** 實付金額(= subtotalAmount - promotionDiscount - discountAmount - pointsUsed + shippingFee) */
+    /** 是否加購禮品包裝 */
+    @Column(name = "gift_wrap", nullable = false)
+    private boolean giftWrap;
+
+    @Column(name = "gift_wrap_fee", nullable = false, precision = 10, scale = 2)
+    private BigDecimal giftWrapFee = BigDecimal.ZERO;
+
+    /** 賀卡留言(加購禮品包裝時才有) */
+    @Column(name = "gift_message", length = 100)
+    private String giftMessage;
+
+    /** 實付金額(= subtotalAmount - promotionDiscount - discountAmount - pointsUsed + shippingFee + giftWrapFee) */
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
@@ -176,6 +187,11 @@ public class Orders {
         return status == OrderStatus.COMPLETED && completedAt != null
                 ? completedAt.plus(ReturnRequest.RETURN_WINDOW)
                 : null;
+    }
+
+    /** 商品部分的實付金額(扣掉運費與禮品包裝費),購物金回饋、會員等級與邀請獎勵都用這個 */
+    public BigDecimal getMerchandiseAmount() {
+        return totalAmount.subtract(shippingFee).subtract(giftWrapFee);
     }
 
     public void addItem(OrderItem item) {

@@ -2,5 +2,5 @@ package com.example.shopping.order.shipping;
 
 import java.math.BigDecimal;
 
-public record ShippingPolicyResponse(BigDecimal fee, BigDecimal cvsFee, BigDecimal freeThreshold) {
+public record ShippingPolicyResponse(BigDecimal fee, BigDecimal cvsFee, BigDecimal freeThreshold, BigDecimal giftWrapFee) {
 }

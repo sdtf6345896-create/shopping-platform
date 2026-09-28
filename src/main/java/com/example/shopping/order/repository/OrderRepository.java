@@ -24,7 +24,7 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
     long countByMemberIdAndCouponIdAndStatusNot(Long memberId, Long couponId, OrderStatus status);
 
     /** 會員在某時間之後、指定狀態訂單的商品金額合計(實付扣掉運費) */
-    @Query("select sum(o.totalAmount - o.shippingFee) from Orders o "
+    @Query("select sum(o.totalAmount - o.shippingFee - o.giftWrapFee) from Orders o "
             + "where o.member.id = :memberId and o.status = :status and o.createdAt >= :since")
     BigDecimal sumMerchandiseAmount(@Param("memberId") Long memberId, @Param("status") OrderStatus status,
                                     @Param("since") LocalDateTime since);
@@ -32,7 +32,7 @@ public interface OrderRepository extends JpaRepository<Orders, Long>, JpaSpecifi
     /** 某時間之後指定狀態訂單的商品金額合計達門檻的啟用會員 id(依等級發券用) */
     @Query("select o.member.id from Orders o where o.member.status = com.example.shopping.common.enums.AccountStatus.ACTIVE"
             + " and o.status = :status and o.createdAt >= :since"
-            + " group by o.member.id having sum(o.totalAmount - o.shippingFee) >= :threshold")
+            + " group by o.member.id having sum(o.totalAmount - o.shippingFee - o.giftWrapFee) >= :threshold")
     List<Long> findMemberIdsWithMerchandiseAmountAtLeast(@Param("status") OrderStatus status,
                                                           @Param("since") LocalDateTime since,
                                                           @Param("threshold") BigDecimal threshold);

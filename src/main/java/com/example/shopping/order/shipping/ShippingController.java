@@ -19,6 +19,7 @@ public class ShippingController {
     @GetMapping("/policy")
     public ApiResponse<ShippingPolicyResponse> policy() {
         return ApiResponse.success(new ShippingPolicyResponse(
-                shippingPolicy.getFee(), shippingPolicy.getCvsFee(), shippingPolicy.getFreeThreshold()));
+                shippingPolicy.getFee(), shippingPolicy.getCvsFee(), shippingPolicy.getFreeThreshold(),
+                shippingPolicy.getGiftWrapFee()));
     }
 }

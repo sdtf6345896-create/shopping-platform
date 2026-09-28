@@ -53,6 +53,10 @@ async function loadSavedStores() {
 const paymentMethod = ref('CREDIT_CARD')
 const submitting = ref(false)
 const buyerNote = ref('')
+// 禮品包裝與賀卡(費用來自運費規則的 giftWrapFee)
+const giftWrap = ref(false)
+const giftMessage = ref('')
+const giftWrapFee = computed(() => (giftWrap.value ? Number(shippingPolicy.value?.giftWrapFee || 0) : 0))
 const invoice = reactive({ type: 'MEMBER_CARRIER', carrierCode: '', taxId: '', companyTitle: '', donationCode: '' })
 
 const showAddressDialog = ref(false)
@@ -106,7 +110,9 @@ const shippingFee = computed(() =>
   shippingFeeFor(payableBeforePoints.value, shippingPolicy.value, shippingMethod.value),
 )
 const toFreeShipping = computed(() => amountToFreeShipping(payableBeforePoints.value, shippingPolicy.value))
-const totalAmount = computed(() => payableBeforePoints.value - appliedPoints.value + shippingFee.value)
+const totalAmount = computed(
+  () => payableBeforePoints.value - appliedPoints.value + shippingFee.value + giftWrapFee.value,
+)
 
 function handleTogglePoints(enabled) {
   pointsToUse.value = enabled ? pointLimit.value : 0
@@ -226,6 +232,8 @@ async function handleSubmit() {
       couponCode: appliedCoupon.value?.code || null,
       pointsToUse: appliedPoints.value,
       note: buyerNote.value.trim() || null,
+      giftWrap: giftWrap.value,
+      giftMessage: giftWrap.value ? giftMessage.value.trim() || null : null,
       invoice: {
         type: invoice.type,
         carrierCode: invoice.type === 'MOBILE_BARCODE' ? invoice.carrierCode.trim().toUpperCase() : null,
@@ -446,6 +454,23 @@ onMounted(async () => {
     </section>
 
     <section class="block">
+      <div class="block-title">禮品包裝</div>
+      <el-checkbox v-model="giftWrap">
+        加購禮品包裝<template v-if="shippingPolicy"> +NT$ {{ shippingPolicy.giftWrapFee }}</template>(附賀卡,不附價格明細)
+      </el-checkbox>
+      <el-input
+        v-if="giftWrap"
+        v-model="giftMessage"
+        class="gift-message"
+        type="textarea"
+        :rows="2"
+        maxlength="100"
+        show-word-limit
+        placeholder="賀卡留言(選填),例如:生日快樂!"
+      />
+    </section>
+
+    <section class="block">
       <div class="block-title">訂單備註</div>
       <el-input
         v-model="buyerNote"
@@ -485,6 +510,10 @@ onMounted(async () => {
           <small v-if="toFreeShipping > 0" class="shipping-hint">再買 NT$ {{ toFreeShipping }} 免運</small>
         </span>
         <span>{{ shippingFee > 0 ? `NT$ ${shippingFee}` : '免運' }}</span>
+      </div>
+      <div v-if="giftWrapFee > 0" class="confirm-row">
+        <span>禮品包裝</span>
+        <span>NT$ {{ giftWrapFee }}</span>
       </div>
       <div class="confirm-total">
         <span>總金額</span>
@@ -529,6 +558,10 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.gift-message {
+  margin-top: 8px;
+}
+
 .shipping-methods {
   margin-bottom: 4px;
 }

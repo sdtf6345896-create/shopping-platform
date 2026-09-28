@@ -233,7 +233,8 @@ public class OrderServiceImpl implements OrderService {
         BigDecimal shippingFee = shippingPolicy.feeFor(order.getShippingMethod(), payable);
         order.setPointsUsed(pointsToUse);
         order.setShippingFee(shippingFee);
-        order.setTotalAmount(payable.subtract(BigDecimal.valueOf(pointsToUse)).add(shippingFee));
+        applyGiftWrap(order, request);
+        order.setTotalAmount(payable.subtract(BigDecimal.valueOf(pointsToUse)).add(shippingFee).add(order.getGiftWrapFee()));
 
         Orders saved = orderRepository.save(order);
         if (pointsToUse > 0) {
@@ -403,7 +404,7 @@ public class OrderServiceImpl implements OrderService {
         MemberTier tier = memberTierService.tierOf(order.getMember().getId());
         order.changeStatus(OrderStatus.COMPLETED, actor, note);
         // 回饋只算商品金額,運費不列入;依會員等級加倍
-        int earned = pointPolicy.pointsEarnedFor(order.getTotalAmount().subtract(order.getShippingFee()),
+        int earned = pointPolicy.pointsEarnedFor(order.getMerchandiseAmount(),
                 tier.getPointsMultiplier());
         order.setPointsEarned(earned);
         if (earned > 0) {
@@ -413,7 +414,7 @@ public class OrderServiceImpl implements OrderService {
                     "訂單 " + order.getOrderNo() + " 完成回饋" + tierNote);
         }
         eventPublisher.publishEvent(new OrderCompletedEvent(order.getMember().getId(), order.getId(),
-                order.getOrderNo(), order.getTotalAmount().subtract(order.getShippingFee())));
+                order.getOrderNo(), order.getMerchandiseAmount()));
     }
 
     private void markPaid(Orders order, OrderActor actor, String note) {
@@ -434,6 +435,16 @@ public class OrderServiceImpl implements OrderService {
         order.setShippedAt(LocalDateTime.now());
         order.changeStatus(OrderStatus.SHIPPING, OrderActor.ADMIN,
                 note != null ? note : carrier + " " + trackingNumber);
+    }
+
+    /** 禮品包裝:加購才收費,賀卡留言只在加購時保留 */
+    private void applyGiftWrap(Orders order, CheckoutRequest request) {
+        if (!Boolean.TRUE.equals(request.getGiftWrap())) {
+            return;
+        }
+        order.setGiftWrap(true);
+        order.setGiftWrapFee(shippingPolicy.getGiftWrapFee());
+        order.setGiftMessage(blankToNull(request.getGiftMessage()));
     }
 
     /** 依配送方式填入收件資訊:宅配用會員地址簿的地址,超商取貨用會員填寫的門市與取件人 */

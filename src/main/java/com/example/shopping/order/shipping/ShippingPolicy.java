@@ -15,13 +15,16 @@ public class ShippingPolicy {
     private final BigDecimal fee;
     private final BigDecimal cvsFee;
     private final BigDecimal freeThreshold;
+    private final BigDecimal giftWrapFee;
 
     public ShippingPolicy(@Value("${app.shipping.fee:60}") BigDecimal fee,
                           @Value("${app.shipping.cvs-fee:45}") BigDecimal cvsFee,
-                          @Value("${app.shipping.free-threshold:999}") BigDecimal freeThreshold) {
+                          @Value("${app.shipping.free-threshold:999}") BigDecimal freeThreshold,
+                          @Value("${app.shipping.gift-wrap-fee:30}") BigDecimal giftWrapFee) {
         this.fee = fee;
         this.cvsFee = cvsFee;
         this.freeThreshold = freeThreshold;
+        this.giftWrapFee = giftWrapFee;
     }
 
     public BigDecimal feeFor(ShippingMethod method, BigDecimal merchandiseAmount) {
@@ -37,6 +40,11 @@ public class ShippingPolicy {
 
     public BigDecimal getCvsFee() {
         return cvsFee;
+    }
+
+    /** 禮品包裝費(不受免運門檻影響) */
+    public BigDecimal getGiftWrapFee() {
+        return giftWrapFee;
     }
 
     public BigDecimal getFreeThreshold() {

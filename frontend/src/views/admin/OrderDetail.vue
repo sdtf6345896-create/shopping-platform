@@ -139,6 +139,10 @@ onMounted(load)
           <span>運費</span>
           <span>{{ order.shippingFee > 0 ? `NT$ ${order.shippingFee}` : '免運' }}</span>
         </div>
+        <div v-if="order.giftWrap" class="item-row">
+          <span>禮品包裝{{ order.giftMessage ? `(賀卡:${order.giftMessage})` : '' }}</span>
+          <span>NT$ {{ order.giftWrapFee }}</span>
+        </div>
         <div class="total-row">
           <span>總金額</span>
           <span class="total-amount">NT$ {{ order.totalAmount }}</span>

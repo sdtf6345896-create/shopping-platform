@@ -97,7 +97,7 @@ class OrderServiceImplTest {
     @Spy
     private InvoiceService invoiceService = new InvoiceService();
     @Spy
-    private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("45"), new BigDecimal("999"));
+    private ShippingPolicy shippingPolicy = new ShippingPolicy(new BigDecimal("60"), new BigDecimal("45"), new BigDecimal("999"), new BigDecimal("30"));
     @Mock
     private PointService pointService;
     @Spy
@@ -698,6 +698,51 @@ class OrderServiceImplTest {
         assertThatThrownBy(() -> orderService.checkout(1L, home))
                 .isInstanceOf(BusinessException.class).hasMessageContaining("收件地址");
         verify(productSkuRepository, never()).decrementStock(any(), anyInt());
+    }
+
+    @Test
+    void checkout_addsGiftWrapFee_andKeepsMessageOnlyWhenWrapped() {
+        when(addressRepository.findByIdAndMemberId(2L, 1L)).thenReturn(Optional.of(address));
+        when(cartItemRepository.findAllByMemberIdWithDetails(1L)).thenReturn(List.of(cartItem));
+        when(memberRepository.getReferenceById(1L)).thenReturn(address.getMember());
+        when(orderRepository.save(any(Orders.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CheckoutRequest wrapped = checkoutRequest();
+        wrapped.setGiftWrap(true);
+        wrapped.setGiftMessage("  生日快樂!  ");
+        OrderResponse response = orderService.checkout(1L, wrapped);
+
+        // 小計 1180 已免運,加禮品包裝 30
+        assertThat(response.isGiftWrap()).isTrue();
+        assertThat(response.getGiftWrapFee()).isEqualByComparingTo("30");
+        assertThat(response.getGiftMessage()).isEqualTo("生日快樂!");
+        assertThat(response.getTotalAmount()).isEqualByComparingTo("1210");
+
+        CheckoutRequest plain = checkoutRequest();
+        plain.setGiftWrap(false);
+        plain.setGiftMessage("沒有包裝就不留");
+        OrderResponse plainResponse = orderService.checkout(1L, plain);
+        assertThat(plainResponse.getGiftMessage()).isNull();
+        assertThat(plainResponse.getGiftWrapFee()).isZero();
+    }
+
+    @Test
+    void complete_earnsPointsExcludingGiftWrapFee() {
+        Orders order = pendingOrderWithItem(1);
+        order.setMember(address.getMember());
+        order.setOrderNo("ORD2");
+        order.setStatus(OrderStatus.SHIPPING);
+        order.setShippingFee(new BigDecimal("60"));
+        order.setGiftWrapFee(new BigDecimal("30"));
+        order.setTotalAmount(new BigDecimal("590"));
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        OrderStatusRequest request = new OrderStatusRequest();
+        request.setStatus(OrderStatus.COMPLETED);
+
+        orderService.updateStatus(1L, request);
+
+        // (590 - 60 - 30) × 1% = 5
+        verify(pointService).credit(eq(1L), eq(1L), eq(5), eq(PointTransactionType.EARN), any());
     }
 
     @Test

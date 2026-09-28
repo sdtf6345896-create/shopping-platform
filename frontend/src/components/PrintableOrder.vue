@@ -37,6 +37,10 @@ const formatTime = (value) => value?.slice(0, 19).replace('T', ' ')
         <span class="label">{{ order.shippingMethod === 'CVS_PICKUP' ? '取貨門市' : '地址' }}</span>{{ order.receiverAddress }}
       </p>
       <p v-if="order.buyerNote"><span class="label">備註</span>{{ order.buyerNote }}</p>
+      <div v-if="order.giftWrap && !isReceipt" class="gift-box">
+        🎁 禮品包裝:請勿放入價格明細
+        <div v-if="order.giftMessage" class="gift-card">賀卡:{{ order.giftMessage }}</div>
+      </div>
       <p v-if="order.trackingNumber">
         <span class="label">物流</span>{{ order.shippingCarrier }} {{ order.trackingNumber }}
       </p>
@@ -79,6 +83,7 @@ const formatTime = (value) => value?.slice(0, 19).replace('T', ' ')
       </p>
       <p v-if="order.pointsUsed > 0"><span>購物金折抵</span><span>- NT$ {{ order.pointsUsed }}</span></p>
       <p><span>運費</span><span>{{ order.shippingFee > 0 ? `NT$ ${order.shippingFee}` : '免運' }}</span></p>
+      <p v-if="order.giftWrap"><span>禮品包裝</span><span>NT$ {{ order.giftWrapFee }}</span></p>
       <p class="grand"><span>實付金額</span><span>NT$ {{ order.totalAmount }}</span></p>
       <p class="note">本收據僅供購物證明,非統一發票。</p>
     </section>
@@ -90,6 +95,19 @@ const formatTime = (value) => value?.slice(0, 19).replace('T', ' ')
 </template>
 
 <style scoped>
+.gift-box {
+  margin: 8px 0;
+  padding: 8px 12px;
+  border: 2px dashed #e4393c;
+  font-weight: bold;
+}
+
+.gift-card {
+  margin-top: 4px;
+  font-weight: normal;
+  white-space: pre-wrap;
+}
+
 .printable {
   max-width: 760px;
   margin: 0 auto;
