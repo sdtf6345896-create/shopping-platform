@@ -20,6 +20,7 @@ import com.example.shopping.product.event.ProductDeletingEvent;
 import com.example.shopping.product.event.SkusRemovingEvent;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.product.stock.StockLedger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +55,9 @@ class ProductServiceImplTest {
     private CategoryRepository categoryRepository;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private StockLedger stockLedger;
 
     @InjectMocks
     private ProductServiceImpl productService;

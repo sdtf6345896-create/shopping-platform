@@ -43,3 +43,8 @@ export function listLowStock(params) {
 export function deleteProduct(id) {
   return request.delete(`/admin/products/${id}`)
 }
+
+// 某規格的庫存異動紀錄,新到舊
+export function listStockMovements(productId, skuId, params) {
+  return request.get(`/admin/products/${productId}/skus/${skuId}/stock-movements`, { params })
+}

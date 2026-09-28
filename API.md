@@ -376,6 +376,14 @@ REFUNDED        → (終態)
 ```
 會記入管理員操作紀錄(檔名與結果)。
 
+### `GET /api/admin/products/{productId}/skus/{skuId}/stock-movements`
+需管理員登入。規格的庫存異動紀錄(新到舊,分頁):
+```json
+{ "id": 12, "changeQty": -2, "stockAfter": 18, "reason": "ORDER", "reference": "ORD202609281030001234",
+  "createdAt": "2026-09-28T10:30:00" }
+```
+`reason`:`INITIAL`(新增商品 / 規格)、`ORDER`(下單扣庫存)、`ORDER_CANCEL`(取消歸還)、`RETURN`(退貨歸還)、`MANUAL`(後台手動調整)、`IMPORT`(CSV 匯入,`reference` 為檔名)、`PRODUCT_EDIT`(編輯商品改庫存)。`stockAfter` 為該筆異動寫入後資料庫中的實際庫存。規格或商品刪除時紀錄一併刪除。
+
 ### `GET /api/admin/products/low-stock`
 需管理員登入。庫存警示:列出**上架中**商品裡庫存小於等於門檻的規格,庫存最少的排前面。Query:`threshold`(預設 10)、`limit`(預設 50,最多 200)。
 ```json
@@ -996,6 +1004,7 @@ Query:`keyword`(比對代碼或名稱)、`status`、`page`、`size` → `PageRes
 | PATCH | `/api/admin/products/status` | 管理員 |
 | POST | `/api/admin/products/stock-import` | 管理員 |
 | GET | `/api/admin/products/low-stock` | 管理員 |
+| GET | `/api/admin/products/{productId}/skus/{skuId}/stock-movements` | 管理員 |
 | GET | `/api/admin/orders` | 管理員 |
 | GET | `/api/admin/orders/export` | 管理員 |
 | GET | `/api/admin/orders/ship-template` | 管理員 |

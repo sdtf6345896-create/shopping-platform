@@ -34,6 +34,8 @@ import com.example.shopping.order.shipping.ShippingPolicy;
 import com.example.shopping.points.service.PointPolicy;
 import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
+import com.example.shopping.product.stock.StockLedger;
+import com.example.shopping.product.stock.StockReason;
 import com.example.shopping.promotion.PromotionCalculator;
 import com.example.shopping.promotion.PromotionService;
 import com.example.shopping.product.entity.ProductSku;
@@ -99,6 +101,7 @@ public class OrderServiceImpl implements OrderService {
     private final InvoiceService invoiceService;
     private final ApplicationEventPublisher eventPublisher;
     private final PromotionService promotionService;
+    private final StockLedger stockLedger;
 
     public OrderServiceImpl(OrderRepository orderRepository,
                              CartItemRepository cartItemRepository,
@@ -116,7 +119,8 @@ public class OrderServiceImpl implements OrderService {
                              MemberTierService memberTierService,
                              InvoiceService invoiceService,
                              ApplicationEventPublisher eventPublisher,
-                             PromotionService promotionService) {
+                             PromotionService promotionService,
+                             StockLedger stockLedger) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.addressRepository = addressRepository;
@@ -134,6 +138,7 @@ public class OrderServiceImpl implements OrderService {
         this.invoiceService = invoiceService;
         this.eventPublisher = eventPublisher;
         this.promotionService = promotionService;
+        this.stockLedger = stockLedger;
     }
 
     @Override
@@ -197,6 +202,7 @@ public class OrderServiceImpl implements OrderService {
             if (productSkuRepository.decrementStock(sku.getId(), cartItem.getQuantity()) == 0) {
                 throw new BusinessException("「" + product.getName() + " " + sku.getSpecName() + "」庫存不足");
             }
+            stockLedger.record(sku.getId(), -cartItem.getQuantity(), StockReason.ORDER, order.getOrderNo());
         }
 
         // 滿件折扣先套用,優惠券門檻與折抵都以折扣後金額計算
@@ -467,6 +473,8 @@ public class OrderServiceImpl implements OrderService {
         }
         for (OrderItem item : order.getItems()) {
             productSkuRepository.incrementStock(item.getProductSku().getId(), item.getQuantity());
+            stockLedger.record(item.getProductSku().getId(), item.getQuantity(), StockReason.ORDER_CANCEL,
+                    order.getOrderNo());
         }
         if (order.getCoupon() != null) {
             couponService.release(order.getCoupon().getId());

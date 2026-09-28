@@ -20,6 +20,8 @@ import com.example.shopping.product.event.ProductDeletingEvent;
 import com.example.shopping.product.event.SkusRemovingEvent;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.product.stock.StockLedger;
+import com.example.shopping.product.stock.StockReason;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,7 +35,9 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.example.shopping.product.repository.ProductSpecifications.*;
 
@@ -45,15 +49,18 @@ public class ProductServiceImpl implements ProductService {
     private final ProductSkuRepository productSkuRepository;
     private final CategoryRepository categoryRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final StockLedger stockLedger;
 
     public ProductServiceImpl(ProductRepository productRepository,
                                ProductSkuRepository productSkuRepository,
                                CategoryRepository categoryRepository,
-                               ApplicationEventPublisher eventPublisher) {
+                               ApplicationEventPublisher eventPublisher,
+                               StockLedger stockLedger) {
         this.productRepository = productRepository;
         this.productSkuRepository = productSkuRepository;
         this.categoryRepository = categoryRepository;
         this.eventPublisher = eventPublisher;
+        this.stockLedger = stockLedger;
     }
 
     @Override
@@ -124,13 +131,21 @@ public class ProductServiceImpl implements ProductService {
         Product product = new Product();
         applyRequest(product, request);
         product.replaceSkus(toSkus(request.getSkus()));
-        return ProductDetailResponse.from(productRepository.save(product));
+        Product saved = productRepository.save(product);
+        productRepository.flush();
+        for (ProductSku sku : saved.getSkus()) {
+            stockLedger.record(sku.getId(), sku.getStock(), StockReason.INITIAL, null);
+        }
+        return ProductDetailResponse.from(saved);
     }
 
     @Override
     public ProductDetailResponse update(Long id, ProductRequest request) {
         Product product = findOrThrow(id);
         applyRequest(product, request);
+
+        Map<String, Integer> stockBefore = product.getSkus().stream()
+                .collect(Collectors.toMap(ProductSku::getSkuCode, ProductSku::getStock));
 
         // 以 SKU 編號合併,既有規格保留 id;真的被移除的規格先讓其他模組確認能不能刪(有訂單就擋下)
         List<ProductSku> removed = product.mergeSkus(toSkus(request.getSkus()));
@@ -139,6 +154,12 @@ public class ProductServiceImpl implements ProductService {
                     .map(sku -> new SkusRemovingEvent.RemovedSku(sku.getId(),
                             product.getName() + " " + sku.getSpecName()))
                     .toList()));
+        }
+        productRepository.flush();
+        for (ProductSku sku : product.getSkus()) {
+            Integer before = stockBefore.get(sku.getSkuCode());
+            stockLedger.record(sku.getId(), sku.getStock() - (before == null ? 0 : before),
+                    before == null ? StockReason.INITIAL : StockReason.PRODUCT_EDIT, null);
         }
         return ProductDetailResponse.from(product);
     }
@@ -167,7 +188,9 @@ public class ProductServiceImpl implements ProductService {
     public SkuResponse updateStock(Long productId, Long skuId, StockUpdateRequest request) {
         ProductSku sku = productSkuRepository.findByIdAndProductId(skuId, productId)
                 .orElseThrow(() -> new ResourceNotFoundException("規格不存在"));
+        int before = sku.getStock();
         sku.setStock(request.getStock());
+        stockLedger.record(sku.getId(), request.getStock() - before, StockReason.MANUAL, null);
         return SkuResponse.from(sku);
     }
 

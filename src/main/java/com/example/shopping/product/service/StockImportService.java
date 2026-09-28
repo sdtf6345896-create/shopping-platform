@@ -5,6 +5,8 @@ import com.example.shopping.common.csv.CsvImportResponse;
 import com.example.shopping.common.csv.CsvImportResponse.RowError;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.product.stock.StockLedger;
+import com.example.shopping.product.stock.StockReason;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -28,9 +30,11 @@ public class StockImportService {
     static final int MAX_STOCK = 1_000_000;
 
     private final ProductSkuRepository productSkuRepository;
+    private final StockLedger stockLedger;
 
-    public StockImportService(ProductSkuRepository productSkuRepository) {
+    public StockImportService(ProductSkuRepository productSkuRepository, StockLedger stockLedger) {
         this.productSkuRepository = productSkuRepository;
+        this.stockLedger = stockLedger;
     }
 
     public CsvImportResponse importCsv(MultipartFile file) {
@@ -55,7 +59,12 @@ public class StockImportService {
         if (!errors.isEmpty()) {
             return CsvImportResponse.rejected(csvRows.size(), errors);
         }
-        rows.forEach((code, value) -> skus.get(code).setStock(value[1]));
+        rows.forEach((code, value) -> {
+            ProductSku sku = skus.get(code);
+            int before = sku.getStock();
+            sku.setStock(value[1]);
+            stockLedger.record(sku.getId(), value[1] - before, StockReason.IMPORT, file.getOriginalFilename());
+        });
         return new CsvImportResponse(true, csvRows.size(), rows.size(), List.of());
     }
 

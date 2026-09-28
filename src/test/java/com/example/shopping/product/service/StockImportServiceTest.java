@@ -4,6 +4,7 @@ import com.example.shopping.common.csv.CsvImportResponse;
 import com.example.shopping.common.exception.BusinessException;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.product.stock.StockLedger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,6 +26,9 @@ class StockImportServiceTest {
 
     @Mock
     private ProductSkuRepository productSkuRepository;
+
+    @Mock
+    private StockLedger stockLedger;
 
     @InjectMocks
     private StockImportService stockImportService;

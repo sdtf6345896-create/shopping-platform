@@ -22,6 +22,7 @@ import com.example.shopping.returns.dto.request.ReturnApplyRequest;
 import com.example.shopping.returns.dto.request.ReturnDecisionRequest;
 import com.example.shopping.returns.entity.ReturnRequest;
 import com.example.shopping.returns.repository.ReturnRequestRepository;
+import com.example.shopping.product.stock.StockLedger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +58,9 @@ class ReturnServiceImplTest {
     private ProductSkuRepository productSkuRepository;
     @Mock
     private ProductRepository productRepository;
+
+    @Mock
+    private StockLedger stockLedger;
 
     @InjectMocks
     private ReturnServiceImpl returnService;

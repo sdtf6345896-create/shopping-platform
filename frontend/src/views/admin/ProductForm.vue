@@ -1,4 +1,5 @@
 <script setup>
+import StockMovementDialog from '../../components/StockMovementDialog.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
@@ -17,6 +18,11 @@ const props = defineProps({
 
 const router = useRouter()
 const isEdit = computed(() => !!props.id)
+
+// 已存檔的規格(有 id 才查得到庫存異動紀錄);以 SKU 編號對應表單列
+const savedSkus = ref([])
+const historySku = ref(null)
+const savedSkuOf = (row) => savedSkus.value.find((s) => s.skuCode === row.skuCode)
 
 const categories = ref([])
 const flatCategories = computed(() => flattenCategories(categories.value))
@@ -147,6 +153,7 @@ async function loadProduct() {
       price: s.price,
       stock: s.stock,
     }))
+    savedSkus.value = data.skus
   } finally {
     loading.value = false
   }
@@ -309,6 +316,7 @@ onMounted(async () => {
             <el-input v-model="sku.specName" placeholder="規格名稱(例:紅色/M)" style="width: 160px" />
             <el-input-number v-model="sku.price" :min="0" :precision="2" placeholder="價格" style="width: 130px" />
             <el-input-number v-model="sku.stock" :min="0" placeholder="庫存" style="width: 110px" />
+            <el-button v-if="savedSkuOf(sku)" link @click="historySku = savedSkuOf(sku)">異動紀錄</el-button>
             <el-button link type="danger" @click="removeSku(index)">移除</el-button>
           </div>
           <el-button size="small" @click="addSku">+ 新增規格</el-button>
@@ -320,6 +328,8 @@ onMounted(async () => {
         <el-button @click="router.push({ name: 'AdminProductList' })">取消</el-button>
       </el-form-item>
     </el-form>
+
+    <StockMovementDialog :product-id="props.id" :sku="historySku" @close="historySku = null" />
   </div>
 </template>
 

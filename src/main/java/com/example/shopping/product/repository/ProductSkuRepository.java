@@ -29,6 +29,10 @@ public interface ProductSkuRepository extends JpaRepository<ProductSku, Long> {
     @Query("update ProductSku s set s.stock = s.stock - :quantity where s.id = :skuId and s.stock >= :quantity")
     int decrementStock(@Param("skuId") Long skuId, @Param("quantity") int quantity);
 
+    /** 直接查資料庫的目前庫存(不經過可能過期的一級快取) */
+    @Query("select s.stock from ProductSku s where s.id = :skuId")
+    int findStockById(@Param("skuId") Long skuId);
+
     /** 加回庫存(取消訂單、退貨),以相對值更新避免覆蓋其他交易的異動 */
     @Modifying(flushAutomatically = true)
     @Query("update ProductSku s set s.stock = s.stock + :quantity where s.id = :skuId")

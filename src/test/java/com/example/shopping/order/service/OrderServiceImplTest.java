@@ -40,6 +40,7 @@ import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductRepository;
 import com.example.shopping.product.repository.ProductSkuRepository;
+import com.example.shopping.product.stock.StockLedger;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,6 +107,9 @@ class OrderServiceImplTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private PromotionService promotionService;
+
+    @Mock
+    private StockLedger stockLedger;
 
     @InjectMocks
     private OrderServiceImpl orderService;

@@ -15,6 +15,8 @@ import com.example.shopping.points.service.PointService;
 import com.example.shopping.product.entity.Product;
 import com.example.shopping.product.entity.ProductSku;
 import com.example.shopping.product.repository.ProductRepository;
+import com.example.shopping.product.stock.StockLedger;
+import com.example.shopping.product.stock.StockReason;
 import com.example.shopping.product.repository.ProductSkuRepository;
 import com.example.shopping.returns.dto.request.ReturnApplyRequest;
 import com.example.shopping.returns.dto.request.ReturnDecisionRequest;
@@ -38,19 +40,22 @@ public class ReturnServiceImpl implements ReturnService {
     private final OrderNotifier orderNotifier;
     private final ProductSkuRepository productSkuRepository;
     private final ProductRepository productRepository;
+    private final StockLedger stockLedger;
 
     public ReturnServiceImpl(ReturnRequestRepository returnRequestRepository,
                              OrderRepository orderRepository,
                              PointService pointService,
                              OrderNotifier orderNotifier,
                              ProductSkuRepository productSkuRepository,
-                             ProductRepository productRepository) {
+                             ProductRepository productRepository,
+                             StockLedger stockLedger) {
         this.returnRequestRepository = returnRequestRepository;
         this.orderRepository = orderRepository;
         this.pointService = pointService;
         this.orderNotifier = orderNotifier;
         this.productSkuRepository = productSkuRepository;
         this.productRepository = productRepository;
+        this.stockLedger = stockLedger;
     }
 
     @Override
@@ -94,6 +99,7 @@ public class ReturnServiceImpl implements ReturnService {
         for (OrderItem item : order.getItems()) {
             ProductSku sku = item.getProductSku();
             productSkuRepository.incrementStock(sku.getId(), item.getQuantity());
+            stockLedger.record(sku.getId(), item.getQuantity(), StockReason.RETURN, order.getOrderNo());
             productRepository.addSalesCount(sku.getProduct().getId(), -item.getQuantity());
         }
         if (order.getPointsUsed() > 0) {
