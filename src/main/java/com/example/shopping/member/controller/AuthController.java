@@ -11,6 +11,8 @@ import com.example.shopping.member.dto.request.VerifyEmailRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
 import com.example.shopping.member.dto.response.MemberResponse;
 import com.example.shopping.member.service.MemberService;
+import com.example.shopping.member.session.ClientInfo;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,13 +32,13 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        return ApiResponse.success("登入成功", memberService.login(request));
+    public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        return ApiResponse.success("登入成功", memberService.login(request, ClientInfo.from(http)));
     }
 
     @PostMapping("/refresh")
-    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
-        return ApiResponse.success("Token 更新成功", memberService.refresh(request));
+    public ApiResponse<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request, HttpServletRequest http) {
+        return ApiResponse.success("Token 更新成功", memberService.refresh(request, ClientInfo.from(http)));
     }
 
     @PostMapping("/logout")

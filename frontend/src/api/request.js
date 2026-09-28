@@ -32,6 +32,7 @@ function refreshMemberToken() {
         const data = res.data.data
         localStorage.setItem('member_token', data.token)
         localStorage.setItem('member_refresh_token', data.refreshToken)
+        if (data.sessionId) localStorage.setItem('member_session_id', data.sessionId)
         return data.token
       })
       .finally(() => {

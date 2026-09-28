@@ -27,6 +27,7 @@ import com.example.shopping.member.repository.EmailVerificationTokenRepository;
 import com.example.shopping.member.repository.MemberRepository;
 import com.example.shopping.member.repository.PasswordResetTokenRepository;
 import com.example.shopping.member.repository.RefreshTokenRepository;
+import com.example.shopping.member.session.ClientInfo;
 import com.example.shopping.security.JwtTokenProvider;
 import com.example.shopping.security.LoginAttemptService;
 import org.slf4j.Logger;
@@ -118,7 +119,7 @@ public class MemberServiceImpl implements MemberService {
 
     @Override
     // 不能是 readOnly:登入會寫入 refresh token(H2 不檢查唯讀,MySQL 會直接拒絕寫入)
-    public LoginResponse login(LoginRequest request) {
+    public LoginResponse login(LoginRequest request, ClientInfo client) {
         loginAttemptService.checkNotLocked(LOGIN_SCOPE, request.getEmail());
 
         Member member = memberRepository.findByEmail(request.getEmail()).orElse(null);
@@ -136,12 +137,13 @@ public class MemberServiceImpl implements MemberService {
         }
 
         String token = jwtTokenProvider.generateToken(member.getId(), member.getEmail(), Role.MEMBER);
-        String refreshToken = issueRefreshToken(member.getId());
-        return LoginResponse.of(token, refreshToken, member.getId(), member.getName(), member.getEmail());
+        RefreshToken refreshToken = issueRefreshToken(member.getId(), UUID.randomUUID().toString(), client);
+        return LoginResponse.of(token, refreshToken.getToken(), member.getId(), member.getName(), member.getEmail(),
+                refreshToken.getSessionId());
     }
 
     @Override
-    public LoginResponse refresh(RefreshTokenRequest request) {
+    public LoginResponse refresh(RefreshTokenRequest request, ClientInfo client) {
         RefreshToken storedToken = refreshTokenRepository.findByToken(request.getRefreshToken())
                 .orElseThrow(() -> new BusinessException("請重新登入", HttpStatus.UNAUTHORIZED));
 
@@ -155,10 +157,16 @@ public class MemberServiceImpl implements MemberService {
         }
 
         // 輪替:換發新 refresh token 前先讓舊的失效,降低外洩後被重複利用的風險
+        // 新 token 沿用同一個登入工作階段;這次沒帶到的裝置資訊就沿用登入時記錄的
         storedToken.setRevoked(true);
-        String newRefreshToken = issueRefreshToken(member.getId());
+        String sessionId = storedToken.getSessionId() != null ? storedToken.getSessionId() : storedToken.getToken();
+        ClientInfo merged = new ClientInfo(
+                client.userAgent() != null ? client.userAgent() : storedToken.getUserAgent(),
+                client.ipAddress() != null ? client.ipAddress() : storedToken.getIpAddress());
+        RefreshToken newRefreshToken = issueRefreshToken(member.getId(), sessionId, merged);
         String newAccessToken = jwtTokenProvider.generateToken(member.getId(), member.getEmail(), Role.MEMBER);
-        return LoginResponse.of(newAccessToken, newRefreshToken, member.getId(), member.getName(), member.getEmail());
+        return LoginResponse.of(newAccessToken, newRefreshToken.getToken(), member.getId(), member.getName(),
+                member.getEmail(), sessionId);
     }
 
     @Override
@@ -205,12 +213,17 @@ public class MemberServiceImpl implements MemberService {
         emailVerificationMailSender.sendVerificationLink(member.getEmail(), verifyLink);
     }
 
-    private String issueRefreshToken(Long memberId) {
+    private RefreshToken issueRefreshToken(Long memberId, String sessionId, ClientInfo client) {
+        LocalDateTime now = LocalDateTime.now();
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setMemberId(memberId);
         refreshToken.setToken(UUID.randomUUID().toString());
-        refreshToken.setExpiresAt(LocalDateTime.now().plus(Duration.ofMillis(refreshExpirationMs)));
-        return refreshTokenRepository.save(refreshToken).getToken();
+        refreshToken.setExpiresAt(now.plus(Duration.ofMillis(refreshExpirationMs)));
+        refreshToken.setSessionId(sessionId);
+        refreshToken.setUserAgent(client.userAgent());
+        refreshToken.setIpAddress(client.ipAddress());
+        refreshToken.setLastUsedAt(now);
+        return refreshTokenRepository.save(refreshToken);
     }
 
     @Override

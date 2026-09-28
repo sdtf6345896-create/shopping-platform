@@ -9,9 +9,15 @@ export const useAuthStore = defineStore('auth', () => {
 
   const isLoggedIn = computed(() => !!token.value)
 
-  function setTokens(newToken, newRefreshToken) {
+  // sessionId:這次登入的工作階段,「登入裝置」頁用來標示目前這台裝置
+  function setTokens(newToken, newRefreshToken, sessionId) {
     token.value = newToken
     refreshToken.value = newRefreshToken
+    if (sessionId) {
+      localStorage.setItem('member_session_id', sessionId)
+    } else if (!newToken) {
+      localStorage.removeItem('member_session_id')
+    }
     if (newToken) {
       localStorage.setItem('member_token', newToken)
     } else {
@@ -26,7 +32,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function login(credentials) {
     const data = await authApi.login(credentials)
-    setTokens(data.token, data.refreshToken)
+    setTokens(data.token, data.refreshToken, data.sessionId)
     member.value = { id: data.memberId, name: data.name, email: data.email }
     return data
   }

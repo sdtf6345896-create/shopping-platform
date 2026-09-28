@@ -56,6 +56,7 @@ const routes = [
       { path: 'wishlist', name: 'MemberWishlist', component: () => import('../views/member/Wishlist.vue'), meta: { title: '我的收藏' } },
       { path: 'points', name: 'MemberPoints', component: () => import('../views/member/Points.vue'), meta: { title: '我的購物金' } },
       { path: 'coupons', name: 'MemberCoupons', component: () => import('../views/member/MyCoupons.vue'), meta: { title: '我的優惠券' } },
+      { path: 'sessions', name: 'MemberSessions', component: () => import('../views/member/Sessions.vue'), meta: { title: '登入裝置' } },
       { path: 'referral', name: 'MemberReferral', component: () => import('../views/member/Referral.vue'), meta: { title: '邀請好友' } },
       {
         path: 'notifications',

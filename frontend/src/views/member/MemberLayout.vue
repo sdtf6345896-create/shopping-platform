@@ -14,6 +14,7 @@ const menu = [
   { name: 'MemberReferral', label: '邀請好友' },
   { name: 'MemberNotifications', label: '通知中心' },
   { name: 'MemberBrowsingHistory', label: '瀏覽紀錄' },
+  { name: 'MemberSessions', label: '登入裝置' },
 ]
 </script>
 

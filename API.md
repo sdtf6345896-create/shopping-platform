@@ -158,6 +158,13 @@ REFUNDED        → (終態)
 
 ## 會員個人資料(Member)— 需會員登入
 
+### 登入裝置 `/api/members/me/sessions` — 需會員登入
+每次登入是一個工作階段(`sessionId`,登入與 `/api/auth/refresh` 的回應都會帶),換發 token 時沿用。登入時記錄 User-Agent 與 IP(經 nginx 時取 `X-Forwarded-For` 第一個位址)。
+- `GET`:目前有效的工作階段 `[ { "sessionId", "userAgent", "ipAddress", "lastUsedAt", "expiresAt" } ]`,最近使用的在前
+- `DELETE /{sessionId}`:登出該裝置(撤銷其 refresh token),不存在或已登出回 404
+- `POST /revoke-others` `{ "currentSessionId": "..." }`:登出目前裝置以外的所有裝置,回傳登出數量
+被登出的裝置手上的 access token 仍可用到過期為止,之後無法再換發。
+
 ### 常用超商門市 `/api/members/cvs-stores` — 需會員登入
 - `GET`:新到舊 `[ { "id", "brand", "brandLabel", "storeName", "storeCode", "recipientName", "recipientPhone" } ]`
 - `POST`:格式與驗證同結帳的 `cvsPickup`;同一門市 + 取件人 + 手機已存過時不新增(只更新店號),每人最多 5 筆,超過回 400

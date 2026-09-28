@@ -12,6 +12,7 @@ import com.example.shopping.member.dto.request.ResendVerificationRequest;
 import com.example.shopping.member.dto.request.ResetPasswordRequest;
 import com.example.shopping.member.dto.request.VerifyEmailRequest;
 import com.example.shopping.member.dto.response.LoginResponse;
+import com.example.shopping.member.session.ClientInfo;
 import com.example.shopping.member.dto.response.MemberResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -20,9 +21,17 @@ public interface MemberService {
 
     MemberResponse register(RegisterRequest request);
 
-    LoginResponse login(LoginRequest request);
+    LoginResponse login(LoginRequest request, ClientInfo client);
 
-    LoginResponse refresh(RefreshTokenRequest request);
+    default LoginResponse login(LoginRequest request) {
+        return login(request, ClientInfo.unknown());
+    }
+
+    LoginResponse refresh(RefreshTokenRequest request, ClientInfo client);
+
+    default LoginResponse refresh(RefreshTokenRequest request) {
+        return refresh(request, ClientInfo.unknown());
+    }
 
     void logout(RefreshTokenRequest request);
 
